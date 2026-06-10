@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GC 後台管理系統 v1.0.0</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2306080e'/%3E%3Ctext x='16' y='23' font-family='Arial Black,sans-serif' font-weight='900' font-size='18' fill='%23ffffff' text-anchor='middle'%3EG%3Ctspan fill='%23BFC3C9'%3EC%3C/tspan%3E%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #f4f5f7;
+  --sidebar-bg:#ffffff;
+  --card-bg:   #ffffff;
+  --border:    rgba(0,0,0,0.08);
+  --accent:    #2563eb;
+  --accent-2:  #1d4ed8;
+  --text:      #111827;
+  --text-dim:  rgba(17,24,39,0.45);
+  --text-mid:  rgba(17,24,39,0.68);
+  --sidebar-w: 240px;
+  --topbar-h:  60px;
+  --success:   #16a34a;
+  --warning:   #d97706;
+  --danger:    #dc2626;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ─── TOPBAR ─── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--topbar-h);
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px 0 0;
+  z-index: 100;
+}
+.topbar-left {
+  display: flex;
+  align-items: center;
+  width: var(--sidebar-w);
+  padding: 0 20px;
+  border-right: 1px solid var(--border);
+  height: 100%;
+}
+.topbar-logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.3rem;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.topbar-logo span { color: var(--accent); }
+.topbar-badge {
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: #f3f4f6;
+  border: 1px solid var(--border);
+  padding: 2px 7px;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+.topbar-user:hover { background: rgba(0,0,0,0.04); }
+.user-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 13px;
+}
+.user-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-mid);
+}
+
+/* ─── LAYOUT ─── */
+.layout {
+  display: flex;
+  margin-top: var(--topbar-h);
+  height: calc(100vh - var(--topbar-h));
+}
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px 0 24px;
+  flex-shrink: 0;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
+
+.nav-group { margin-bottom: 6px; }
+.nav-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 10px 20px 6px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 20px;
+  cursor: pointer;
+  color: var(--text-mid);
+  font-size: 13.5px;
+  font-weight: 400;
+  border-radius: 0;
+  transition: background 0.15s, color 0.15s;
+  position: relative;
+  user-select: none;
+}
+.nav-item:hover {
+  background: rgba(0,0,0,0.04);
+  color: var(--text);
+}
+.nav-item.active {
+  background: rgba(37,99,235,0.08);
+  color: var(--accent);
+  font-weight: 500;
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 4px; bottom: 4px;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 0 2px 2px 0;
+}
+.nav-item .icon {
+  width: 18px; height: 18px;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+.nav-item.active .icon { opacity: 1; }
+
+.nav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 16px;
+}
+
+/* ─── MAIN ─── */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 32px;
+  background: var(--bg);
+}
+.main::-webkit-scrollbar { width: 6px; }
+.main::-webkit-scrollbar-track { background: transparent; }
+.main::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 3px; }
+
+/* ─── PAGE HEADER ─── */
+.page-header {
+  margin-bottom: 24px;
+}
+.page-header h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.page-header p {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+.breadcrumb span { color: var(--text-mid); }
+.breadcrumb .sep { color: var(--border); }
+
+/* ─── TOOLBAR ─── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.toolbar-left, .toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f4f5f7;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  width: 220px;
+}
+.search-box input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  width: 100%;
+}
+.search-box input::placeholder { color: var(--text-dim); }
+.search-icon { color: var(--text-dim); flex-shrink: 0; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover { background: #3a7dee; }
+.btn-secondary {
+  background: #ffffff;
+  color: var(--text-mid);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { background: #f4f5f7; color: var(--text); }
+.btn-ghost {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid transparent;
+}
+.btn-ghost:hover { background: rgba(0,0,0,0.04); color: var(--text-mid); }
+
+/* ─── TABLE CARD ─── */
+.table-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.table-wrap {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+thead tr {
+  background: #f8f9fb;
+  border-bottom: 1px solid var(--border);
+}
+thead th {
+  padding: 11px 16px;
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+tbody tr {
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  transition: background 0.15s;
+}
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #f8f9fb; }
+tbody td {
+  padding: 13px 16px;
+  font-size: 13.5px;
+  color: var(--text-mid);
+  vertical-align: middle;
+}
+td.id-cell {
+  font-family: 'Syne', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+td .cell-name {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* ─── BADGES ─── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.badge-green { background: #dcfce7; color: #16a34a; }
+.badge-blue  { background: #dbeafe; color: #2563eb; }
+.badge-amber { background: #fef3c7; color: #d97706; }
+.badge-red   { background: #fee2e2; color: #dc2626; }
+.badge-gray  { background: #f3f4f6; color: var(--text-dim); }
+
+/* ─── ROW ACTIONS ─── */
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+tbody tr:hover .row-actions { opacity: 1; }
+.action-btn {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  transition: background 0.15s, color 0.15s;
+}
+.action-btn:hover { background: rgba(0,0,0,0.06); color: var(--text); }
+.action-btn.danger:hover { background: rgba(239,68,68,0.12); color: #f87171; }
+
+/* ─── PAGINATION ─── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.page-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.page-btn {
+  width: 30px; height: 30px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-mid);
+  font-size: 13px;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.page-btn:hover { background: rgba(0,0,0,0.05); }
+.page-btn.active { background: var(--accent); color: #fff; border-color: transparent; }
+.page-btn:disabled { opacity: 0.3; cursor: default; }
+
+/* ─── EMPTY STATE ─── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+}
+.empty-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: #f4f5f7;
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 16px;
+  color: var(--text-dim);
+}
+.empty-state h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-mid);
+  margin-bottom: 6px;
+}
+.empty-state p {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  max-width: 280px;
+}
+
+/* ─── STATS ROW (dashboard) ─── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+.stat-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+.stat-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+.stat-sub {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+.stat-sub .up   { color: #4ade80; }
+.stat-sub .down { color: #f87171; }
+
+/* ─── SECTION PLACEHOLDER ─── */
+.section-placeholder {
+  background: var(--card-bg);
+  border: 1px dashed rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.section-placeholder strong { display: block; margin-bottom: 6px; color: var(--text-mid); font-size: 14px; }
+
+/* ─── LOGIN ─── */
+#login-screen {
+  position: fixed; inset: 0;
+  background: #f4f5f7;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 999;
+}
+.login-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px 44px;
+  width: 380px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+}
+.login-logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.8rem;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.login-logo span { color: var(--accent); }
+.login-subtitle {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 32px;
+}
+.form-group {
+  margin-bottom: 16px;
+}
+.form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-mid);
+  margin-bottom: 6px;
+  letter-spacing: 0.02em;
+}
+.form-group input {
+  width: 100%;
+  padding: 10px 14px;
+  background: #f8f9fb;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-group input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  background: #fff;
+}
+.login-btn {
+  width: 100%;
+  padding: 11px;
+  margin-top: 8px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.login-btn:hover { background: var(--accent-2); }
+.login-error {
+  font-size: 12.5px;
+  color: var(--danger);
+  margin-top: 10px;
+  min-height: 18px;
+  text-align: center;
+}
+
+/* ─── EDIT ROW ─── */
+.edit-input {
+  width: 100%;
+  padding: 5px 9px;
+  background: #f8f9fb;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  outline: none;
+}
+.edit-input:focus { border-color: var(--accent); background: #fff; }
+.edit-select {
+  padding: 5px 9px;
+  background: #f8f9fb;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+}
+.edit-select:focus { border-color: var(--accent); background: #fff; }
+.save-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fffbeb;
+  border-top: 1px solid #fde68a;
+  font-size: 13px;
+  color: #92400e;
+}
+.save-bar svg { flex-shrink: 0; }
+
+/* ─── SCROLLBAR global ─── */
+* { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.1) transparent; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">G<span>C</span></div>
+    <div class="login-subtitle">後台管理系統 v1.0.0</div>
+    <div class="form-group">
+      <label>人員名稱</label>
+      <input type="text" id="login-name" placeholder="請輸入名稱" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>登入密碼</label>
+      <input type="password" id="login-password" placeholder="請輸入密碼" autocomplete="current-password">
+    </div>
+    <button class="login-btn" onclick="doLogin()">登入</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<header class="topbar" style="display:none;" id="main-topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">G<span>C</span></div>
+    <div class="topbar-badge">後台 v1.0.0</div>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-user" onclick="doLogout()">
+      <div class="user-avatar" id="topbar-avatar">S</div>
+      <span class="user-name" id="topbar-name">Sylvia</span>
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--text-dim);margin-left:2px"><path d="M5 8l5 5 5-5"/></svg>
+    </div>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout" id="main-layout" style="display:none;">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- 資料管理 -->
+    <div class="nav-group">
+      <div class="nav-group-label">資料管理</div>
+      <div class="nav-item active" onclick="navigate(this, 'customers')">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="7" r="3"/><path d="M3 17c0-3.314 3.134-6 7-6s7 2.686 7 6"/></svg>
+        客戶資料
+      </div>
+      <div class="nav-item" onclick="navigate(this, 'service_providers')">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="7" width="14" height="11" rx="2"/><path d="M7 7V5a3 3 0 016 0v2"/></svg>
+        服務商資料
+      </div>
+      <div class="nav-item" onclick="navigate(this, 'business_partners')">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M17 20a5 5 0 00-10 0"/><path d="M19 13a3 3 0 11-6 0"/><path d="M21 20a3 3 0 00-6 0"/></svg>
+        商務夥伴資料
+      </div>
+    </div>
+
+    <div class="nav-divider"></div>
+
+    <!-- 專案管理 -->
+    <div class="nav-group">
+      <div class="nav-group-label">專案管理</div>
+      <div class="nav-item" onclick="navigate(this, 'projects')">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/></svg>
+        專案管理
+      </div>
+      <div class="nav-item" onclick="navigate(this, 'project_matches')">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v14M3 10h14"/><circle cx="10" cy="10" r="7"/></svg>
+        合作紀錄
+      </div>
+    </div>
+
+    <div class="nav-divider"></div>
+
+    <!-- 財務管理 -->
+    <div class="nav-group">
+      <div class="nav-group-label">財務管理</div>
+      <div class="nav-item" onclick="navigate(this, 'financial_records')">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="16" height="12" rx="2"/><path d="M2 9h16"/><circle cx="7" cy="13" r="1" fill="currentColor" stroke="none"/></svg>
+        帳務紀錄
+      </div>
+      <div class="nav-item" onclick="navigate(this, 'commission_rules')">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 10h10M5 6h6M5 14h8"/><rect x="1" y="2" width="18" height="16" rx="2"/></svg>
+        分潤規則
+      </div>
+      <div class="nav-item" onclick="navigate(this, 'commission_records')">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2v4m0 8v4M4.93 4.93l2.83 2.83m4.48 4.48l2.83 2.83M2 10h4m8 0h4M4.93 15.07l2.83-2.83M12.24 7.76l2.83-2.83"/></svg>
+        分潤紀錄
+      </div>
+    </div>
+
+    <div class="nav-divider"></div>
+
+    <!-- 平台管理 -->
+    <div class="nav-group" id="platform-nav-group">
+      <div class="nav-group-label">平台管理</div>
+      <div class="nav-item" onclick="navigate(this, 'admin_users')">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="8" r="3"/><path d="M3.5 18a7 7 0 0113 0"/><path d="M15 5l1.5 1.5L19 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        帳號管理
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main" id="main-content">
+    <!-- 內容由 JS 動態切換 -->
+  </main>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ─── Supabase ────────────────────────────────────────────
+var SUPABASE_URL = 'https://rtzfeoahpsutyikutsys.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0emZlb2FocHN1dHlpa3V0c3lzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODU2NTAsImV4cCI6MjA5NjU2MTY1MH0.1ouoDmHrmetOc_qsvPrXiKsKx8eDEebbsXr2Fk2Sy-o';
+var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── 工具函式 ────────────────────────────────────────────
+function fmtTime(d) {
+  var y  = d.getFullYear();
+  var mo = String(d.getMonth()+1).padStart(2,'0');
+  var dy = String(d.getDate()).padStart(2,'0');
+  var h  = String(d.getHours()).padStart(2,'0');
+  var mi = String(d.getMinutes()).padStart(2,'0');
+  var s  = String(d.getSeconds()).padStart(2,'0');
+  return y+'-'+mo+'-'+dy+' '+h+':'+mi+':'+s;
+}
+
+// ─── 資料庫 ──────────────────────────────────────────────
+var now = new Date();
+
+var DB = {
+  admin_users: [
+    {
+      id: '001',
+      full_name: 'Sylvia',
+      password: '00000000',
+      role: '0',
+      active: '1',
+      created_time: fmtTime(now),
+      updated_time: fmtTime(now),
+      updated_by: 'system'
+    }
+  ],
+  customers: []
+};
+
+// 登入狀態
+var currentUser = null;
+
+// ─── 登入 ────────────────────────────────────────────────
+function doLogin() {
+  var name = document.getElementById('login-name').value.trim();
+  var pwd  = document.getElementById('login-password').value;
+  var err  = document.getElementById('login-error');
+  var user = null;
+  for (var i = 0; i < DB.admin_users.length; i++) {
+    var u = DB.admin_users[i];
+    if (u.full_name === name && u.password === pwd && u.active === '1') { user = u; break; }
+  }
+  if (!user) { err.textContent = '名稱或密碼錯誤，請重新輸入'; return; }
+
+  currentUser = user;
+  document.getElementById('topbar-avatar').textContent = name.charAt(0).toUpperCase();
+  document.getElementById('topbar-name').textContent = name;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-topbar').style.display = 'flex';
+  document.getElementById('main-layout').style.display = 'flex';
+
+  // 依身份組顯示 / 隱藏平台管理
+  document.getElementById('platform-nav-group').style.display = (user.role === '0') ? '' : 'none';
+
+  // 登入後預設選中客戶資料
+  var firstNav = document.querySelector('.nav-item');
+  if (firstNav) { document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); }); firstNav.classList.add('active'); }
+  loadCustomers();
+}
+
+function doLogout() {
+  if (!confirm('確定要登出嗎？')) return;
+  currentUser = null;
+  document.getElementById('login-name').value = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('main-topbar').style.display = 'none';
+  document.getElementById('main-layout').style.display = 'none';
+}
+
+// Enter 鍵登入
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') doLogin();
+});
+
+// ─── 頁面設定 ───────────────────────────────────────────
+const PAGES = {
+  customers: {
+    title: '客戶資料',
+    group: '資料管理',
+    table: 'customers',
+    comment: '客戶資料'
+  },
+  service_providers: {
+    title: '服務商資料',
+    group: '資料管理',
+    table: 'service_providers',
+    comment: '服務商資料'
+  },
+  business_partners: {
+    title: '商務夥伴資料',
+    group: '資料管理',
+    table: 'business_partners',
+    comment: '商務夥伴資料'
+  },
+  projects: {
+    title: '專案管理',
+    group: '專案管理',
+    table: 'projects',
+    comment: '專案管理'
+  },
+  project_matches: {
+    title: '合作紀錄',
+    group: '專案管理',
+    table: 'project_matches',
+    comment: '合作紀錄'
+  },
+  financial_records: {
+    title: '帳務紀錄',
+    group: '財務管理',
+    table: 'financial_records',
+    comment: '帳務紀錄'
+  },
+  commission_rules: {
+    title: '分潤規則',
+    group: '財務管理',
+    table: 'commission_rules',
+    comment: '分潤規則'
+  },
+  commission_records: {
+    title: '分潤紀錄',
+    group: '財務管理',
+    table: 'commission_records',
+    comment: '分潤紀錄'
+  },
+  admin_users: {
+    title: '帳號管理',
+    group: '平台管理',
+    table: 'admin_users',
+    comment: '後台帳號管理'
+  }
+};
+
+var currentPage = 'customers';
+var editingRow = null;
+var PAGE_SIZE = 25;
+var customerPage = 1;
+var adminPage = 1;
+
+// ─── 導覽 ───────────────────────────────────────────────
+function navigate(el, pageKey) {
+  document.querySelectorAll('.nav-item').forEach(function(i){ i.classList.remove('active'); });
+  el.classList.add('active');
+  currentPage = pageKey;
+  editingRow = null;
+  renderPage(pageKey);
+}
+
+// ─── Supabase customers 讀寫 ────────────────────────────
+async function loadCustomers() {
+  // 先顯示 loading
+  var main = document.getElementById('main-content');
+  if (main) main.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-dim);font-size:13px;">載入中…</div>';
+
+  var result = await sb.from('customers').select('*').order('created_time', { ascending: false });
+  if (result.error) {
+    if (main) main.innerHTML = '<div style="padding:60px;text-align:center;color:#dc2626;font-size:13px;">讀取失敗：' + result.error.message + '</div>';
+    return;
+  }
+  DB.customers = result.data || [];
+  customerPage = 1;
+  renderCustomers();
+}
+
+// ─── 渲染頁面 dispatch ───────────────────────────────────
+function renderPage(pageKey) {
+  if (pageKey === 'admin_users') { renderAdminUsers(); return; }
+  if (pageKey === 'customers')   { loadCustomers();    return; }
+
+  var page = PAGES[pageKey];
+  var main = document.getElementById('main-content');
+  main.innerHTML =
+    '<div class="page-header">' +
+      '<div class="breadcrumb"><span>' + page.group + '</span><span class="sep">›</span><span>' + page.title + '</span></div>' +
+      '<h1>' + page.title + '</h1>' +
+      '<p>資料表：<code style="font-size:12px;color:var(--text-dim);background:#f3f4f6;padding:2px 7px;border-radius:4px;">' + page.table + '</code>　' + page.comment + '</p>' +
+    '</div>' +
+    '<div class="toolbar"><div class="toolbar-left">' +
+      '<div class="search-box"><svg class="search-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M15 15l3 3" stroke-linecap="round"/></svg><input type="text" placeholder="搜尋…"></div>' +
+    '</div><div class="toolbar-right">' +
+      '<button class="btn btn-primary"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg> 新增資料</button>' +
+    '</div></div>' +
+    '<div class="table-card"><div class="table-wrap"><table>' +
+      '<thead><tr><th>ID</th><th>欄位待定</th><th>狀態</th><th>建立時間</th><th style="width:80px;text-align:right;">操作</th></tr></thead>' +
+      '<tbody>' + renderEmptyState(5) + '</tbody>' +
+    '</table></div>' +
+    '<div class="pagination"><span>共 0 筆資料</span><div class="page-controls">' +
+      '<button class="page-btn" disabled>‹</button><button class="page-btn active">1</button><button class="page-btn" disabled>›</button>' +
+    '</div></div></div>';
+}
+
+// ─── 客戶資料 ────────────────────────────────────────────
+var CUSTOMER_FIELDS = [
+  {key:'company_name',     label:'公司抬頭',   required:true},
+  {key:'tax_id',           label:'統一編號',   required:true},
+  {key:'owner_name',       label:'公司負責人', required:true},
+  {key:'contact_name',     label:'聯絡人',     required:true},
+  {key:'contact_phone',    label:'聯絡電話',   required:false},
+  {key:'email',            label:'電子信箱',   required:true},
+  {key:'line_id',          label:'LINE ID',    required:false},
+  {key:'website_url',      label:'官網網址',   required:true},
+  {key:'bank_code',        label:'銀行代號',   required:true},
+  {key:'bank_account_no',  label:'銀行帳號',   required:true},
+  {key:'bank_account_name',label:'銀行戶名',   required:true},
+  {key:'bank_branch',      label:'分行別',     required:true},
+  {key:'bank_swift_code',  label:'SWIFT Code', required:false},
+  {key:'notes',            label:'備註',       required:false}
+];
+
+// 所有需在表格顯示的欄位順序（含系統欄位）
+var CUSTOMER_TABLE_COLS = [
+  {key:'id',               label:'客戶 ID',    w:'70px',  fixed:true},
+  {key:'company_name',     label:'公司抬頭',   w:'140px'},
+  {key:'tax_id',           label:'統一編號',   w:'110px'},
+  {key:'owner_name',       label:'公司負責人', w:'100px'},
+  {key:'contact_name',     label:'聯絡人',     w:'100px'},
+  {key:'contact_phone',    label:'聯絡電話',   w:'120px'},
+  {key:'email',            label:'電子信箱',   w:'170px'},
+  {key:'line_id',          label:'LINE ID',    w:'110px'},
+  {key:'website_url',      label:'官網網址',   w:'160px'},
+  {key:'bank_code',        label:'銀行代號',   w:'90px'},
+  {key:'bank_account_no',  label:'銀行帳號',   w:'140px'},
+  {key:'bank_account_name',label:'銀行戶名',   w:'110px'},
+  {key:'bank_branch',      label:'分行別',     w:'100px'},
+  {key:'bank_swift_code',  label:'SWIFT Code', w:'120px'},
+  {key:'notes',            label:'備註',       w:'160px'},
+  {key:'created_time',     label:'建立時間',   w:'150px'},
+  {key:'updated_time',     label:'最後更新',   w:'150px'},
+  {key:'updated_by',       label:'最後修改人', w:'100px'}
+];
+
+function renderCustomers() {
+  var main = document.getElementById('main-content');
+  // 最新在前（倒序複製，不改原陣列）
+  var allRows = DB.customers.slice().reverse();
+  var total = allRows.length;
+  var totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (customerPage > totalPages) customerPage = totalPages;
+  var start = (customerPage - 1) * PAGE_SIZE;
+  var rows = allRows.slice(start, start + PAGE_SIZE);
+  var isAdmin = currentUser && currentUser.role === '0';
+  var totalCols = CUSTOMER_TABLE_COLS.length + (isAdmin ? 1 : 0);
+
+  // thead
+  var theadCols = '';
+  for (var h = 0; h < CUSTOMER_TABLE_COLS.length; h++) {
+    var col = CUSTOMER_TABLE_COLS[h];
+    theadCols += '<th style="min-width:' + col.w + ';white-space:nowrap;">' + col.label + '</th>';
+  }
+  if (isAdmin) theadCols += '<th style="width:70px;text-align:right;position:sticky;right:0;background:#f8f9fb;">操作</th>';
+
+  // tbody
+  var tbody = '';
+  if (rows.length === 0) {
+    tbody = renderEmptyState(totalCols);
+  } else {
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      tbody += '<tr>';
+      for (var c = 0; c < CUSTOMER_TABLE_COLS.length; c++) {
+        var k = CUSTOMER_TABLE_COLS[c].key;
+        var val = r[k] || '';
+        if (k === 'id') {
+          tbody += '<td class="id-cell">' + val + '</td>';
+        } else if (k === 'company_name') {
+          tbody += '<td><span class="cell-name">' + val + '</span></td>';
+        } else if (k === 'website_url' && val) {
+          tbody += '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + val + '">' + val + '</td>';
+        } else {
+          tbody += '<td style="white-space:nowrap;">' + val + '</td>';
+        }
+      }
+      if (isAdmin) {
+        tbody += '<td style="text-align:right;position:sticky;right:0;background:#fff;">' +
+          '<div class="row-actions">' +
+            '<button class="action-btn" onclick="startEditCustomer(\'' + r.id + '\')" title="編輯">' +
+              '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.5 3.5a2.121 2.121 0 013 3L7 17l-4 1 1-4L14.5 3.5z"/></svg>' +
+            '</button>' +
+          '</div></td>';
+      }
+      tbody += '</tr>';
+    }
+  }
+
+  var addBtn = isAdmin
+    ? '<button class="btn btn-primary" onclick="addCustomer()"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg> 新增客戶</button>'
+    : '';
+
+  main.innerHTML =
+    '<div class="page-header">' +
+      '<div class="breadcrumb"><span>資料管理</span><span class="sep">›</span><span>客戶資料</span></div>' +
+      '<h1>客戶資料</h1>' +
+      '<p>資料表：<code style="font-size:12px;color:var(--text-dim);background:#f3f4f6;padding:2px 7px;border-radius:4px;">customers</code>　客戶資料</p>' +
+    '</div>' +
+    '<div class="toolbar"><div class="toolbar-left">' +
+      '<div class="search-box"><svg class="search-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M15 15l3 3" stroke-linecap="round"/></svg><input type="text" placeholder="搜尋公司名稱…"></div>' +
+    '</div><div class="toolbar-right">' + addBtn + '</div></div>' +
+    '<div class="table-card"><div class="table-wrap" style="overflow-x:auto;"><table style="min-width:max-content;width:100%;">' +
+      '<thead><tr>' + theadCols + '</tr></thead>' +
+      '<tbody>' + tbody + '</tbody>' +
+    '</table></div>' +
+    '<div class="pagination"><span>共 ' + total + ' 筆資料，第 ' + customerPage + ' / ' + totalPages + ' 頁</span>' +
+    '<div class="page-controls">' + buildPageBtns(customerPage, totalPages, 'goCustomerPage') + '</div></div></div>';
+}
+
+function goCustomerPage(p) { customerPage = p; renderCustomers(); }
+
+function addCustomer() {
+  openCustomerModal(null, true);
+}
+
+function startEditCustomer(id) {
+  openCustomerModal(id, false);
+}
+
+function openCustomerModal(id, isNew) {
+  var row = {};
+  if (!isNew) {
+    for (var i = 0; i < DB.customers.length; i++) {
+      if (String(DB.customers[i].id) === String(id)) { row = DB.customers[i]; break; }
+    }
+  }
+
+  var fields = CUSTOMER_FIELDS.map(function(f) {
+    var reqMark = f.required ? '<span style="color:#dc2626;margin-left:2px;">*</span>' : '';
+    var reqAttr = f.required ? ' data-required="1"' : '';
+    return '<div class="form-group">' +
+      '<label>' + f.label + reqMark + '<span style="color:var(--text-dim);font-weight:400;margin-left:4px;font-size:11px;">' + f.key + '</span></label>' +
+      '<input class="edit-input" id="cf-' + f.key + '" value="' + (row[f.key]||'') + '" placeholder="' + (f.required ? f.label + '（必填）' : f.label) + '"' + reqAttr + '>' +
+      '</div>';
+  }).join('');
+
+  var overlay = document.createElement('div');
+  overlay.id = 'customer-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:200;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML =
+    '<div style="background:#fff;border-radius:14px;width:560px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.14);">' +
+      '<div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">' +
+        '<div>' +
+          '<div style="font-family:Syne,sans-serif;font-weight:700;font-size:1rem;">' + (isNew ? '新增客戶' : '編輯客戶') + '</div>' +
+          '<div style="font-size:12px;color:var(--text-dim);margin-top:2px;">' + (isNew ? 'ID：儲存後自動生成' : 'ID：' + row.id) + '</div>' +
+        '</div>' +
+        '<button onclick="closeCustomerModal(false)" style="background:transparent;border:none;cursor:pointer;color:var(--text-dim);padding:4px;">' +
+          '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5l10 10M15 5L5 15" stroke-linecap="round"/></svg>' +
+        '</button>' +
+      '</div>' +
+      '<div style="padding:20px 24px;overflow-y:auto;flex:1;display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">' +
+        fields +
+      '</div>' +
+      '<div style="padding:0 24px 4px;"><div id="customer-form-err" style="display:none;font-size:12.5px;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:7px;padding:8px 12px;"></div></div>' +
+      '<div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;">' +
+        '<button class="btn btn-secondary" onclick="closeCustomerModal(' + (isNew ? 'true' : 'false') + ')">取消</button>' +
+        '<button class="btn btn-primary" onclick="saveCustomer(\'' + id + '\')">保存變更</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e){ if (e.target === overlay) closeCustomerModal(isNew); });
+}
+
+async function saveCustomer(id) {
+  // 驗證必填欄位
+  var missing = [];
+  for (var j = 0; j < CUSTOMER_FIELDS.length; j++) {
+    var f = CUSTOMER_FIELDS[j];
+    if (!f.required) continue;
+    var el = document.getElementById('cf-' + f.key);
+    if (el) {
+      el.style.borderColor = '';
+      if (!el.value.trim()) { el.style.borderColor = '#dc2626'; missing.push(f.label); }
+    }
+  }
+  if (missing.length > 0) {
+    var errEl = document.getElementById('customer-form-err');
+    if (errEl) { errEl.textContent = '請填寫必填欄位：' + missing.join('、'); errEl.style.display = 'block'; }
+    return;
+  }
+
+  // 收集欄位值
+  var payload = {};
+  CUSTOMER_FIELDS.forEach(function(f) {
+    var el = document.getElementById('cf-' + f.key);
+    if (el) payload[f.key] = el.value.trim() || null;
+  });
+  payload.updated_time = new Date().toISOString();
+  payload.updated_by = currentUser ? currentUser.full_name : 'admin';
+
+  // 停用按鈕防止重複送出
+  var saveBtn = document.querySelector('#customer-modal .btn-primary');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '儲存中…'; }
+
+  var result;
+  if (!id) {
+    // 新增
+    payload.created_time = new Date().toISOString();
+    result = await sb.from('customers').insert([payload]);
+  } else {
+    // 更新
+    result = await sb.from('customers').update(payload).eq('id', id);
+  }
+
+  if (result.error) {
+    var errEl = document.getElementById('customer-form-err');
+    if (errEl) { errEl.textContent = '儲存失敗：' + result.error.message; errEl.style.display = 'block'; }
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存變更'; }
+    return;
+  }
+
+  closeCustomerModal(false);
+  await loadCustomers();
+}
+
+function closeCustomerModal(removeRow) {
+  var modal = document.getElementById('customer-modal');
+  if (modal) modal.remove();
+}
+
+// ─── 帳號管理 ────────────────────────────────────────────
+function roleBadge(r)   { return r==='0' ? '<span class="badge badge-blue">管理員</span>' : '<span class="badge badge-gray">檢視者</span>'; }
+function activeBadge(a) { return a==='1' ? '<span class="badge badge-green">啟用</span>'  : '<span class="badge badge-red">停用</span>'; }
+
+function renderAdminUsers() {
+  var main = document.getElementById('main-content');
+  var allRows = DB.admin_users.slice().reverse();
+  var total = allRows.length;
+  var totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (adminPage > totalPages) adminPage = totalPages;
+  var start = (adminPage - 1) * PAGE_SIZE;
+  var rows = allRows.slice(start, start + PAGE_SIZE);
+  var tbody = '';
+
+  for (var i = 0; i < rows.length; i++) {
+    var u = rows[i];
+    var isEditing = editingRow && editingRow.id === u.id;
+    var d = isEditing ? editingRow.draft : u;
+
+    if (isEditing) {
+      tbody +=
+        '<tr id="row-' + u.id + '" style="background:#f0f7ff;">' +
+        '<td class="id-cell">' + u.id + '</td>' +
+        '<td><input class="edit-input" id="e-name" value="' + d.full_name + '" style="max-width:140px;"></td>' +
+        '<td><input class="edit-input" id="e-pwd" type="text" value="' + d.password + '" style="max-width:130px;"></td>' +
+        '<td><select class="edit-select" id="e-role">' +
+          '<option value="0"' + (d.role==='0'?' selected':'') + '>0 — 管理員</option>' +
+          '<option value="1"' + (d.role==='1'?' selected':'') + '>1 — 檢視者</option>' +
+        '</select></td>' +
+        '<td><select class="edit-select" id="e-active">' +
+          '<option value="1"' + (d.active==='1'?' selected':'') + '>啟用</option>' +
+          '<option value="0"' + (d.active==='0'?' selected':'') + '>停用</option>' +
+        '</select></td>' +
+        '<td>' + u.created_time + '</td><td>' + u.updated_time + '</td><td>' + u.updated_by + '</td>' +
+        '<td style="text-align:right;"><div class="row-actions" style="opacity:1;">' +
+          '<button class="action-btn" onclick="cancelEdit()" title="取消"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5l10 10M15 5L5 15" stroke-linecap="round"/></svg></button>' +
+        '</div></td></tr>';
+    } else {
+      tbody +=
+        '<tr id="row-' + u.id + '">' +
+        '<td class="id-cell">' + u.id + '</td>' +
+        '<td><span class="cell-name">' + u.full_name + '</span></td>' +
+        '<td style="letter-spacing:0.1em;">••••••••</td>' +
+        '<td>' + roleBadge(u.role) + '</td>' +
+        '<td>' + activeBadge(u.active) + '</td>' +
+        '<td>' + u.created_time + '</td><td>' + u.updated_time + '</td><td>' + u.updated_by + '</td>' +
+        '<td style="text-align:right;"><div class="row-actions">' +
+          '<button class="action-btn" onclick="startEdit(\'' + u.id + '\')" title="編輯"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.5 3.5a2.121 2.121 0 013 3L7 17l-4 1 1-4L14.5 3.5z"/></svg></button>' +
+        '</div></td></tr>';
+    }
+  }
+
+  var saveBar = editingRow
+    ? '<div class="save-bar">' +
+        '<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l2.5 2.5"/></svg>' +
+        ' 你有未儲存的變更' +
+        '<button class="btn btn-primary" style="margin-left:auto;" onclick="saveEdit()">' +
+          '<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 10l4 4 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg> 保存變更</button>' +
+        '<button class="btn btn-secondary" onclick="cancelEdit()">取消</button>' +
+      '</div>'
+    : '';
+
+  main.innerHTML =
+    '<div class="page-header">' +
+      '<div class="breadcrumb"><span>平台管理</span><span class="sep">›</span><span>帳號管理</span></div>' +
+      '<h1>帳號管理</h1>' +
+      '<p>資料表：<code style="font-size:12px;color:var(--text-dim);background:#f3f4f6;padding:2px 7px;border-radius:4px;">admin_users</code>　後台帳號管理</p>' +
+    '</div>' +
+    '<div class="toolbar"><div class="toolbar-left">' +
+      '<div class="search-box"><svg class="search-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M15 15l3 3" stroke-linecap="round"/></svg><input type="text" placeholder="搜尋名稱…"></div>' +
+    '</div><div class="toolbar-right">' +
+      '<button class="btn btn-primary" onclick="addAdminUser()"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg> 新增帳號</button>' +
+    '</div></div>' +
+    '<div class="table-card"><div class="table-wrap"><table>' +
+      '<thead><tr>' +
+        '<th style="width:60px;">ID</th><th>人員名稱</th><th>密碼</th><th>身份組</th><th>啟用狀態</th><th>建立時間</th><th>最後更新</th><th>操作者</th>' +
+        '<th style="width:70px;text-align:right;">操作</th>' +
+      '</tr></thead>' +
+      '<tbody>' + tbody + '</tbody>' +
+    '</table></div>' +
+    saveBar +
+    '<div class="pagination"><span>共 ' + total + ' 筆資料，第 ' + adminPage + ' / ' + totalPages + ' 頁</span>' +
+    '<div class="page-controls">' + buildPageBtns(adminPage, totalPages, 'goAdminPage') + '</div></div></div>';
+}
+
+function goAdminPage(p) { adminPage = p; renderAdminUsers(); }
+
+function startEdit(id) {
+  var user = null;
+  for (var i = 0; i < DB.admin_users.length; i++) { if (DB.admin_users[i].id === id) { user = DB.admin_users[i]; break; } }
+  if (!user) return;
+  var draft = {};
+  for (var k in user) { draft[k] = user[k]; }
+  editingRow = { id: id, draft: draft };
+  renderAdminUsers();
+}
+
+function cancelEdit() {
+  editingRow = null;
+  renderAdminUsers();
+}
+
+function saveEdit() {
+  var user = null;
+  for (var i = 0; i < DB.admin_users.length; i++) { if (DB.admin_users[i].id === editingRow.id) { user = DB.admin_users[i]; break; } }
+  if (!user) return;
+  user.full_name    = document.getElementById('e-name').value.trim() || user.full_name;
+  user.password     = document.getElementById('e-pwd').value  || user.password;
+  user.role         = document.getElementById('e-role').value;
+  user.active       = document.getElementById('e-active').value;
+  user.updated_time = fmtTime(new Date());
+  user.updated_by   = currentUser ? currentUser.full_name : 'admin';
+  editingRow = null;
+  if (currentUser && currentUser.id === user.id) {
+    currentUser = user;
+    document.getElementById('topbar-avatar').textContent = user.full_name.charAt(0).toUpperCase();
+    document.getElementById('topbar-name').textContent = user.full_name;
+  }
+  renderAdminUsers();
+}
+
+function addAdminUser() {
+  adminPage = 1;
+  var nextId = String(DB.admin_users.length + 1).padStart(3, '0');
+  var t = fmtTime(new Date());
+  DB.admin_users.push({ id: nextId, full_name: '新帳號', password: '00000000', role: '1', active: '1', created_time: t, updated_time: t, updated_by: currentUser ? currentUser.full_name : 'admin' });
+  startEdit(nextId);
+}
+
+// ─── 分頁按鈕 ────────────────────────────────────────────
+function buildPageBtns(cur, total, fn) {
+  if (total <= 1) return '<button class="page-btn active">1</button>';
+  var html = '';
+  html += '<button class="page-btn"' + (cur===1?' disabled':'') + ' onclick="' + fn + '(' + (cur-1) + ')">‹</button>';
+  // 顯示最多 7 個頁碼按鈕
+  var start = Math.max(1, cur - 3);
+  var end   = Math.min(total, start + 6);
+  start = Math.max(1, end - 6);
+  if (start > 1) html += '<button class="page-btn" onclick="' + fn + '(1)">1</button>' + (start > 2 ? '<span style="padding:0 4px;color:var(--text-dim);">…</span>' : '');
+  for (var p = start; p <= end; p++) {
+    html += '<button class="page-btn' + (p===cur?' active':'') + '" onclick="' + fn + '(' + p + ')">' + p + '</button>';
+  }
+  if (end < total) html += (end < total-1 ? '<span style="padding:0 4px;color:var(--text-dim);">…</span>' : '') + '<button class="page-btn" onclick="' + fn + '(' + total + ')">' + total + '</button>';
+  html += '<button class="page-btn"' + (cur===total?' disabled':'') + ' onclick="' + fn + '(' + (cur+1) + ')">›</button>';
+  return html;
+}
+
+function renderEmptyState(cols) {
+  cols = cols || 5;
+  return '<tr><td colspan="' + cols + '">' +
+    '<div class="empty-state">' +
+      '<div class="empty-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12h6M12 9v6"/></svg></div>' +
+      '<h3>尚無資料</h3><p>此資料表的欄位定義尚未設定，請提供欄位結構後繼續建置。</p>' +
+    '</div></td></tr>';
+}
+</script>
+</body>
+</html>
