@@ -737,18 +737,7 @@ function fmtTime(d) {
 var now = new Date();
 
 var DB = {
-  admin_users: [
-    {
-      id: '001',
-      full_name: 'admin',
-      password: '00000000',
-      role: '0',
-      active: '1',
-      created_time: fmtTime(now),
-      updated_time: fmtTime(now),
-      updated_by: 'system'
-    }
-  ],
+  admin_users: [],   // 從 Supabase admin_users 資料表動態載入
   customers: []
 };
 
@@ -763,7 +752,8 @@ async function doLogin() {
   err.textContent = '';
   var result = await sb.auth.signInWithPassword({ email: email, password: pwd });
   if (result.error) { err.textContent = '帳號或密碼錯誤，請重新輸入'; return; }
-  currentUser = DB.admin_users[0];
+  var uid = result.data.user.id;
+  currentUser = await fetchAdminByUid(uid, email);
   enterApp(currentUser);
 }
 
@@ -891,7 +881,7 @@ async function loadCustomers() {
 
 // ─── 渲染頁面 dispatch ───────────────────────────────────
 function renderPage(pageKey) {
-  if (pageKey === 'admin_users') { renderAdminUsers(); return; }
+  if (pageKey === 'admin_users') { loadAdminUsers(); return; }
   if (pageKey === 'customers')   { loadCustomers();    return; }
 
   var page = PAGES[pageKey];
@@ -1165,7 +1155,8 @@ function renderAdminUsers() {
         '<tr id="row-' + u.id + '" style="background:#f0f7ff;">' +
         '<td class="id-cell">' + u.id + '</td>' +
         '<td><input class="edit-input" id="e-name" value="' + d.full_name + '" style="max-width:140px;"></td>' +
-        '<td><input class="edit-input" id="e-pwd" type="text" value="' + d.password + '" style="max-width:130px;"></td>' +
+        '<td><input class="edit-input" id="e-email" value="' + (d.email||'') + '" style="max-width:200px;" placeholder="對應的 Supabase Email"><br><input class="edit-input" id="e-uid" value="' + (d.auth_uid||'') + '" style="max-width:200px;margin-top:4px;font-size:11px;" placeholder="Auth UID（可選）"></td>' +
+        '<td style="color:var(--text-dim);font-size:12px;">—</td>' +
         '<td><select class="edit-select" id="e-role">' +
           '<option value="0"' + (d.role==='0'?' selected':'') + '>0 — 管理員</option>' +
           '<option value="1"' + (d.role==='1'?' selected':'') + '>1 — 檢視者</option>' +
@@ -1183,7 +1174,8 @@ function renderAdminUsers() {
         '<tr id="row-' + u.id + '">' +
         '<td class="id-cell">' + u.id + '</td>' +
         '<td><span class="cell-name">' + u.full_name + '</span></td>' +
-        '<td style="letter-spacing:0.1em;">••••••••</td>' +
+        '<td style="color:var(--text-dim);font-size:12.5px;">' + (u.email||'<span style="color:#d1d5db;">未設定</span>') + (u.auth_uid ? '<br><span style="font-size:11px;color:#9ca3af;">'+u.auth_uid.substring(0,8)+'…</span>' : '') + '</td>' +
+        '<td style="color:var(--text-dim);font-size:12px;">—</td>' +
         '<td>' + roleBadge(u.role) + '</td>' +
         '<td>' + activeBadge(u.active) + '</td>' +
         '<td>' + u.created_time + '</td><td>' + u.updated_time + '</td><td>' + u.updated_by + '</td>' +
@@ -1216,7 +1208,7 @@ function renderAdminUsers() {
     '</div></div>' +
     '<div class="table-card"><div class="table-wrap"><table>' +
       '<thead><tr>' +
-        '<th style="width:60px;">ID</th><th>人員名稱</th><th>密碼</th><th>身份組</th><th>啟用狀態</th><th>建立時間</th><th>最後更新</th><th>操作者</th>' +
+        '<th style="width:60px;">ID</th><th>人員名稱</th><th>Supabase 帳號 / Auth UID</th><th>密碼</th><th>身份組</th><th>啟用狀態</th><th>建立時間</th><th>最後更新</th><th>操作者</th>' +
         '<th style="width:70px;text-align:right;">操作</th>' +
       '</tr></thead>' +
       '<tbody>' + tbody + '</tbody>' +
@@ -1243,31 +1235,58 @@ function cancelEdit() {
   renderAdminUsers();
 }
 
-function saveEdit() {
+async function saveEdit() {
   var user = null;
-  for (var i = 0; i < DB.admin_users.length; i++) { if (DB.admin_users[i].id === editingRow.id) { user = DB.admin_users[i]; break; } }
+  for (var i = 0; i < DB.admin_users.length; i++) { if (String(DB.admin_users[i].id) === String(editingRow.id)) { user = DB.admin_users[i]; break; } }
   if (!user) return;
-  user.full_name    = document.getElementById('e-name').value.trim() || user.full_name;
-  user.password     = document.getElementById('e-pwd').value  || user.password;
-  user.role         = document.getElementById('e-role').value;
-  user.active       = document.getElementById('e-active').value;
-  user.updated_time = fmtTime(new Date());
-  user.updated_by   = currentUser ? currentUser.full_name : 'admin';
-  editingRow = null;
-  if (currentUser && currentUser.id === user.id) {
-    currentUser = user;
-    document.getElementById('topbar-avatar').textContent = user.full_name.charAt(0).toUpperCase();
-    document.getElementById('topbar-name').textContent = user.full_name;
+
+  var payload = {
+    full_name:    document.getElementById('e-name').value.trim()  || user.full_name,
+    email:        document.getElementById('e-email').value.trim() || user.email,
+    role:         document.getElementById('e-role').value,
+    active:       document.getElementById('e-active').value,
+    updated_time: new Date().toISOString(),
+    updated_by:   currentUser ? currentUser.full_name : 'admin'
+  };
+
+  // auth_uid 欄位（可選填入，讓新帳號與 Supabase auth 建立連結）
+  var uidInput = document.getElementById('e-uid');
+  if (uidInput && uidInput.value.trim()) payload.auth_uid = uidInput.value.trim();
+
+  var saveBtn = document.querySelector('.save-bar .btn-primary');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '儲存中…'; }
+
+  var isNew = user._isNew;
+  var result;
+  if (isNew) {
+    payload.created_time = new Date().toISOString();
+    result = await sb.from('admin_users').insert([payload]);
+  } else {
+    result = await sb.from('admin_users').update(payload).eq('id', user.id);
   }
-  renderAdminUsers();
+
+  if (result.error) {
+    alert('儲存失敗：' + result.error.message);
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存變更'; }
+    return;
+  }
+
+  editingRow = null;
+  await loadAdminUsers();
+
+  if (currentUser && String(currentUser.id) === String(user.id)) {
+    currentUser.full_name = payload.full_name;
+    document.getElementById('topbar-avatar').textContent = payload.full_name.charAt(0).toUpperCase();
+    document.getElementById('topbar-name').textContent = payload.full_name;
+  }
 }
 
 function addAdminUser() {
   adminPage = 1;
-  var nextId = String(DB.admin_users.length + 1).padStart(3, '0');
   var t = fmtTime(new Date());
-  DB.admin_users.push({ id: nextId, full_name: '新帳號', password: '00000000', role: '1', active: '1', created_time: t, updated_time: t, updated_by: currentUser ? currentUser.full_name : 'admin' });
-  startEdit(nextId);
+  // 暫存到 DB（_isNew 標記）
+  DB.admin_users.push({ id: '_new_' + Date.now(), _isNew: true, full_name: '新帳號', email: '', auth_uid: '', role: '1', active: '1', created_time: t, updated_time: t, updated_by: currentUser ? currentUser.full_name : 'admin' });
+  startEdit(DB.admin_users[DB.admin_users.length - 1].id);
 }
 
 // ─── 分頁按鈕 ────────────────────────────────────────────
@@ -1297,11 +1316,27 @@ function renderEmptyState(cols) {
     '</div></td></tr>';
 }
 
+// ─── 從 Supabase 查詢對應帳號 ────────────────────────────
+async function fetchAdminByUid(uid, email) {
+  var res = await sb.from('admin_users').select('*').eq('auth_uid', uid).maybeSingle();
+  if (res.data) return res.data;
+  // 資料表裡找不到時，以 email 前綴作為名稱（未設定人員記錄）
+  return { id: null, full_name: (email || 'user').split('@')[0], email: email, auth_uid: uid, role: '1', active: '1' };
+}
+
+// ─── 載入所有後台帳號（管理員用）────────────────────────
+async function loadAdminUsers() {
+  var res = await sb.from('admin_users').select('*').order('id', { ascending: true });
+  DB.admin_users = res.data || [];
+  renderAdminUsers();
+}
+
 // ─── 自動恢復登入狀態 ────────────────────────────────────
 (async function() {
   var res = await sb.auth.getSession();
   if (res.data && res.data.session) {
-    currentUser = DB.admin_users[0];
+    var u = res.data.session.user;
+    currentUser = await fetchAdminByUid(u.id, u.email);
     enterApp(currentUser);
   }
 })();
