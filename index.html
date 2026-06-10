@@ -611,8 +611,8 @@ tbody tr:hover .row-actions { opacity: 1; }
     <div class="login-logo">G<span>C</span></div>
     <div class="login-subtitle">後台管理系統 v1.0.0</div>
     <div class="form-group">
-      <label>人員名稱</label>
-      <input type="text" id="login-name" placeholder="請輸入名稱" autocomplete="username">
+      <label>電子信箱</label>
+      <input type="email" id="login-email" placeholder="請輸入 Email" autocomplete="email">
     </div>
     <div class="form-group">
       <label>登入密碼</label>
@@ -756,20 +756,20 @@ var DB = {
 var currentUser = null;
 
 // ─── 登入 ────────────────────────────────────────────────
-function doLogin() {
-  var name = document.getElementById('login-name').value.trim();
-  var pwd  = document.getElementById('login-password').value;
-  var err  = document.getElementById('login-error');
-  var user = null;
-  for (var i = 0; i < DB.admin_users.length; i++) {
-    var u = DB.admin_users[i];
-    if (u.full_name === name && u.password === pwd && u.active === '1') { user = u; break; }
-  }
-  if (!user) { err.textContent = '名稱或密碼錯誤，請重新輸入'; return; }
+async function doLogin() {
+  var email = document.getElementById('login-email').value.trim();
+  var pwd   = document.getElementById('login-password').value;
+  var err   = document.getElementById('login-error');
+  err.textContent = '';
+  var result = await sb.auth.signInWithPassword({ email: email, password: pwd });
+  if (result.error) { err.textContent = '帳號或密碼錯誤，請重新輸入'; return; }
+  currentUser = DB.admin_users[0];
+  enterApp(currentUser);
+}
 
-  currentUser = user;
-  document.getElementById('topbar-avatar').textContent = name.charAt(0).toUpperCase();
-  document.getElementById('topbar-name').textContent = name;
+function enterApp(user) {
+  document.getElementById('topbar-avatar').textContent = user.full_name.charAt(0).toUpperCase();
+  document.getElementById('topbar-name').textContent = user.full_name;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('main-topbar').style.display = 'flex';
   document.getElementById('main-layout').style.display = 'flex';
@@ -777,16 +777,17 @@ function doLogin() {
   // 依身份組顯示 / 隱藏平台管理
   document.getElementById('platform-nav-group').style.display = (user.role === '0') ? '' : 'none';
 
-  // 登入後預設選中客戶資料
+  // 預設選中客戶資料
   var firstNav = document.querySelector('.nav-item');
   if (firstNav) { document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); }); firstNav.classList.add('active'); }
   loadCustomers();
 }
 
-function doLogout() {
+async function doLogout() {
   if (!confirm('確定要登出嗎？')) return;
+  await sb.auth.signOut();
   currentUser = null;
-  document.getElementById('login-name').value = '';
+  document.getElementById('login-email').value = '';
   document.getElementById('login-password').value = '';
   document.getElementById('login-error').textContent = '';
   document.getElementById('login-screen').style.display = 'flex';
@@ -1080,7 +1081,7 @@ function openCustomerModal(id, isNew) {
       '</div>' +
     '</div>';
   document.body.appendChild(overlay);
-  overlay.addEventListener('click', function(e){ if (e.target === overlay) closeCustomerModal(isNew); });
+  // 不綁定點擊外部關閉，避免誤觸
 }
 
 async function saveCustomer(id) {
@@ -1295,6 +1296,15 @@ function renderEmptyState(cols) {
       '<h3>尚無資料</h3><p>此資料表的欄位定義尚未設定，請提供欄位結構後繼續建置。</p>' +
     '</div></td></tr>';
 }
+
+// ─── 自動恢復登入狀態 ────────────────────────────────────
+(async function() {
+  var res = await sb.auth.getSession();
+  if (res.data && res.data.session) {
+    currentUser = DB.admin_users[0];
+    enterApp(currentUser);
+  }
+})();
 </script>
 </body>
 </html>
