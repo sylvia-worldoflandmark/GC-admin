@@ -740,7 +740,7 @@ var DB = {
   admin_users: [
     {
       id: '001',
-      full_name: 'Sylvia',
+      full_name: 'admin',
       password: '00000000',
       role: '0',
       active: '1',
@@ -1114,13 +1114,13 @@ async function saveCustomer(id) {
   var saveBtn = document.querySelector('#customer-modal .btn-primary');
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '儲存中…'; }
 
+  var isNew = !id || id === 'null' || id === 'undefined';
   var result;
-  if (!id) {
-    // 新增
+  if (isNew) {
+    delete payload.id;
     payload.created_time = new Date().toISOString();
     result = await sb.from('customers').insert([payload]);
   } else {
-    // 更新
     result = await sb.from('customers').update(payload).eq('id', id);
   }
 
