@@ -754,6 +754,10 @@ select.cm-input {
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="14" height="12" rx="2"/><path d="M3 8h14M8 4v12"/></svg>
         商品清單
       </div>
+      <div class="nav-item" onclick="navigate(this, 'export_logs')">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v9m0 0l-3-3m3 3l3-3"/><path d="M4 14v2a1 1 0 001 1h10a1 1 0 001-1v-2"/></svg>
+        匯出紀錄
+      </div>
     </div>
 
     <div class="nav-divider"></div>
@@ -978,6 +982,12 @@ const PAGES = {
     group: '貨盤管理',
     table: 'suppliers',
     comment: '品牌方叫貨對接表'
+  },
+  export_logs: {
+    title: '匯出紀錄',
+    group: '貨盤管理',
+    table: 'export_logs',
+    comment: '貨盤表匯出紀錄'
   }
 };
 
@@ -1032,6 +1042,7 @@ function renderPage(pageKey) {
   if (pageKey === 'financial_records')          { loadFinancialRecords(); return; }
   if (pageKey === 'products')                   { loadProducts();         return; }
   if (pageKey === 'suppliers')                  { loadSuppliers();        return; }
+  if (pageKey === 'export_logs')                { loadExportLogs();       return; }
 
   var page = PAGES[pageKey];
   var main = document.getElementById('main-content');
@@ -7499,6 +7510,28 @@ async function loadProducts(){
   renderProducts();
 }
 function hpProductName(p){ return p.name_zh||p.name_en||p.name_ja||p.name_ko||'（未命名）'; }
+function hpPickEntry(p){
+  var cps=Array.isArray(p.country_prices)?p.country_prices:[];
+  if(cps.length){
+    var sel=(typeof msSel==='function')?msSel('hp-reg'):[];
+    if(sel && sel.length===1){ var e=cps.filter(function(c){return c.region===sel[0];})[0]; if(e) return {e:e,multi:cps.length>1}; }
+    return {e:cps[0],multi:cps.length>1};
+  }
+  return {e:{currency:p.currency,suggested_incl:p.suggested_price_incl,supply_excl:p.supply_price_excl,supply_incl:p.supply_price_incl}, multi:false};
+}
+function hpPriceCell(p){
+  var cps=Array.isArray(p.country_prices)?p.country_prices:[];
+  var sel=(typeof msSel==='function')?msSel('hp-reg'):[];
+  function fmt(e){ if(!e) return ''; var v=(e.suggested_incl!=null?e.suggested_incl:(e.supply_incl!=null?e.supply_incl:e.supply_excl)); var r=hpRound(v,e.currency); return r!=null?hpEsc((e.currency||'')+' '+r):(e.currency?hpEsc(e.currency):''); }
+  if(cps.length){
+    if(sel && sel.length===1){ return fmt(cps.filter(function(c){return c.region===sel[0];})[0]); }
+    if(cps.length===1) return fmt(cps[0]);
+    return '<span style="color:#2563eb;">多國('+cps.length+')</span>';
+  }
+  var v=(p.suggested_price_incl!=null?p.suggested_price_incl:(p.supply_price_incl!=null?p.supply_price_incl:p.supply_price_excl));
+  var r=hpRound(v,p.currency);
+  return r!=null?hpEsc((p.currency||'')+' '+r):'';
+}
 function hpImgPreview(url){ if(!url) return;
   var ov=document.createElement('div'); ov.id='img-preview';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:300;display:flex;align-items:center;justify-content:center;cursor:zoom-out;padding:24px;';
@@ -7521,22 +7554,20 @@ function hpRowsHtml(rows){
     var chips=(p.stock_regions||[]).map(function(s){return '<span style="display:inline-block;padding:1px 7px;margin:1px;border-radius:10px;background:#eff4ff;color:#2563eb;font-size:11px;">'+hpEsc(s)+'</span>';}).join('');
     var thumb=p.photo_url? '<img src="'+hpEsc(p.photo_url)+'" onclick="hpImgPreview(this.src)" title="點擊放大" style="cursor:zoom-in;width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">' : '<div style="width:36px;height:36px;border-radius:6px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;color:#c0c4cc;font-size:11px;">圖</div>';
     return '<tr>'+
+      '<td style="text-align:center;"><input type="checkbox" class="hp-sel" value="'+p.id+'"></td>'+
       '<td>'+thumb+'</td>'+
       '<td style="font-family:monospace;color:#374151;white-space:nowrap;">'+hpEsc(p.sku)+'</td>'+
       '<td>'+hpEsc(hpProductName(p))+'</td>'+
       '<td style="color:#6b7280;">'+hpEsc(p.category)+'</td>'+
       '<td>'+hpEsc(p.brand)+'</td>'+
       '<td>'+chips+'</td>'+
-      '<td style="color:#6b7280;">'+hpEsc(p.currency)+'</td>'+
-      '<td style="text-align:right;color:#6b7280;">'+(p.suggested_price_incl!=null?hpEsc(p.suggested_price_incl):'')+'</td>'+
-      '<td style="text-align:right;font-weight:500;">'+(p.supply_price_excl!=null?hpEsc(p.supply_price_excl):'')+'</td>'+
-      '<td style="text-align:right;color:#6b7280;">'+(p.supply_price_incl!=null?hpEsc(p.supply_price_incl):'')+'</td>'+
+      '<td style="text-align:right;white-space:nowrap;">'+hpPriceCell(p)+'</td>'+
       '<td style="color:#6b7280;white-space:nowrap;">'+hpEsc(p.updated_by||p.created_by||'')+'</td>'+
       '<td style="text-align:right;white-space:nowrap;">'+
         '<button class="btn btn-secondary" style="padding:3px 9px;font-size:12px;" onclick="openProductModal(\''+p.id+'\',false)">編輯</button> '+
         '<button class="btn btn-secondary" style="padding:3px 9px;font-size:12px;color:#dc2626;" onclick="deleteProduct(\''+p.id+'\')">刪除</button>'+
       '</td></tr>';
-  }).join('') : '<tr><td colspan="12" style="text-align:center;color:var(--text-dim);padding:40px;">尚無商品，點右上「新增商品」或「批量匯入」</td></tr>';
+  }).join('') : '<tr><td colspan="10" style="text-align:center;color:var(--text-dim);padding:40px;">尚無商品，點右上「新增商品」或「批量匯入」</td></tr>';
 }
 function hpRenderProdBody(){
   var rows=hpFilteredProducts(); var total=rows.length; var pages=Math.max(1,Math.ceil(total/HP_PAGE));
@@ -7559,13 +7590,14 @@ function renderProducts(){
       msDropdown('hp-cat','全部類別',HP_CATS.map(function(c){return {v:c,l:c};}),'hpApplyFilter')+
       msDropdown('hp-brand','全部品牌',brands.map(function(b){return {v:b,l:b};}),'hpApplyFilter')+
     '</div><div class="toolbar-right" style="gap:8px;">'+
+      '<button class="btn btn-secondary" style="color:#dc2626;" onclick="hpBatchDelete()">刪除選取</button>'+
       '<button class="btn btn-secondary" onclick="openProductModal(null,true)">＋ 新增商品</button>'+
       '<button class="btn btn-secondary" onclick="openImportDialog()">⭳ 批量匯入</button>'+
       '<button class="btn btn-secondary" onclick="openBatchImageDialog()">批次配圖</button>'+
       '<button class="btn btn-primary" onclick="openExportDialog()">匯出貨盤表</button>'+
     '</div></div>'+
     '<div class="table-card"><div class="table-wrap"><table><thead><tr>'+
-      '<th>縮圖</th><th>SKU</th><th>商品名稱</th><th>類別</th><th>品牌</th><th>存貨地區</th><th>幣別</th><th style="text-align:right;">建議售價(含稅)</th><th style="text-align:right;">供貨價(未稅)</th><th style="text-align:right;">供貨價(含稅)</th><th>最後操作人</th><th style="text-align:right;">操作</th>'+
+      '<th style="width:32px;text-align:center;"><input type="checkbox" onclick="hpSelAll(this)" title="全選本頁"></th><th>縮圖</th><th>SKU</th><th>商品名稱</th><th>類別</th><th>品牌</th><th>存貨地區</th><th style="text-align:right;">建議售價</th><th>最後操作人</th><th style="text-align:right;">操作</th>'+
     '</tr></thead><tbody id="hp-tbody"></tbody></table></div>'+
     '<div class="pagination"><span id="hp-count"></span><span id="hp-pager"></span></div></div>';
   hpRenderProdBody();
@@ -7575,14 +7607,29 @@ function hpToggleRegion(btn){
   var on=btn.getAttribute('data-on')==='1'; on=!on; btn.setAttribute('data-on',on?'1':'0');
   btn.style.background=on?'#eff4ff':'#fff'; btn.style.color=on?'#2563eb':'#6b7280'; btn.style.borderColor=on?'#bcd3f7':'#e5e7eb';
 }
-function hpAddCode(region,code){
-  var wrap=document.getElementById('pf-localcodes'); if(!wrap) return;
-  var div=document.createElement('div'); div.className='pf-lc-row'; div.style.cssText='display:flex;gap:6px;margin-bottom:6px;';
-  div.innerHTML='<select class="cm-input pf-lc-region" style="width:130px;flex:none;"><option value="">地區</option>'+HP_REGIONS.map(function(r){return '<option value="'+r+'">'+r+'</option>';}).join('')+'</select>'+
-    '<input class="cm-input pf-lc-code" style="flex:1;" placeholder="當地商品編號 (JAN/CCC…)" value="'+hpEsc(code||'')+'">'+
-    '<button type="button" class="btn btn-secondary" style="padding:0 12px;flex:none;" onclick="this.parentNode.remove()">✕</button>';
+var HP_REGION_CUR={"台灣":"TWD","中國":"CNY","香港":"HKD","日本":"JPY","韓國":"KRW","馬來西亞":"MYR","新加坡":"SGD","泰國":"THB","越南":"VND","美國":"USD","歐洲":"EUR"};
+function hpRegionCur(r){ return HP_REGION_CUR[r]||''; }
+function hpCpRegionCur(selEl){ var row=selEl.parentNode; var cur=row.querySelector('.pf-cp-cur'); if(cur && !cur.value) cur.value=hpRegionCur(selEl.value)||''; }
+function hpAddCountry(c){
+  c=c||{}; var wrap=document.getElementById('pf-countryrows'); if(!wrap) return;
+  var div=document.createElement('div'); div.className='pf-cp-row'; div.style.cssText='display:flex;gap:6px;margin-bottom:6px;align-items:center;';
+  var regOpts='<option value="">地區</option>'+HP_REGIONS.map(function(r){return '<option value="'+r+'">'+r+'</option>';}).join('');
+  var curOpts='<option value="">幣別</option>'+HP_CUR.map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join('');
+  div.innerHTML=
+    '<select class="cm-input pf-cp-region" style="width:96px;flex:none;" onchange="hpCpRegionCur(this)">'+regOpts+'</select>'+
+    '<select class="cm-input pf-cp-cur" style="width:78px;flex:none;">'+curOpts+'</select>'+
+    '<input class="cm-input pf-cp-sugg" type="number" style="width:92px;flex:none;" placeholder="建議售價">'+
+    '<input class="cm-input pf-cp-excl" type="number" style="width:92px;flex:none;" placeholder="供貨未稅">'+
+    '<input class="cm-input pf-cp-incl" type="number" style="width:92px;flex:none;" placeholder="供貨含稅">'+
+    '<input class="cm-input pf-cp-code" style="flex:1;min-width:90px;" placeholder="當地商品編號">'+
+    '<button type="button" class="btn btn-secondary" style="padding:0 10px;flex:none;" onclick="this.parentNode.remove()">✕</button>';
   wrap.appendChild(div);
-  if(region){ div.querySelector('.pf-lc-region').value=region; }
+  if(c.region) div.querySelector('.pf-cp-region').value=c.region;
+  div.querySelector('.pf-cp-cur').value=c.currency||hpRegionCur(c.region)||'';
+  if(c.suggested_incl!=null) div.querySelector('.pf-cp-sugg').value=c.suggested_incl;
+  if(c.supply_excl!=null) div.querySelector('.pf-cp-excl').value=c.supply_excl;
+  if(c.supply_incl!=null) div.querySelector('.pf-cp-incl').value=c.supply_incl;
+  if(c.local_code) div.querySelector('.pf-cp-code').value=c.local_code;
 }
 function openProductModal(id,isNew){
   var p={}; if(!isNew){ (DB.products||[]).forEach(function(x){ if(String(x.id)===String(id)) p=x; }); }
@@ -7617,16 +7664,12 @@ function openProductModal(id,isNew){
         '<div style="margin-top:16px;"><label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:8px;">存貨地區（可複選）</label>'+regChips+'</div></div></div>'+
       '<div class="cm-section"><div><div class="cm-sec-title">多語系內容</div><div class="cm-sec-desc">至少填一個語言的商品名稱，其餘可留待翻譯</div></div>'+
         '<div><div style="margin-bottom:14px;">'+langTabs+'</div>'+langPanels+'</div></div>'+
-      '<div class="cm-section"><div><div class="cm-sec-title">在地碼與價格</div><div class="cm-sec-desc">當地編號可多國；價格為原幣、不含 GC 利潤</div></div>'+
-        '<div><div style="margin-bottom:16px;"><label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:6px;">當地商品編號（可多國，JAN/CCC…）</label>'+
-          '<div id="pf-localcodes"></div>'+
-          '<button type="button" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;margin-top:2px;" onclick="hpAddCode()">＋ 新增地區編號</button></div>'+
-        '<div class="cm-grid">'+
-          '<div class="cm-field"><label>幣別</label>'+sel('currency',HP_CUR,p.currency,true)+'</div>'+
-          '<div class="cm-field"><label>建議售價(含稅)</label><input class="cm-input" id="pf-suggested_price_incl" type="number" value="'+hpEsc(p.suggested_price_incl)+'"></div>'+
-          '<div class="cm-field"><label>供貨價(未稅)＝成本<span style="color:#dc2626;">*</span></label><input class="cm-input" id="pf-supply_price_excl" type="number" value="'+hpEsc(p.supply_price_excl)+'"></div>'+
-          '<div class="cm-field"><label>供貨價(含稅)</label><input class="cm-input" id="pf-supply_price_incl" type="number" value="'+hpEsc(p.supply_price_incl)+'"></div>'+
-        '</div></div></div>'+
+      '<div class="cm-section"><div><div class="cm-sec-title">各國售價與編號</div><div class="cm-sec-desc">一國一列、可多國。價格為原幣、不含 GC 利潤；至少一國、且該國至少填一個價格。幣別會依地區自動帶、可改。</div></div>'+
+        '<div>'+
+          '<div style="display:flex;gap:6px;font-size:11px;color:var(--text-dim);margin-bottom:4px;padding:0 2px;"><span style="width:96px;flex:none;">地區</span><span style="width:78px;flex:none;">幣別</span><span style="width:92px;flex:none;">建議售價(含稅)</span><span style="width:92px;flex:none;">供貨價(未稅)</span><span style="width:92px;flex:none;">供貨價(含稅)</span><span style="flex:1;min-width:90px;">當地商品編號</span><span style="width:34px;flex:none;"></span></div>'+
+          '<div id="pf-countryrows"></div>'+
+          '<button type="button" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;margin-top:2px;" onclick="hpAddCountry()">＋ 新增國家</button>'+
+        '</div></div>'+
       '<div class="cm-section"><div><div class="cm-sec-title">規格</div><div class="cm-sec-desc">物流/報關資訊</div></div>'+
         '<div class="cm-grid">'+
           '<div class="cm-field"><label>HSCODE</label><input class="cm-input" id="pf-hscode" value="'+hpEsc(p.hscode)+'"></div>'+
@@ -7647,11 +7690,18 @@ function openProductModal(id,isNew){
       '<button class="btn btn-secondary" onclick="document.getElementById(\'prod-modal\').remove()">取消</button>'+
       '<button class="btn btn-primary" onclick="saveProduct(\''+(id||'')+'\')">保存</button></div></div>';
   document.body.appendChild(ov);
-  // 帶入既有當地編號
-  var codes=Array.isArray(p.local_codes)?p.local_codes:[];
-  if(!codes.length && p.local_code) codes=[{region:'',code:p.local_code}];
-  if(!codes.length) codes=[{region:'',code:''}];
-  codes.forEach(function(c){ hpAddCode(c.region,c.code); });
+  // 帶入既有各國售價（新結構優先；否則由舊單一價格/當地碼轉入）
+  var cps=Array.isArray(p.country_prices)?p.country_prices:[];
+  if(!cps.length){
+    var codes=Array.isArray(p.local_codes)?p.local_codes:[];
+    if(p.currency||p.suggested_price_incl!=null||p.supply_price_excl!=null||p.supply_price_incl!=null||p.local_code||codes.length){
+      var r0=(codes[0]&&codes[0].region)||(regs[0]||p.origin||'');
+      cps=[{region:r0,currency:p.currency||hpRegionCur(r0),suggested_incl:p.suggested_price_incl,supply_excl:p.supply_price_excl,supply_incl:p.supply_price_incl,local_code:p.local_code||(codes[0]&&codes[0].code)||''}];
+      codes.slice(1).forEach(function(c){ cps.push({region:c.region,currency:hpRegionCur(c.region),local_code:c.code}); });
+    }
+  }
+  if(!cps.length) cps=[{region:(regs[0]||''),currency:hpRegionCur(regs[0]||'')}];
+  cps.forEach(function(c){ hpAddCountry(c); });
 }
 function hpTab(l){
   document.querySelectorAll('#prod-modal .hp-lang-tab').forEach(function(b){ var on=b.getAttribute('data-l')===l; b.style.background=on?'#2563eb':'#f3f4f6'; b.style.color=on?'#fff':'#6b7280'; });
@@ -7672,24 +7722,34 @@ async function hpUploadImg(input){
 async function saveProduct(id){
   var isNew=!id;
   var category=hpVal('pf-category'), origin=hpVal('pf-origin');
-  var priceExcl=hpNum('pf-supply_price_excl'), priceIncl=hpNum('pf-supply_price_incl'), sugg=hpNum('pf-suggested_price_incl');
   var names={zh:hpVal('pf-name_zh'),en:hpVal('pf-name_en'),ja:hpVal('pf-name_ja'),ko:hpVal('pf-name_ko')};
   var hasName=names.zh||names.en||names.ja||names.ko;
+  // 收集各國售價列
+  function n(el){ var v=el.value.trim(); return v===''?null:Number(v); }
+  var cps=[];
+  document.querySelectorAll('#prod-modal .pf-cp-row').forEach(function(r){
+    var region=r.querySelector('.pf-cp-region').value, currency=r.querySelector('.pf-cp-cur').value;
+    var s=n(r.querySelector('.pf-cp-sugg')), ex=n(r.querySelector('.pf-cp-excl')), ic=n(r.querySelector('.pf-cp-incl')), code=r.querySelector('.pf-cp-code').value.trim();
+    if(region||currency||s!=null||ex!=null||ic!=null||code) cps.push({region:region||null,currency:currency||null,suggested_incl:s,supply_excl:ex,supply_incl:ic,local_code:code||null});
+  });
+  var hasPrice=cps.some(function(c){ return c.suggested_incl!=null||c.supply_excl!=null||c.supply_incl!=null; });
   var miss=[];
   if(!category) miss.push('類別');
   if(!origin) miss.push('原產地');
-  if(priceExcl==null&&priceIncl==null&&sugg==null) miss.push('至少一個價格（建議售價/供貨價未稅/供貨價含稅）');
+  if(!hasPrice) miss.push('至少一國要填價格');
   if(!hasName) miss.push('至少一個語言的商品名稱');
   if(miss.length){ var e=document.getElementById('prod-err'); e.textContent='請填必填欄位：'+miss.join('、'); e.style.display='block'; return; }
   var regions=[]; document.querySelectorAll('#prod-modal .pf-region-chip[data-on="1"]').forEach(function(b){ regions.push(b.getAttribute('data-region')); });
-  var codes=[]; document.querySelectorAll('#prod-modal .pf-lc-row').forEach(function(r){ var reg=r.querySelector('.pf-lc-region').value; var cd=r.querySelector('.pf-lc-code').value.trim(); if(cd) codes.push({region:reg||null,code:cd}); });
+  var first=cps[0]||{};
+  var codes=cps.filter(function(c){return c.local_code;}).map(function(c){return {region:c.region,code:c.local_code};});
   var payload={
     stock_regions:regions, category:category, brand:hpVal('pf-brand'), source_supplier:hpVal('pf-source_supplier'), origin:origin,
     name_zh:names.zh, name_en:names.en, name_ja:names.ja, name_ko:names.ko,
     desc_zh:hpVal('pf-desc_zh'), desc_en:hpVal('pf-desc_en'), desc_ja:hpVal('pf-desc_ja'), desc_ko:hpVal('pf-desc_ko'),
     selling_zh:hpVal('pf-selling_zh'), selling_en:hpVal('pf-selling_en'), selling_ja:hpVal('pf-selling_ja'), selling_ko:hpVal('pf-selling_ko'),
-    local_codes:codes, local_code:(codes.length?codes[0].code:null), currency:hpVal('pf-currency'),
-    suggested_price_incl:sugg, supply_price_excl:priceExcl, supply_price_incl:priceIncl,
+    country_prices:cps,
+    local_codes:codes, local_code:(codes.length?codes[0].code:null), currency:first.currency||null,
+    suggested_price_incl:first.suggested_incl!=null?first.suggested_incl:null, supply_price_excl:first.supply_excl!=null?first.supply_excl:null, supply_price_incl:first.supply_incl!=null?first.supply_incl:null,
     hscode:hpVal('pf-hscode'), units_per_carton:hpNum('pf-units_per_carton'),
     box_l:hpNum('pf-box_l'), box_w:hpNum('pf-box_w'), box_h:hpNum('pf-box_h'),
     gross_weight:hpNum('pf-gross_weight'), shelf_life_months:hpNum('pf-shelf_life_months'),
@@ -7704,50 +7764,89 @@ async function saveProduct(id){
   document.getElementById('prod-modal').remove(); await loadProducts();
 }
 async function deleteProduct(id){ if(!confirm('確定刪除此商品？')) return; var r=await sb.from('products').delete().eq('id',id); if(r.error){ alert('刪除失敗：'+r.error.message); return; } await loadProducts(); }
+function hpSelAll(cb){ document.querySelectorAll('#hp-tbody .hp-sel').forEach(function(c){ c.checked=cb.checked; }); }
+async function hpBatchDelete(){
+  var ids=[]; document.querySelectorAll('#hp-tbody .hp-sel:checked').forEach(function(c){ ids.push(c.value); });
+  if(!ids.length){ alert('請先勾選要刪除的商品'); return; }
+  if(!confirm('確定刪除選取的 '+ids.length+' 筆商品？此動作無法復原。')) return;
+  var r=await sb.from('products').delete().in('id',ids);
+  if(r.error){ alert('刪除失敗：'+r.error.message); return; }
+  await loadProducts();
+}
 
 /* ---------- 幣別換算（重用台銀 BOT_RATES） ---------- */
 function hpToTWD(amt,cur){ if(cur==null||cur==='TWD') return amt; var s=(typeof BOT_RATES!=='undefined')?BOT_RATES[cur]:null; if(!s) return null; return amt*((s.buy+s.sell)/2); }
 function hpConv(amt,from,to){ if(amt==null) return null; if(!to||from===to) return amt; var twd=hpToTWD(amt,from); if(twd==null) return null; if(to==='TWD') return twd; var s=(typeof BOT_RATES!=='undefined')?BOT_RATES[to]:null; if(!s) return null; return twd/((s.buy+s.sell)/2); }
-function hpRound(v,cur){ if(v==null) return null; return (['JPY','KRW','VND'].indexOf(cur)>=0)?Math.round(v):Math.round(v*100)/100; }
+var HP_ZERO_DEC=['TWD','JPY','KRW','VND','IDR','HUF','CLP'];  // 無小數幣別（顯示整數）
+function hpRound(v,cur){ if(v==null||v==='') return null; var n=Number(v); if(isNaN(n)) return v; return (HP_ZERO_DEC.indexOf((cur||'').toUpperCase())>=0)?Math.round(n):Math.round(n*100)/100; }
 
 /* ---------- 批量匯入 ---------- */
 var hpImpRows=[];
 function hpImpVal(v){ v=(v==null?'':String(v)).trim(); return v===''?null:v; }
 function hpImpNum(v){ var s=hpImpVal(v); if(s==null) return null; var n=Number(String(s).replace(/,/g,'')); return isNaN(n)?null:n; }
 function hpImpGet(row,sub){ var ks=Object.keys(row); for(var i=0;i<ks.length;i++){ if(ks[i].replace(/\s/g,'').indexOf(sub)>=0) return row[ks[i]]; } return ''; }
-function hpMapImportRow(row){
+function hpPriceRowCp(row){
+  function g(sub){ return hpImpGet(row,sub); }
+  var region=hpImpVal(g('國家'))||hpImpVal(g('地區'));
+  return {region:region||null, currency:hpImpVal(g('幣別'))||hpRegionCur(region)||null,
+    suggested_incl:hpImpNum(g('建議售價')), supply_excl:hpImpNum(g('供貨價(未稅)')), supply_incl:hpImpNum(g('供貨價(含稅)')),
+    local_code:hpImpVal(g('當地商品編號'))||null};
+}
+function hpMapImportRow(row, extCps){
   function g(sub){ return hpImpGet(row,sub); }
   var category=hpImpVal(g('類別')), origin=hpImpVal(g('原產地'));
-  var priceExcl=hpImpNum(g('供貨價(未稅)')), priceIncl=hpImpNum(g('供貨價(含稅)')), sugg=hpImpNum(g('建議售價'));
-  var hasPrice=(priceExcl!=null||priceIncl!=null||sugg!=null);
   var names={zh:hpImpVal(g('商品名稱_中')),en:hpImpVal(g('商品名稱_英')),ja:hpImpVal(g('商品名稱_日')),ko:hpImpVal(g('商品名稱_韓'))};
   var hasName=names.zh||names.en||names.ja||names.ko;
-  if(!category&&!origin&&!hasPrice&&!hasName) return null; // 空列
+  var regionsRaw=hpImpVal(g('存貨地區')); var regions=regionsRaw?regionsRaw.split(/[、,，\/\s]+/).filter(Boolean):[];
+  var cps, cpRaw=null;
+  if(extCps){ cps=extCps.slice(); }   // 雙分頁：價格來自「各國售價」分頁
+  else {
+    cpRaw=hpImpVal(g('各國售價')); cps=[];
+    if(cpRaw){
+      cpRaw.split(/[;；\n]+/).forEach(function(seg){ seg=seg.trim(); if(!seg) return;
+        var f=seg.split(/[｜|]/).map(function(x){return x.trim();});
+        if(!f[0]&&!f[2]&&!f[3]&&!f[4]&&!f[5]) return;
+        cps.push({region:f[0]||null, currency:f[1]||hpRegionCur(f[0])||null, suggested_incl:hpImpNum(f[2]), supply_excl:hpImpNum(f[3]), supply_incl:hpImpNum(f[4]), local_code:f[5]||null});
+      });
+    }
+    if(!cps.length){ // 相容舊單欄
+      var lcRaw=hpImpVal(g('當地商品編號')); var lcs=[];
+      if(lcRaw){ lcRaw.split(/[;；\n]+/).forEach(function(part){ part=part.trim(); if(!part) return; var mm=part.split(/[:：]/); if(mm.length>=2) lcs.push({region:(mm[0].trim()||null),code:mm.slice(1).join(':').trim()}); else lcs.push({region:(regions[0]||null),code:part}); }); }
+      var cur=hpImpVal(g('幣別')), s=hpImpNum(g('建議售價')), ex=hpImpNum(g('供貨價(未稅)')), ic=hpImpNum(g('供貨價(含稅)'));
+      var r0=(lcs[0]&&lcs[0].region)||regions[0]||origin||null;
+      if(cur||s!=null||ex!=null||ic!=null||lcs.length){
+        cps=[{region:r0,currency:cur||hpRegionCur(r0),suggested_incl:s,supply_excl:ex,supply_incl:ic,local_code:(lcs[0]&&lcs[0].code)||null}];
+        lcs.slice(1).forEach(function(c){ cps.push({region:c.region,currency:hpRegionCur(c.region),local_code:c.code}); });
+      }
+    }
+  }
+  var hasPrice=cps.some(function(c){ return c.suggested_incl!=null||c.supply_excl!=null||c.supply_incl!=null; });
+  if(!category&&!origin&&!hasPrice&&!hasName&&!cpRaw) return null; // 空列
   var errs=[];
   if(!category) errs.push('缺類別'); if(!origin) errs.push('缺原產地'); if(!hasPrice) errs.push('缺價格'); if(!hasName) errs.push('缺商品名稱');
-  var regionsRaw=hpImpVal(g('存貨地區')); var regions=regionsRaw?regionsRaw.split(/[、,，\/\s]+/).filter(Boolean):[];
-  var lcRaw=hpImpVal(g('當地商品編號')); var localCodes=[];
-  if(lcRaw){ lcRaw.split(/[;；\n]+/).forEach(function(part){ part=part.trim(); if(!part) return; var mm=part.split(/[:：]/); if(mm.length>=2) localCodes.push({region:(mm[0].trim()||null),code:mm.slice(1).join(':').trim()}); else localCodes.push({region:(regions[0]||null),code:part}); }); }
-  var localCode=localCodes.length?localCodes[0].code:null; var photo=hpImpVal(g('照片'));
+  var first=cps[0]||{};
+  var codes=cps.filter(function(c){return c.local_code;}).map(function(c){return {region:c.region,code:c.local_code};});
+  var allCodes=codes.map(function(c){return c.code;});
+  var localCode=allCodes[0]||null; var photo=hpImpVal(g('照片'));
   var payload={
     stock_regions:regions, category:category, brand:hpImpVal(g('品牌名稱')), source_supplier:(hpImpVal(g('窗口'))||hpImpVal(g('來源'))), origin:origin,
     name_zh:names.zh,name_en:names.en,name_ja:names.ja,name_ko:names.ko,
     desc_zh:hpImpVal(g('產品敘述_中')),desc_en:hpImpVal(g('產品敘述_英')),desc_ja:hpImpVal(g('產品敘述_日')),desc_ko:hpImpVal(g('產品敘述_韓')),
     selling_zh:hpImpVal(g('產品賣點_中')),selling_en:hpImpVal(g('產品賣點_英')),selling_ja:hpImpVal(g('產品賣點_日')),selling_ko:hpImpVal(g('產品賣點_韓')),
-    local_code:localCode, local_codes:localCodes,
-    currency:hpImpVal(g('幣別')), suggested_price_incl:sugg, supply_price_excl:priceExcl, supply_price_incl:priceIncl,
+    country_prices:cps,
+    local_code:localCode, local_codes:codes,
+    currency:first.currency||null, suggested_price_incl:(first.suggested_incl!=null?first.suggested_incl:null), supply_price_excl:(first.supply_excl!=null?first.supply_excl:null), supply_price_incl:(first.supply_incl!=null?first.supply_incl:null),
     hscode:hpImpVal(g('HSCODE')), units_per_carton:hpImpNum(g('箱入數')),
     box_l:hpImpNum(g('箱長')), box_w:hpImpNum(g('箱寬')), box_h:hpImpNum(g('箱高')),
     gross_weight:hpImpNum(g('單箱毛重')), shelf_life_months:hpImpNum(g('有效期限')),
     website:hpImpVal(g('網站連結')), note:hpImpVal(g('備註')),
     photo_url:(photo&&/^https?:\/\//i.test(photo))?photo:null
   };
-  // 比對既有：先當地編號，再 品牌+中文名+原產地
   var match=null;
   (DB.products||[]).forEach(function(p){
     if(match) return;
-    if(localCode && (p.local_code===localCode || (Array.isArray(p.local_codes)&&p.local_codes.some(function(c){return c.code===localCode;})))) match=p;
-    else if(!localCode && p.brand===payload.brand && p.name_zh===payload.name_zh && p.origin===origin && payload.name_zh) match=p;
+    if(allCodes.length && (allCodes.indexOf(p.local_code)>=0 || (Array.isArray(p.local_codes)&&p.local_codes.some(function(c){return allCodes.indexOf(c.code)>=0;})))) match=p;
+    else if(!allCodes.length && p.brand===payload.brand && p.name_zh===payload.name_zh && p.origin===origin && payload.name_zh) match=p;
   });
   return {payload:payload, errors:errs, mode:(match?'update':'new'), id:(match?match.id:null), name:(names.zh||names.en||names.ja||names.ko||'')};
 }
@@ -7761,7 +7860,7 @@ function openImportDialog(){
       '<div style="font-family:Syne,sans-serif;font-weight:700;">批量匯入商品</div>'+
       '<button onclick="document.getElementById(\'imp-modal\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:18px;">✕</button></div>'+
     '<div style="padding:20px 24px;overflow-y:auto;flex:1;">'+
-      '<div style="font-size:13px;color:var(--text-mid);margin-bottom:12px;line-height:1.7;">請用「GC商品上傳範本」的<b>「上傳範本」分頁</b>填寫後上傳（.xlsx）。系統依<b>當地商品編號</b>比對：已存在→更新、不存在→新增並配發 SKU；缺當地編號時以「品牌＋中文名＋原產地」比對。</div>'+
+      '<div style="font-size:13px;color:var(--text-mid);margin-bottom:12px;line-height:1.7;">上傳範本 .xlsx：<b>商品資料</b>分頁（一商品一列、內容）＋<b>各國售價</b>分頁（一國一列、價格），兩分頁以<b>商品代號</b>對應。系統依<b>當地商品編號</b>比對新增/更新（缺則用 品牌＋中文名＋原產地），新品自動配 SKU。</div>'+
       '<input type="file" accept=".xlsx" id="hp-imp-file" onchange="hpImpParse(this)">'+
       '<div id="hp-imp-status" style="font-size:12px;color:var(--text-dim);margin-top:8px;"></div>'+
       '<div id="hp-imp-result" style="margin-top:14px;"></div>'+
@@ -7778,10 +7877,20 @@ function hpImpParse(input){
   reader.onload=function(e){
     try{
       var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-      var sh=wb.Sheets['商品資料']||wb.Sheets['上傳範本']||wb.Sheets[wb.SheetNames[0]];
-      var rows=XLSX.utils.sheet_to_json(sh,{defval:''});
+      var pSheet=wb.Sheets['商品資料']||wb.Sheets['上傳範本'];
+      var cpSheet=wb.Sheets['各國售價'];
       hpImpRows=[];
-      rows.forEach(function(row,idx){ var m=hpMapImportRow(row); if(m){ m.rowNum=idx+2; hpImpRows.push(m); } });
+      if(pSheet && cpSheet){ // 雙分頁：商品資料 + 各國售價（以 商品代號 / 商品名稱(中) 對應）
+        var prices=XLSX.utils.sheet_to_json(cpSheet,{defval:''});
+        var pmap={};
+        prices.forEach(function(r){ var k=hpImpVal(hpImpGet(r,'商品代號'))||hpImpVal(hpImpGet(r,'商品名稱')); if(!k) return; var cp=hpPriceRowCp(r); if(cp.region||cp.currency||cp.suggested_incl!=null||cp.supply_excl!=null||cp.supply_incl!=null||cp.local_code){ (pmap[k]=pmap[k]||[]).push(cp); } });
+        var prods=XLSX.utils.sheet_to_json(pSheet,{defval:''});
+        prods.forEach(function(row,idx){ var k=hpImpVal(hpImpGet(row,'商品代號'))||hpImpVal(hpImpGet(row,'商品名稱_中'))||hpImpVal(hpImpGet(row,'商品名稱')); var m=hpMapImportRow(row, pmap[k]||[]); if(m){ m.rowNum=idx+2; hpImpRows.push(m); } });
+      } else { // 單分頁（相容舊格式）
+        var sh=pSheet||wb.Sheets[wb.SheetNames[0]];
+        var rows=XLSX.utils.sheet_to_json(sh,{defval:''});
+        rows.forEach(function(row,idx){ var m=hpMapImportRow(row); if(m){ m.rowNum=idx+2; hpImpRows.push(m); } });
+      }
       hpRenderImp();
     }catch(err){ if(status) status.textContent='解析失敗：'+err.message; }
   };
@@ -7816,7 +7925,12 @@ async function hpImpRun(){
     var r=ok[i]; var pl=r.payload; pl.updated_time=now; pl.updated_by=who;
     var res;
     if(r.mode==='new'){ pl.sku=hpBatchSku(pl.origin,pl.category); pl.created_time=now; pl.created_by=who; res=await sb.from('products').insert([pl]); }
-    else { res=await sb.from('products').update(pl).eq('id',r.id); }
+    else {
+      // 更新既有商品：匯入檔沒帶有效圖片網址時，不要覆蓋原有圖片（photo_url / photos 保持不動）
+      if(!pl.photo_url){ delete pl.photo_url; }
+      delete pl.photos;
+      res=await sb.from('products').update(pl).eq('id',r.id);
+    }
     if(res.error){ fail++; } else { done++; }
     var status=document.getElementById('hp-imp-status'); if(status) status.textContent='匯入中… '+(i+1)+'/'+ok.length;
   }
@@ -7836,6 +7950,7 @@ function openExportDialog(){
   if(typeof ExcelJS==='undefined'){ alert('Excel 函式庫尚未載入，請重新整理頁面再試。'); return; }
   var n=hpFilteredProducts().length;
   var curOpts=['__ORIG__'].concat(HP_CUR).map(function(c){return '<option value="'+c+'">'+(c==='__ORIG__'?'原幣（不換算）':c)+'</option>';}).join('');
+  if(typeof msSel==='function'){ msSel('exp-country').length=0; }  // 每次開啟清空出貨國家複選
   var ov=document.createElement('div'); ov.id='exp-modal';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:200;display:flex;align-items:center;justify-content:center;';
   ov.innerHTML='<div style="background:#fff;border-radius:14px;width:460px;max-width:94vw;box-shadow:0 8px 40px rgba(0,0,0,0.14);">'+
@@ -7843,62 +7958,246 @@ function openExportDialog(){
       '<div style="font-family:Syne,sans-serif;font-weight:700;">匯出貨盤表</div>'+
       '<button onclick="document.getElementById(\'exp-modal\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:18px;">✕</button></div>'+
     '<div style="padding:20px 24px;font-size:13px;">'+
+      '<div style="margin-bottom:14px;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">出貨國家（可複選，每國一個分頁；不選＝各商品第一國、單一分頁）</label><div>'+msDropdown('exp-country','不選＝各商品第一國',HP_REGIONS.map(function(r){return {v:r,l:r};}),'')+'</div></div>'+
       '<div style="margin-bottom:14px;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">顯示語系（表頭與內容）</label><select class="cm-input" id="exp-lang"><option value="zh">中文</option><option value="en">English</option><option value="ja">日本語</option><option value="ko">한국어</option></select></div>'+
       '<div style="display:flex;gap:12px;margin-bottom:14px;">'+
         '<div style="flex:1;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">GC 利潤率 (%)</label><input class="cm-input" id="exp-margin" type="number" value="5"></div>'+
-        '<div style="flex:1;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">目標幣別</label><select class="cm-input" id="exp-cur">'+curOpts+'</select></div>'+
+        '<div style="flex:1;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">目標幣別</label><select class="cm-input" id="exp-cur" onchange="hpExpRenderFx()">'+curOpts+'</select></div>'+
       '</div>'+
-      '<div style="background:#f9fafb;border-radius:7px;padding:9px 12px;font-size:12px;color:#6b7280;">將依<b>目前清單篩選</b>匯出 '+n+' 筆。GC報價 = 供貨價(含稅)×(1+利潤率)；無含稅則以供貨價(未稅)加成。建議售價僅供對照、不參與加成。圖片內嵌儲存格，缺匯率的幣別保留原幣。</div>'+
+      '<div id="exp-fx" style="margin-bottom:14px;"></div>'+
+      '<div style="margin-bottom:14px;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">備註（會存進匯出紀錄，例：給哪家經紀公司／用途）</label><textarea class="cm-input" id="exp-note" rows="2" style="resize:vertical;" placeholder="選填"></textarea></div>'+
+      '<div style="background:#f9fafb;border-radius:7px;padding:9px 12px;font-size:12px;color:#6b7280;">將依<b>目前清單篩選</b>匯出（最多 '+n+' 筆）。<b>出貨國家複選</b>時每個國家產生一個分頁，各分頁只列有該國價格的商品、並抓該國價格。供貨價 = 該國供貨價(含稅)×(1+利潤率)；無含稅則用未稅。建議售價僅供對照。圖片內嵌儲存格，缺匯率的幣別保留原幣。</div>'+
       '<div id="exp-status" style="font-size:12px;color:var(--text-dim);margin-top:10px;"></div>'+
     '</div>'+
     '<div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;">'+
       '<button class="btn btn-secondary" onclick="document.getElementById(\'exp-modal\').remove()">取消</button>'+
       '<button class="btn btn-primary" id="exp-run" onclick="hpExportRun()">匯出 Excel</button></div></div>';
   document.body.appendChild(ov);
+  hpExpRenderFx();
+}
+// 這次匯出可能用到的幣別（來源幣別集合）
+function hpExpCurList(){
+  var set={}; hpFilteredProducts().forEach(function(p){ hpEntriesOf(p).forEach(function(e){ if(e.currency) set[e.currency]=1; }); });
+  return Object.keys(set);
+}
+// 依目標幣別渲染可編輯匯率列（1 外幣 = ? TWD）
+function hpExpRenderFx(){
+  var box=document.getElementById('exp-fx'); if(!box) return;
+  var tgt=((document.getElementById('exp-cur')||{}).value)||'__ORIG__';
+  var inv={}; hpExpCurList().forEach(function(c){ if(c!=='TWD') inv[c]=1; });
+  if(tgt!=='__ORIG__'&&tgt!=='TWD') inv[tgt]=1;
+  var curs=Object.keys(inv);
+  if(tgt==='__ORIG__'||!curs.length){ box.innerHTML='<div style="font-size:11.5px;color:var(--text-dim);">目標幣別為「原幣」時不換算，無需匯率。</div>'; return; }
+  var rows=curs.map(function(c){
+    var s=(typeof BOT_RATES!=='undefined')?BOT_RATES[c]:null; var mid=s?Math.round((s.buy+s.sell)/2*10000)/10000:'';
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'+
+      '<span style="width:96px;flex:none;font-size:12px;">1 '+hpEsc(c)+' =</span>'+
+      '<input class="cm-input fx-rate" data-cur="'+hpEsc(c)+'" type="number" step="any" value="'+mid+'" style="flex:1;">'+
+      '<span style="font-size:12px;color:#6b7280;">TWD</span></div>';
+  }).join('');
+  box.innerHTML='<label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">換算匯率（1 外幣 = ? 新台幣，預設為後台內建匯率、可手動修改）</label>'+rows+
+    '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">＊換算透過新台幣中轉；本次使用的匯率會一併存入匯出紀錄。</div>';
+}
+function hpRateTWD(cur, fx){ if(cur==null||cur==='TWD') return 1; if(fx&&fx[cur]!=null) return fx[cur]; var s=(typeof BOT_RATES!=='undefined')?BOT_RATES[cur]:null; return s?((s.buy+s.sell)/2):null; }
+function hpConvFx(amt,from,to,fx){ if(amt==null) return null; if(!to||to==='__ORIG__'||from===to) return amt; var rf=hpRateTWD(from,fx), rt=hpRateTWD(to,fx); if(rf==null||rt==null) return null; return amt*rf/rt; }
+function hpEntriesOf(p){
+  var cps=Array.isArray(p.country_prices)?p.country_prices:[];
+  if(cps.length) return cps;
+  if(p.currency||p.supply_price_excl!=null||p.supply_price_incl!=null||p.suggested_price_incl!=null||p.local_code)
+    return [{region:(p.origin||''),currency:p.currency,suggested_incl:p.suggested_price_incl,supply_excl:p.supply_price_excl,supply_incl:p.supply_price_incl,local_code:p.local_code}];
+  return [];
+}
+function hpSheetName(name, wb){
+  var s=String(name||'表').replace(/[\[\]\*\?\/\\:]/g,'').slice(0,28)||'表';
+  var base=s, k=2;
+  while(wb.getWorksheet(s)){ s=base+'_'+k; k++; }
+  return s;
+}
+// 填一個分頁：country='__FIRST__' 取各商品第一國；否則只列有該國價格者。回傳 {skipped,used}
+async function hpExpFillSheet(wb, ws, rows, country, lang, margin, targetCur, imgCache, st, fx){
+  var heads=HP_EXP_HEADERS[lang]||HP_EXP_HEADERS.zh;
+  ws.columns=heads.map(function(h,i){ return {header:h, width:(i===1?11:(i===0||i===11?16:(i>=4&&i<=6?34:14)))}; });
+  ws.getRow(1).font={bold:true}; ws.getRow(1).height=22;
+  var skipped=0, used=0;
+  for(var i=0;i<rows.length;i++){
+    var p=rows[i];
+    var ents=hpEntriesOf(p), e;
+    if(country && country!=='__FIRST__'){ e=ents.filter(function(x){return x.region===country;})[0]; if(!e){ skipped++; continue; } }
+    else { e=ents[0]||{}; }
+    var name=p['name_'+lang]||p.name_zh||p.name_en||p.name_ja||p.name_ko||'';
+    var desc=p['desc_'+lang]||''; var selling=p['selling_'+lang]||'';
+    var srcCur=e.currency||''; var base=(e.supply_incl!=null?e.supply_incl:e.supply_excl);
+    var cur=srcCur; var gc=(base!=null)?base*(1+margin/100):null;
+    var sugg=(e.suggested_incl!=null?e.suggested_incl:null);
+    var doConv=(targetCur && targetCur!=='__ORIG__' && srcCur && targetCur!==srcCur);
+    if(doConv){
+      if(gc!=null){ var cv=hpConvFx(gc,srcCur,targetCur,fx); if(cv!=null){ gc=cv; cur=targetCur; } }
+      if(sugg!=null){ var sc=hpConvFx(sugg,srcCur,targetCur,fx); if(sc!=null){ sugg=sc; cur=targetCur; } }
+    }
+    gc=hpRound(gc,cur); sugg=hpRound(sugg,cur);
+    var lc=e.local_code||'';
+    var regions=(p.stock_regions||[]).join('、');
+    var row=ws.addRow([p.sku||'','',p.category||'',p.brand||'',name,desc,selling,cur,(sugg==null?'':sugg),(gc==null?'':gc),(p.shelf_life_months==null?'':p.shelf_life_months),p.origin||'',regions,lc]);
+    row.height=48; row.alignment={vertical:'middle',wrapText:true}; used++;
+    if(p.photo_url){
+      try{
+        if(st) st.textContent='處理圖片…';
+        var im=imgCache[p.photo_url];
+        if(!im){ var resp=await fetch(p.photo_url); var buf=await resp.arrayBuffer(); var ext=(p.photo_url.split('?')[0].split('.').pop()||'').toLowerCase(); ext=(ext==='png')?'png':(ext==='gif'?'gif':'jpeg'); im={buffer:buf,extension:ext}; imgCache[p.photo_url]=im; }
+        var imgId=wb.addImage({buffer:im.buffer, extension:im.extension});
+        ws.addImage(imgId,{tl:{col:1,row:row.number-1},ext:{width:60,height:60}});
+      }catch(e){ /* 圖片抓取失敗則略過 */ }
+    }
+  }
+  return {skipped:skipped, used:used};
 }
 async function hpExportRun(){
   var lang=document.getElementById('exp-lang').value;
+  var sel=(typeof msSel==='function')?msSel('exp-country').slice():[];
   var margin=Number(document.getElementById('exp-margin').value)||0, targetCur=document.getElementById('exp-cur').value;
+  // 讀取本次使用的匯率（1 外幣 = ? TWD），供換算與記錄
+  var fx={}; Array.prototype.forEach.call(document.querySelectorAll('#exp-fx .fx-rate'),function(inp){ var v=parseFloat(inp.value); if(!isNaN(v)&&v>0) fx[inp.getAttribute('data-cur')]=v; });
+  var fxUsed=(targetCur&&targetCur!=='__ORIG__'&&Object.keys(fx).length)?fx:null;
   var rows=hpFilteredProducts();
   var st=document.getElementById('exp-status'); var btn=document.getElementById('exp-run'); if(btn){btn.disabled=true;btn.textContent='匯出中…';}
   try{
-    var wb=new ExcelJS.Workbook(); var ws=wb.addWorksheet('貨盤表');
-    var heads=HP_EXP_HEADERS[lang]||HP_EXP_HEADERS.zh;
-    ws.columns=heads.map(function(h,i){ return {header:h, width:(i===1?11:(i===0||i===11?16:(i>=4&&i<=6?34:14)))}; });
-    ws.getRow(1).font={bold:true}; ws.getRow(1).height=22;
-    for(var i=0;i<rows.length;i++){
-      var p=rows[i];
-      var name=p['name_'+lang]||p.name_zh||p.name_en||p.name_ja||p.name_ko||'';
-      var desc=p['desc_'+lang]||''; var selling=p['selling_'+lang]||'';
-      var base=(p.supply_price_incl!=null?p.supply_price_incl:p.supply_price_excl);
-      var cur=p.currency||''; var gc=(base!=null)?base*(1+margin/100):null;
-      var sugg=p.suggested_price_incl;
-      var doConv=(targetCur && targetCur!=='__ORIG__' && p.currency && targetCur!==p.currency);
-      if(doConv){
-        if(gc!=null){ var cv=hpConv(gc,p.currency,targetCur); if(cv!=null){ gc=cv; cur=targetCur; } }
-        if(sugg!=null){ var sc=hpConv(sugg,p.currency,targetCur); if(sc!=null){ sugg=sc; cur=targetCur; } }
+    var wb=new ExcelJS.Workbook(); var imgCache={}; var cnt=0; var emptyCountries=[];
+    if(sel.length){
+      for(var s=0;s<sel.length;s++){
+        var c=sel[s];
+        if(st) st.textContent='產生分頁：'+c+'（'+(s+1)+'/'+sel.length+'）…';
+        var r1=await hpExpFillSheet(wb, wb.addWorksheet(hpSheetName(c,wb)), rows, c, lang, margin, targetCur, imgCache, st, fx);
+        cnt+=r1.used; if(r1.used===0) emptyCountries.push(c);
       }
-      gc=hpRound(gc,cur); sugg=hpRound(sugg,cur);
-      var lc=(Array.isArray(p.local_codes)&&p.local_codes.length)?p.local_codes.map(function(c){return (c.region?c.region+':':'')+c.code;}).join(' / '):(p.local_code||'');
-      var regions=(p.stock_regions||[]).join('、');
-      var row=ws.addRow([p.sku||'','',p.category||'',p.brand||'',name,desc,selling,cur,(sugg==null?'':sugg),(gc==null?'':gc),(p.shelf_life_months==null?'':p.shelf_life_months),p.origin||'',regions,lc]);
-      row.height=48; row.alignment={vertical:'middle',wrapText:true};
-      if(p.photo_url){
-        try{
-          if(st) st.textContent='處理圖片 '+(i+1)+'/'+rows.length+'…';
-          var resp=await fetch(p.photo_url); var buf=await resp.arrayBuffer();
-          var ext=(p.photo_url.split('?')[0].split('.').pop()||'').toLowerCase(); ext=(ext==='png')?'png':(ext==='gif'?'gif':'jpeg');
-          var imgId=wb.addImage({buffer:buf, extension:ext});
-          ws.addImage(imgId,{tl:{col:1,row:row.number-1},ext:{width:60,height:60}});
-        }catch(e){ /* 圖片抓取失敗則略過 */ }
-      }
+    } else {
+      var r0=await hpExpFillSheet(wb, wb.addWorksheet('貨盤表'), rows, '__FIRST__', lang, margin, targetCur, imgCache, st, fx);
+      cnt=r0.used;
     }
+    var country=sel.length?sel.join('、'):'__FIRST__';
     var out=await wb.xlsx.writeBuffer();
+    var note=((document.getElementById('exp-note')||{}).value||'').trim();
+    var stamp=new Date(); var dstr=stamp.toISOString().slice(0,10);
+    var dlName='貨盤表_'+dstr+'.xlsx';
     var blob=new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='貨盤表_'+new Date().toISOString().slice(0,10)+'.xlsx'; a.click();
+    // 上傳存檔到 Storage，供「匯出紀錄」日後預覽/下載。路徑用純 ASCII（中文檔名會被 Storage 拒絕）
+    var fileUrl=null, fileName='pallet_'+stamp.getTime()+'.xlsx', upErr='';
+    try{
+      if(st) st.textContent='儲存匯出檔…';
+      var upath='exports/'+fileName;
+      var upx=await sb.storage.from('export-files').upload(upath,blob,{upsert:true,contentType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',cacheControl:'3600'});
+      if(upx.error){ upErr=upx.error.message||'上傳失敗'; }
+      else { fileUrl=sb.storage.from('export-files').getPublicUrl(upath).data.publicUrl; }
+    }catch(e){ upErr=(e&&e.message)||String(e); }
+    // 寫入匯出紀錄
+    try{
+      var rec={ created_time:stamp.toISOString(), created_by:(currentUser?currentUser.full_name:'admin'),
+        note:note||null, lang:lang, country:country, target_currency:targetCur, margin:margin,
+        product_count:cnt, file_name:dlName, file_url:fileUrl, fx_rates:(fxUsed?JSON.stringify(fxUsed):null) };
+      var ins=await sb.from('export_logs').insert([rec]);
+      if(ins&&ins.error&&/fx_rates/.test(ins.error.message||'')){ delete rec.fx_rates; await sb.from('export_logs').insert([rec]); }
+    }catch(e){}
+    // 瀏覽器下載
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=dlName; a.click();
     setTimeout(function(){ URL.revokeObjectURL(a.href); },4000);
+    if(emptyCountries.length) alert('以下出貨國家沒有任何商品有價格，該分頁為空：'+emptyCountries.join('、'));
+    if(upErr) alert('檔案已下載到本機，但存到雲端失敗，匯出紀錄會顯示「未存檔」、無法再次下載/預覽。\n原因：'+upErr+'\n\n請確認已在 Supabase 執行建立 export-files bucket 的 SQL（貨盤管理_匯出紀錄_建表.sql）。');
     document.getElementById('exp-modal').remove();
+    if(typeof currentPage!=='undefined' && currentPage==='export_logs'){ loadExportLogs(); }
   }catch(err){ if(st) st.textContent='匯出失敗：'+err.message; if(btn){btn.disabled=false;btn.textContent='匯出 Excel';} }
+}
+
+/* ---------- 匯出紀錄 ---------- */
+var hpExpLogs=[]; var hpExpLogPage=1;
+async function loadExportLogs(){
+  var main=document.getElementById('main-content');
+  if(main) main.innerHTML='<div style="padding:60px;text-align:center;color:var(--text-dim);font-size:13px;">載入中…</div>';
+  var r=await sb.from('export_logs').select('*').order('created_time',{ascending:false});
+  if(r.error){ if(main) main.innerHTML='<div style="padding:60px;text-align:center;color:#dc2626;font-size:13px;">讀取失敗：'+r.error.message+'</div>'; return; }
+  hpExpLogs=r.data||[]; hpExpLogPage=1; renderExportLogs();
+}
+function hpLangLabel(l){ return ({zh:'中文',en:'English',ja:'日本語',ko:'한국어'})[l]||l||''; }
+function hpExpGo(n){ hpExpLogPage=n; renderExportLogs(); }
+async function hpExpPreview(url, name){
+  if(typeof XLSX==='undefined'){ window.open(url,'_blank'); return; }
+  var ov=document.createElement('div'); ov.id='exp-prev';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:250;display:flex;align-items:center;justify-content:center;';
+  ov.innerHTML='<div style="background:#fff;border-radius:12px;width:92vw;max-width:1100px;height:84vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.2);">'+
+    '<div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;">'+
+      '<div style="font-family:Syne,sans-serif;font-weight:700;">預覽：'+hpEsc(name||'')+'</div>'+
+      '<div style="display:flex;gap:8px;align-items:center;">'+
+        '<a class="btn btn-secondary" style="padding:4px 12px;" href="'+hpEsc(url)+'" download="'+hpEsc(name||'貨盤表.xlsx')+'" target="_blank" rel="noopener">下載</a>'+
+        '<button onclick="document.getElementById(\'exp-prev\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:18px;">✕</button>'+
+      '</div></div>'+
+    '<div id="exp-prev-tabs" style="padding:8px 20px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;"></div>'+
+    '<div id="exp-prev-body" style="padding:12px 20px;overflow:auto;flex:1;font-size:12px;color:var(--text-dim);">載入中…</div>'+
+  '</div>';
+  document.body.appendChild(ov);
+  try{
+    var resp=await fetch(url); var buf=await resp.arrayBuffer();
+    window._expPrevWB=XLSX.read(new Uint8Array(buf),{type:'array'});
+    var wb=window._expPrevWB;
+    document.getElementById('exp-prev-tabs').innerHTML=wb.SheetNames.map(function(sn,i){
+      return '<button class="btn btn-secondary" style="padding:3px 12px;'+(i===0?'background:#eff6ff;border-color:#93c5fd;':'')+'" onclick="hpExpPrevSheet('+i+',this)">'+hpEsc(sn)+'</button>'; }).join('');
+    hpExpPrevSheet(0,null);
+  }catch(e){ var b=document.getElementById('exp-prev-body'); if(b) b.innerHTML='<span style="color:#dc2626;">預覽失敗：'+hpEsc((e&&e.message)||String(e))+'（可改用右上角下載）</span>'; }
+}
+function hpExpPrevSheet(i, btn){
+  var wb=window._expPrevWB; if(!wb) return;
+  if(btn){ document.querySelectorAll('#exp-prev-tabs button').forEach(function(b){ b.style.background=''; b.style.borderColor=''; }); btn.style.background='#eff6ff'; btn.style.borderColor='#93c5fd'; }
+  var ws=wb.Sheets[wb.SheetNames[i]];
+  var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  var max=Math.min(rows.length,200);
+  var html='<table style="border-collapse:collapse;font-size:12px;width:100%;">';
+  for(var r=0;r<max;r++){
+    var cells=rows[r]||[]; html+='<tr>';
+    for(var c=0;c<cells.length;c++){ var tag=(r===0?'th':'td');
+      html+='<'+tag+' style="border:1px solid #e5e7eb;padding:4px 8px;text-align:left;white-space:pre-wrap;vertical-align:top;max-width:260px;'+(r===0?'background:#f9fafb;font-weight:600;position:sticky;top:0;':'')+'">'+hpEsc(String(cells[c]==null?'':cells[c])).slice(0,300)+'</'+tag+'>'; }
+    html+='</tr>';
+  }
+  html+='</table>'+(rows.length>max?'<div style="padding:8px;color:var(--text-dim);">僅預覽前 '+max+' 列；完整內容與商品圖片請下載檔案查看。</div>':'<div style="padding:8px;color:var(--text-dim);">＊預覽為文字表格，商品圖片請下載檔案查看。</div>');
+  document.getElementById('exp-prev-body').innerHTML=html;
+}
+function renderExportLogs(){
+  var main=document.getElementById('main-content'); if(!main) return;
+  var all=hpExpLogs, size=(typeof PAGE_SIZE!=='undefined'?PAGE_SIZE:25);
+  var total=all.length, pages=Math.max(1,Math.ceil(total/size));
+  if(hpExpLogPage>pages) hpExpLogPage=pages;
+  var start=(hpExpLogPage-1)*size, page=all.slice(start,start+size);
+  var body=page.length?page.map(function(x){
+    var t=x.created_time?new Date(x.created_time):null;
+    var ts=t?(t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')+' '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')):'';
+    var ctryL=(x.country&&x.country!=='__FIRST__')?x.country:'各商品第一國';
+    var curL=(x.target_currency&&x.target_currency!=='__ORIG__')?x.target_currency:'原幣（不換算）';
+    var fxTxt='';
+    if(x.fx_rates){ try{ var fo=JSON.parse(x.fx_rates); var parts=Object.keys(fo).map(function(k){return '1'+k+'='+fo[k]+'TWD';}); if(parts.length) fxTxt='<div style="font-size:10.5px;color:var(--text-dim);margin-top:2px;">匯率：'+hpEsc(parts.join('、'))+'</div>'; }catch(e){} }
+    var dl=x.file_url?
+      '<button class="btn btn-secondary" style="padding:4px 10px;margin-right:6px;" data-url="'+hpEsc(x.file_url)+'" data-name="'+hpEsc(x.file_name||'貨盤表.xlsx')+'" onclick="hpExpPreview(this.dataset.url,this.dataset.name)">預覽</button>'+
+      '<a class="btn btn-secondary" style="padding:4px 10px;" href="'+hpEsc(x.file_url)+'" download="'+hpEsc(x.file_name||'貨盤表.xlsx')+'" target="_blank" rel="noopener">下載</a>'
+      :'<span style="color:var(--text-dim);font-size:12px;">未存檔</span>';
+    return '<tr>'+
+      '<td style="white-space:nowrap;">'+hpEsc(ts)+'</td>'+
+      '<td>'+hpEsc(x.created_by||'')+'</td>'+
+      '<td>'+hpEsc(hpLangLabel(x.lang))+'</td>'+
+      '<td>'+hpEsc(ctryL)+'</td>'+
+      '<td>'+hpEsc(curL)+fxTxt+'</td>'+
+      '<td style="text-align:right;">'+(x.margin!=null?x.margin:0)+'%</td>'+
+      '<td style="text-align:right;">'+(x.product_count!=null?x.product_count:'')+'</td>'+
+      '<td style="max-width:240px;">'+hpEsc(x.note||'')+'</td>'+
+      '<td style="text-align:right;white-space:nowrap;">'+dl+'</td></tr>';
+  }).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--text-dim);padding:40px;">尚無匯出紀錄</td></tr>';
+  var pag;
+  if(pages>1){
+    var btns=''; for(var i=1;i<=pages;i++){ btns+='<button class="page-btn'+(i===hpExpLogPage?' active':'')+'" onclick="hpExpGo('+i+')">'+i+'</button>'; }
+    pag='<div class="pagination"><span>共 '+total+' 筆</span><div class="page-controls">'+
+      '<button class="page-btn" '+(hpExpLogPage<=1?'disabled':'onclick="hpExpGo('+(hpExpLogPage-1)+')"')+'>‹</button>'+btns+
+      '<button class="page-btn" '+(hpExpLogPage>=pages?'disabled':'onclick="hpExpGo('+(hpExpLogPage+1)+')"')+'>›</button></div></div>';
+  } else { pag='<div class="pagination"><span>共 '+total+' 筆</span></div>'; }
+  main.innerHTML=
+    '<div class="page-header"><div class="breadcrumb"><span>貨盤管理</span><span class="sep">›</span><span>匯出紀錄</span></div><h1>匯出紀錄</h1>'+
+      '<p>每次「匯出貨盤表」都會存一份檔案，可從這裡預覽或重新下載</p></div>'+
+    '<div class="table-card"><div class="table-wrap"><table>'+
+      '<thead><tr><th style="white-space:nowrap;">匯出時間</th><th>匯出人</th><th>語系</th><th>出貨國家</th><th>目標幣別</th><th style="text-align:right;">GC利潤</th><th style="text-align:right;">筆數</th><th>備註</th><th style="text-align:right;width:150px;">檔案</th></tr></thead>'+
+      '<tbody>'+body+'</tbody></table></div>'+pag+'</div>';
 }
 
 /* ---------- 批次配圖 ---------- */
@@ -7910,7 +8209,7 @@ function openBatchImageDialog(){
       '<div style="font-family:Syne,sans-serif;font-weight:700;">批次配圖</div>'+
       '<button onclick="document.getElementById(\'img-modal\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:18px;">✕</button></div>'+
     '<div style="padding:20px 24px;overflow-y:auto;flex:1;font-size:13px;">'+
-      '<div style="color:var(--text-mid);line-height:1.7;margin-bottom:12px;">選擇多張圖片<b>或直接丟一個 ZIP 圖包</b>上傳（免進 Supabase，只要後台登入即可）。系統依<b>檔名</b>比對商品：檔名用商品的 <b>SKU</b> 或 <b>當地商品編號</b>（例 <code>GC-TW-BEA-001.jpg</code>、<code>4713008375044.png</code>）。同商品多張圖加 <code>_1</code>、<code>_2</code>（第一張為主圖、其餘為附圖）。</div>'+
+      '<div style="color:var(--text-mid);line-height:1.7;margin-bottom:12px;">選擇多張圖片<b>或直接丟一個 ZIP 圖包</b>上傳（免進 Supabase，只要後台登入即可）。系統依<b>檔名</b>比對商品：檔名用商品的 <b>SKU</b> 或 <b>當地商品編號</b>（例 <code>GC-TW-BEA-001.jpg</code>、<code>4713008375044.png</code>）。同商品多張圖加 <code>_1</code>、<code>_2</code>（第一張為主圖、其餘為附圖）。<b>重新配圖會覆蓋該商品原有圖片</b>（沒配到的商品不受影響）。</div>'+
       '<input type="file" accept=".zip,image/*" multiple id="hp-img-files">'+
       '<div id="hp-img-status" style="font-size:12px;color:var(--text-dim);margin-top:10px;"></div>'+
       '<div id="hp-img-result" style="margin-top:10px;"></div>'+
@@ -7956,7 +8255,8 @@ async function hpBatchImgRun(){
     var up=await sb.storage.from('product-images').upload(path,e.blob,{upsert:true,cacheControl:'3600'});
     if(up.error){ log.push('<div style="color:#dc2626;">'+hpEsc(e.name)+' → 上傳失敗：'+hpEsc(up.error.message)+'</div>'); continue; }
     var url=sb.storage.from('product-images').getPublicUrl(path).data.publicUrl;
-    var a=acc[p.id]||(acc[p.id]={photo_url:p.photo_url||null, photos:Array.isArray(p.photos)?p.photos.slice():[]});
+    // 重新配圖採「覆蓋」：本次配到的商品，圖片以這次上傳的為準（第一張主圖、其餘附圖），覆蓋原有圖片
+    var a=acc[p.id]||(acc[p.id]={photo_url:null, photos:[]});
     if(!a.photo_url) a.photo_url=url; else a.photos.push(url);
     matched++; log.push('<div style="color:#16a34a;">'+hpEsc(e.name)+' → '+hpEsc(p.sku||'')+' '+hpEsc(hpProductName(p))+'</div>');
   }
@@ -8051,7 +8351,6 @@ async function hpSupImpRun(){
   alert('品牌方匯入完成：成功 '+done+' 筆'+(fail?('，失敗 '+fail+' 筆'):''));
   await loadSuppliers();
 }
-
 </script>
 </body>
 </html>
