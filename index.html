@@ -7778,7 +7778,7 @@ function hpImpParse(input){
   reader.onload=function(e){
     try{
       var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-      var sh=wb.Sheets['上傳範本']||wb.Sheets[wb.SheetNames[0]];
+      var sh=wb.Sheets['商品資料']||wb.Sheets['上傳範本']||wb.Sheets[wb.SheetNames[0]];
       var rows=XLSX.utils.sheet_to_json(sh,{defval:''});
       hpImpRows=[];
       rows.forEach(function(row,idx){ var m=hpMapImportRow(row); if(m){ m.rowNum=idx+2; hpImpRows.push(m); } });
