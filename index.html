@@ -669,7 +669,8 @@ select.cm-input {
 /* 漢堡鈕與抽屜遮罩：桌機隱藏 */
 .nav-toggle { display: none; }
 .nav-backdrop { display: none; }
-@media (max-width: 768px) {
+/* 直向手機(寬≤768) 或 橫放手機(橫向且高度很矮，電腦/平板不會這麼矮) 都套用手機版 */
+@media (max-width: 768px), (orientation: landscape) and (max-height: 500px) {
   /* 頂欄：收掉 240px 固定佔位、顯示漢堡鈕 */
   .topbar { padding-right: 12px; }
   .topbar-left {
