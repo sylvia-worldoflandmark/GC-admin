@@ -4688,7 +4688,7 @@ function _payItemRow(it,total_twd,cfg,locked){
     return '<tr id="pay-row-'+id+'" data-amt="'+numVal+'" data-dir="'+(it.dir||'收')+'" style="color:var(--text-mid);">'+
       '<td style="font-size:12.5px;">'+_esc(it.label||'款項')+'</td>'+
       '<td style="text-align:center;font-size:12.5px;">'+(it.pct!=null&&it.pct!==''?it.pct+'%':'—')+'</td>'+
-      '<td style="text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums;padding-right:12px;">'+cur+' '+_money(numVal)+'</td>'+
+      '<td style="text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums;padding-right:12px;">'+_fxFmt(numVal,cfg)+'</td>'+
       '<td style="font-size:12.5px;">'+(it.date?it.date:'—')+'</td>'+
       '<td style="text-align:center;font-size:12.5px;">'+dirLabel+'</td>'+
       '<td></td>'+
@@ -4751,29 +4751,37 @@ function _payDisplayTotal(){
     return Math.round(_fxConv(totalTwdCalc,cfg)*100)/100;
   }
 }
-// 即時更新收款排程小計 footer（收款項加總 vs 含稅總額）
-function _payUpdateTotal(){
-  var footer=document.getElementById('pay-footer'); if(!footer) return;
-  var cfg=_quoteCfg();
-  // 統一使用 _payDisplayTotal() 取得「含稅應收」基準（居間/主理人各自正確邏輯）
+// 共用：計算「排程收款合計 vs 含稅應收」差額。無排程表時回傳 null。
+function _payDiffCheck(){
+  var tbody=document.getElementById('pay-tbody'); if(!tbody) return null;
   var target=_payDisplayTotal();
   var sum=0;
-  var tbody=document.getElementById('pay-tbody');
-  if(tbody){ tbody.querySelectorAll('tr[id^="pay-row-"]').forEach(function(row){
+  tbody.querySelectorAll('tr[id^="pay-row-"]').forEach(function(row){
     var id=row.id.replace('pay-row-','');
-    // 未鎖定：讀 input；鎖定：讀 data-dir / data-amt
     var dirEl=document.getElementById('pay-dir-'+id);
     var dir=dirEl?dirEl.value:(row.dataset.dir||'收');
     if(dir!=='收') return; // 只計算「收」款
     var amtEl=document.getElementById('pay-amt-'+id);
     var amt=amtEl?parseFloat(amtEl.value)||0:parseFloat(row.dataset.amt)||0;
     sum+=amt;
-  }); }
+  });
   sum=Math.round(sum*100)/100;
   var diff=Math.round((sum-target)*100)/100;
-  var ok=Math.abs(diff)<0.005;
-  var cur=cfg.currency;
-  var fmt=function(n){ return cur+' '+_money(n); };
+  return { sum:sum, target:target, diff:diff, ok:Math.abs(diff)<0.005 };
+}
+// 即時更新收款排程小計 footer（收款項加總 vs 含稅總額）＋連動「標記已送合約」按鈕
+function _payUpdateTotal(){
+  var chk=_payDiffCheck();
+  // 防呆：排程金額與含稅應收不吻合時，停用「標記已送合約」按鈕
+  var mb=document.getElementById('wiz-marksent-btn');
+  if(mb){
+    if(chk && !chk.ok){ mb.disabled=true; mb.style.opacity='0.5'; mb.style.cursor='not-allowed'; mb.title='收款排程金額與含稅應收不一致，請先調整至吻合再送出'; }
+    else { mb.disabled=false; mb.style.opacity=''; mb.style.cursor=''; mb.title=''; }
+  }
+  var footer=document.getElementById('pay-footer'); if(!footer||!chk) return;
+  var cfg=_quoteCfg();
+  var target=chk.target, sum=chk.sum, diff=chk.diff, ok=chk.ok;
+  var fmt=function(n){ return _fxFmt(n,cfg); };  // 依幣別決定小數位（USD/EUR 兩位、TWD/JPY 整數）
   footer.style.cssText='margin-top:10px;padding:10px 14px;border-radius:8px;background:'+(ok?'#f0fdf4':'#fef2f2')+';border:1px solid '+(ok?'#bbf7d0':'#fecaca')+';';
   footer.innerHTML='<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;font-size:12.5px;">'+
     '<span style="color:var(--text-mid);">排程收款合計 <b style="color:var(--text);font-variant-numeric:tabular-nums;">'+fmt(sum)+'</b></span>'+
@@ -4905,7 +4913,7 @@ function _payScheduleCard(p){
       }
       var diff=Math.round((initSum-tgt)*100)/100;
       var ok=Math.abs(diff)<0.005;
-      var cur=cfg.currency; var fmt=function(n){ return cur+' '+_money(n); };
+      var fmt=function(n){ return _fxFmt(n,cfg); };
       return '<div id="pay-footer" style="margin-top:10px;padding:10px 14px;border-radius:8px;background:'+(ok?'#f0fdf4':'#fef2f2')+';border:1px solid '+(ok?'#bbf7d0':'#fecaca')+';">'+
         '<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;font-size:12.5px;">'+
         '<span style="color:var(--text-mid);">排程收款合計 <b style="color:var(--text);font-variant-numeric:tabular-nums;">'+fmt(initSum)+'</b></span>'+
@@ -5079,7 +5087,7 @@ function _wizStep5(){
     ?''
     :(_statusRank(p.status)>=_statusRank('contract_sent')
       ?'<button class="btn btn-secondary" onclick="_wizEditQuote()" style="border-color:#dc2626;color:#dc2626;">修改報價</button>'
-      :'<button class="btn btn-secondary" onclick="_wizSaveStep3()">儲存設定</button><button class="btn btn-secondary" onclick="_wizMarkSent()">標記已送合約</button>');
+      :'<button class="btn btn-secondary" onclick="_wizSaveStep3()">儲存設定</button><button class="btn btn-secondary" id="wiz-marksent-btn" onclick="_wizMarkSent()">標記已送合約</button>');
   return (_step5SignedLocked?_SIGN_LOCK_BANNER:'')+
   '<div style="display:flex;gap:20px;align-items:flex-start;'+(_step5SignedLocked?'pointer-events:none;opacity:0.7;':'')+'">'+
     '<div style="flex:1;min-width:0;">'+
@@ -5103,6 +5111,15 @@ async function _wizEditQuote(){
   if(r){ _toast('已開啟修改模式，匯率維持鎖定（可至匯率設定手動解除）'); _wizRender(); }
 }
 async function _wizMarkSent(){
+  // 防呆：收款排程「收」款金額必須與報價含稅應收一致，否則不允許送出合約
+  if(!_isLocked()){
+    var _chk=_payDiffCheck();
+    if(_chk && !_chk.ok){
+      var _c=_quoteCfg();
+      alert('收款排程金額與報價含稅總計不一致，無法標記送出合約。\n\n排程收款合計：'+_fxFmt(_chk.sum,_c)+'\n含稅應收　　：'+_fxFmt(_chk.target,_c)+'\n差額　　　　：'+(_chk.diff>0?'多收 ':'少收 ')+_fxFmt(Math.abs(_chk.diff),_c)+'\n\n請調整收款排程金額使其與含稅應收一致後再送出（可用上方「快速套用」一鍵帶入）。');
+      return;
+    }
+  }
   // 先把排程同步到記憶體（確保即使之前有重渲染也不丟資料）
   // _isLocked() 為 true 時 DOM 無 input，_paySync() 會全部讀到 0，不能蓋掉記憶體
   var payItems=_isLocked()?[]:_paySync(); var payStr=payItems&&payItems.length?_paySerialize(payItems):WIZ.project.payment_terms||null;
@@ -8013,6 +8030,25 @@ function hpSheetName(name, wb){
   while(wb.getWorksheet(s)){ s=base+'_'+k; k++; }
   return s;
 }
+// 匯出用縮圖：抓圖→縮到 160px→輸出 JPEG，大幅縮小檔案（避免超過 Storage 單檔上限）。失敗回傳 null。
+async function hpExpThumb(url){
+  try{
+    var resp=await fetch(url); if(!resp.ok) throw new Error('fetch '+resp.status);
+    var blob=await resp.blob();
+    var bmp=null; try{ bmp=await createImageBitmap(blob); }catch(e){ bmp=null; }
+    if(bmp){
+      var max=160, w=bmp.width||160, h=bmp.height||160, s=Math.min(1,max/Math.max(w,h));
+      var cw=Math.max(1,Math.round(w*s)), ch=Math.max(1,Math.round(h*s));
+      var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
+      var ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,cw,ch); ctx.drawImage(bmp,0,0,cw,ch);
+      var out=await new Promise(function(res){ cv.toBlob(function(b){res(b);},'image/jpeg',0.82); });
+      if(out){ return {buffer:await out.arrayBuffer(), extension:'jpeg'}; }
+    }
+    // 後備：縮圖失敗就用原圖
+    var ext=(url.split('?')[0].split('.').pop()||'').toLowerCase(); ext=(ext==='png')?'png':(ext==='gif'?'gif':'jpeg');
+    return {buffer:await blob.arrayBuffer(), extension:ext};
+  }catch(e){ return null; }
+}
 // 填一個分頁：country='__FIRST__' 取各商品第一國；否則只列有該國價格者。回傳 {skipped,used}
 async function hpExpFillSheet(wb, ws, rows, country, lang, margin, targetCur, imgCache, st, fx){
   var heads=HP_EXP_HEADERS[lang]||HP_EXP_HEADERS.zh;
@@ -8043,9 +8079,11 @@ async function hpExpFillSheet(wb, ws, rows, country, lang, margin, targetCur, im
       try{
         if(st) st.textContent='處理圖片…';
         var im=imgCache[p.photo_url];
-        if(!im){ var resp=await fetch(p.photo_url); var buf=await resp.arrayBuffer(); var ext=(p.photo_url.split('?')[0].split('.').pop()||'').toLowerCase(); ext=(ext==='png')?'png':(ext==='gif'?'gif':'jpeg'); im={buffer:buf,extension:ext}; imgCache[p.photo_url]=im; }
-        var imgId=wb.addImage({buffer:im.buffer, extension:im.extension});
-        ws.addImage(imgId,{tl:{col:1,row:row.number-1},ext:{width:60,height:60}});
+        if(im===undefined){ im=await hpExpThumb(p.photo_url); imgCache[p.photo_url]=im; }  // 縮圖快取（失敗存 null，不重試）
+        if(im){
+          var imgId=wb.addImage({buffer:im.buffer, extension:im.extension});
+          ws.addImage(imgId,{tl:{col:1,row:row.number-1},ext:{width:60,height:60}});
+        }
       }catch(e){ /* 圖片抓取失敗則略過 */ }
     }
   }
