@@ -638,6 +638,14 @@ tbody tr:hover .row-actions { opacity: 1; }
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .cm-input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+/* 洽談項目報價的小計列（電腦版） */
+.wiz-sum {
+  display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: baseline;
+  gap: 6px 26px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);
+}
+.wiz-sum-item { display: inline-flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+.wiz-sum-l { font-size: 13.5px; color: var(--text-mid); }
+.wiz-sum-v { font-size: 17px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 textarea.cm-input { height: auto; padding: 9px 12px; line-height: 1.6; }
 select.cm-input {
   appearance: none;
@@ -729,6 +737,10 @@ select.cm-input {
   /* 表單／卡片格線改單欄 */
   .cm-section { grid-template-columns: 1fr; gap: 10px; }
   .cm-grid { grid-template-columns: 1fr; gap: 14px; }
+  /* 手機：小計列改為靠左換行、字級略縮，但仍比原本大 */
+  .wiz-sum { justify-content: flex-start; gap: 10px 18px; margin-top: 12px; padding-top: 10px; }
+  .wiz-sum-l { font-size: 12.5px; }
+  .wiz-sum-v { font-size: 15px; }
   .cr-grid { grid-template-columns: 1fr; }
   [style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
   [style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
@@ -1194,14 +1206,16 @@ var CUSTOMER_FIELDS = [
   {key:'contact_phone',         label:'聯絡電話',                        required:false},
   {key:'email',                 label:'電子信箱',                        required:true},
   {key:'other_contact_info',    label:'其他聯絡方式',                    required:false},
-  {type:'section', label:'公司資訊', desc:'客戶的基本登記資料'},
+  {type:'section', label:'公司資訊', desc:'基本登記資料與公司聯絡方式'},
   {key:'customer_type',         label:'身份類型',                        required:true, type:'select', options:[{v:'公司',l:'公司'},{v:'工作室',l:'工作室'},{v:'個人',l:'個人'}]},
   {key:'company_name',          label:'公司 / 工作室名稱 / 個人名字',   required:true},
   {key:'tax_id',                label:'統一編號 / 身分證字號',           required:true},
   {key:'owner_name',            label:'公司負責人',                      required:true},
+  {key:'company_country',       label:'公司登記地',                      required:true},
+  {key:'company_phone',         label:'公司電話',                        required:false, placeholder:'公司總機／代表號'},
+  {key:'company_address',       label:'公司地址',                        required:false, wide:true, placeholder:'發票／合約抬頭地址'},
   {key:'website_url',           label:'官網網址'},
   {type:'section', label:'公司銀行資訊', desc:'付款帳戶與開立憑證設定'},
-  {key:'company_country',       label:'公司登記地',                      required:true},
   {key:'payment_currency',      label:'付款幣別',                        required:true, type:'select', options:[{v:'TWD',l:'TWD'},{v:'USD',l:'USD'},{v:'JPY',l:'JPY'},{v:'CNY',l:'CNY'}]},
   {key:'invoice_type',          label:'開立憑證方式',                    required:true, type:'select', options:[{v:'發票',l:'發票'},{v:'收據',l:'收據'},{v:'勞務報酬單',l:'勞務報酬單'}]},
   {key:'bank_code',             label:'銀行代號',                        required:true},
@@ -1220,12 +1234,14 @@ var CUSTOMER_TABLE_COLS = [
   {key:'company_name',       label:'公司／工作室／個人名字',          w:'160px'},
   {key:'tax_id',             label:'統一編號／身分證字號',            w:'140px'},
   {key:'owner_name',         label:'公司負責人',                      w:'100px'},
+  {key:'company_country',    label:'公司登記地',                      w:'110px'},
+  {key:'company_phone',      label:'公司電話',                        w:'120px'},
+  {key:'company_address',    label:'公司地址',                        w:'200px'},
   {key:'contact_name',       label:'聯絡人',                          w:'100px'},
   {key:'contact_phone',      label:'聯絡電話',                        w:'120px'},
   {key:'email',              label:'電子信箱',                        w:'170px'},
   {key:'other_contact_info', label:'其他聯絡方式',                    w:'130px'},
   {key:'website_url',        label:'官網網址',                        w:'160px'},
-  {key:'company_country',    label:'公司登記地',                      w:'110px'},
   {key:'payment_currency',   label:'付款幣別',                        w:'90px'},
   {key:'invoice_type',       label:'開立憑證方式',                    w:'120px'},
   {key:'bank_code',          label:'銀行代號',                        w:'90px'},
@@ -1414,7 +1430,7 @@ function openCustomerModal(id, isNew) {
       }).join('');
       inputHtml = '<select class="cm-input" id="cf-' + f.key + '"' + reqAttr + ' onchange="this.style.borderColor=\'\'"><option value="">請選擇</option>' + opts + '</select>';
     } else {
-      inputHtml = '<input class="cm-input" id="cf-' + f.key + '" value="' + (row[f.key]||'') + '" placeholder="' + (f.required ? f.label + '（必填）' : f.label) + '"' + reqAttr + ' oninput="this.style.borderColor=\'\'">';
+      inputHtml = '<input class="cm-input" id="cf-' + f.key + '" value="' + (row[f.key]||'') + '" placeholder="' + (f.placeholder || (f.required ? f.label + '（必填）' : f.label)) + '"' + reqAttr + ' oninput="this.style.borderColor=\'\'">';
     }
     current.html += '<div class="cm-field"' + (f.wide ? ' style="grid-column:1/-1;"' : '') + '>' +
       '<label>' + f.label + reqMark + '<span class="cm-key">' + f.key + '</span></label>' +
@@ -1518,13 +1534,15 @@ var SERVICE_PROVIDER_FIELDS = [
   {type:'section', label:'聯絡窗口資訊', desc:'主要聯繫窗口與聯絡方式'},
   {key:'contact_name',       label:'服務商聯絡人',                     required:true},
   {key:'contact_info',       label:'服務商聯絡方式',                   required:false},
-  {type:'section', label:'公司資訊', desc:'服務商的基本登記資料'},
+  {type:'section', label:'公司資訊', desc:'基本登記資料與公司聯絡方式'},
   {key:'customer_type',      label:'身份類型',                         required:true, type:'select', options:[{v:'公司',l:'公司'},{v:'工作室',l:'工作室'},{v:'個人',l:'個人'}]},
   {key:'company_name',       label:'公司抬頭 / 個人名稱',              required:true},
   {key:'tax_id',             label:'統一編號 / 身分證字號',            required:true},
   {key:'owner_name',         label:'公司負責人',                       required:true},
-  {type:'section', label:'公司銀行資訊', desc:'收款帳戶與開立憑證設定'},
   {key:'company_country',    label:'公司登記地',                       required:true},
+  {key:'company_phone',      label:'公司電話',                         required:false, placeholder:'公司總機／代表號'},
+  {key:'company_address',    label:'公司地址',                         required:false, wide:true, placeholder:'發票／合約抬頭地址'},
+  {type:'section', label:'公司銀行資訊', desc:'收款帳戶與開立憑證設定'},
   {key:'payment_currency',   label:'收款幣別',                         required:true, type:'select', options:[{v:'TWD',l:'TWD'},{v:'USD',l:'USD'},{v:'JPY',l:'JPY'},{v:'CNY',l:'CNY'}]},
   {key:'invoice_type',       label:'開立憑證方式',                     required:true, type:'select', options:[{v:'發票',l:'發票'},{v:'收據',l:'收據'},{v:'勞務報酬單',l:'勞務報酬單'}]},
   {key:'bank_code',          label:'銀行代號',                         required:true},
@@ -1542,9 +1560,11 @@ var SERVICE_PROVIDER_TABLE_COLS = [
   {key:'company_name',       label:'公司抬頭／個人名稱',               w:'160px'},
   {key:'tax_id',             label:'統一編號／身分證字號',             w:'140px'},
   {key:'owner_name',         label:'公司負責人',                       w:'100px'},
+  {key:'company_country',    label:'公司登記地',                       w:'110px'},
+  {key:'company_phone',      label:'公司電話',                         w:'120px'},
+  {key:'company_address',    label:'公司地址',                         w:'200px'},
   {key:'contact_name',       label:'服務商聯絡人',                     w:'110px'},
   {key:'contact_info',       label:'服務商聯絡方式',                   w:'160px'},
-  {key:'company_country',    label:'公司登記地',                       w:'110px'},
   {key:'payment_currency',   label:'收款幣別',                         w:'90px'},
   {key:'invoice_type',       label:'開立憑證方式',                     w:'120px'},
   {key:'bank_code',          label:'銀行代號',                         w:'90px'},
@@ -1746,7 +1766,7 @@ function openServiceProviderModal(id, isNew) {
       }).join('');
       inputHtml = '<select class="cm-input" id="sp-' + f.key + '"' + reqAttr + ' onchange="this.style.borderColor=\'\'"><option value="">請選擇</option>' + opts + '</select>';
     } else {
-      inputHtml = '<input class="cm-input" id="sp-' + f.key + '" value="' + (row[f.key]||'') + '" placeholder="' + (f.required ? f.label + '（必填）' : f.label) + '"' + reqAttr + ' oninput="this.style.borderColor=\'\'">';
+      inputHtml = '<input class="cm-input" id="sp-' + f.key + '" value="' + (row[f.key]||'') + '" placeholder="' + (f.placeholder || (f.required ? f.label + '（必填）' : f.label)) + '"' + reqAttr + ' oninput="this.style.borderColor=\'\'">';
     }
     current.html += '<div class="cm-field"' + (f.wide ? ' style="grid-column:1/-1;"' : '') + '>' +
       '<label>' + f.label + reqMark + '<span class="cm-key">' + f.key + '</span></label>' +
@@ -1843,13 +1863,15 @@ function closeSpModal() {
 
 // ─── 商務夥伴資料 ────────────────────────────────────────
 var BUSINESS_PARTNER_FIELDS = [
-  {type:'section', label:'公司資訊', desc:'商務夥伴的基本登記資料'},
+  {type:'section', label:'公司資訊', desc:'基本登記資料與公司聯絡方式'},
   {key:'customer_type',      label:'身份類型',                         required:true, type:'select', options:[{v:'公司',l:'公司'},{v:'工作室',l:'工作室'},{v:'個人',l:'個人'}]},
   {key:'company_name',       label:'公司抬頭 / 個人名稱',              required:true},
   {key:'tax_id',             label:'統一編號 / 身分證字號',            required:true},
   {key:'owner_name',         label:'公司負責人',                       required:true},
-  {type:'section', label:'公司銀行資訊', desc:'收款帳戶與開立憑證設定'},
   {key:'company_country',    label:'公司登記地',                       required:true},
+  {key:'company_phone',      label:'公司電話',                         required:false, placeholder:'公司總機／代表號'},
+  {key:'company_address',    label:'公司地址',                         required:false, wide:true, placeholder:'發票／合約抬頭地址'},
+  {type:'section', label:'公司銀行資訊', desc:'收款帳戶與開立憑證設定'},
   {key:'payment_currency',   label:'收款幣別',                         required:true, type:'select', options:[{v:'TWD',l:'TWD'},{v:'USD',l:'USD'},{v:'JPY',l:'JPY'},{v:'CNY',l:'CNY'}]},
   {key:'invoice_type',       label:'開立憑證方式',                     required:true, type:'select', options:[{v:'發票',l:'發票'},{v:'收據',l:'收據'},{v:'勞務報酬單',l:'勞務報酬單'}]},
   {key:'bank_code',          label:'銀行代號',                         required:true},
@@ -1868,6 +1890,8 @@ var BUSINESS_PARTNER_TABLE_COLS = [
   {key:'tax_id',             label:'統一編號／身分證字號',             w:'140px'},
   {key:'owner_name',         label:'公司負責人',                       w:'100px'},
   {key:'company_country',    label:'公司登記地',                       w:'110px'},
+  {key:'company_phone',      label:'公司電話',                         w:'120px'},
+  {key:'company_address',    label:'公司地址',                         w:'200px'},
   {key:'payment_currency',   label:'收款幣別',                         w:'90px'},
   {key:'invoice_type',       label:'開立憑證方式',                     w:'120px'},
   {key:'bank_code',          label:'銀行代號',                         w:'90px'},
@@ -2068,7 +2092,7 @@ function openBpModal(id, isNew) {
       }).join('');
       inputHtml = '<select class="cm-input" id="bp-' + f.key + '"' + reqAttr + ' onchange="this.style.borderColor=\'\'"><option value="">請選擇</option>' + opts + '</select>';
     } else {
-      inputHtml = '<input class="cm-input" id="bp-' + f.key + '" value="' + (row[f.key]||'') + '" placeholder="' + (f.required ? f.label + '（必填）' : f.label) + '"' + reqAttr + ' oninput="this.style.borderColor=\'\'">';
+      inputHtml = '<input class="cm-input" id="bp-' + f.key + '" value="' + (row[f.key]||'') + '" placeholder="' + (f.placeholder || (f.required ? f.label + '（必填）' : f.label)) + '"' + reqAttr + ' oninput="this.style.borderColor=\'\'">';
     }
     current.html += '<div class="cm-field"' + (f.wide ? ' style="grid-column:1/-1;"' : '') + '>' +
       '<label>' + f.label + reqMark + '<span class="cm-key">' + f.key + '</span></label>' +
@@ -2473,6 +2497,23 @@ function _badge(label,color){
   return '<span style="display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;color:'+c[0]+';background:'+c[1]+';white-space:nowrap;">'+_esc(label)+'</span>';
 }
 function _custName(id){ var x=_find(DB.customers,id); return x?(x.company_name||('#'+id)):(id?'#'+id:'—'); }
+/* 報價單／合約上的客戶公司資訊：統編、地址、電話、負責人（缺的欄位自動略過，不留空行） */
+function _custInfo(id){
+  var x=_find(DB.customers,id); if(!x) return null;
+  return { name:x.company_name||('#'+id), tax:x.tax_id||'', addr:x.company_address||'', phone:x.company_phone||'',
+           owner:x.owner_name||'', contact:x.contact_name||'', contactPhone:x.contact_phone||'' };
+}
+function _custInfoHtml(id,opt){
+  var c=_custInfo(id); if(!c) return '';
+  opt=opt||{}; var L=[];
+  if(c.tax)   L.push('統一編號：'+_esc(c.tax));
+  if(c.addr)  L.push('地址：'+_esc(c.addr));
+  if(c.phone) L.push('電話：'+_esc(c.phone));
+  if(opt.owner!==false && c.owner) L.push('負責人：'+_esc(c.owner));
+  if(opt.contact && (c.contact||c.contactPhone)) L.push('聯絡人：'+_esc(c.contact)+(c.contactPhone?'　'+_esc(c.contactPhone):''));
+  if(!L.length) return '';
+  return '<div style="font-size:11px;color:#666;margin-top:'+(opt.gap||4)+'px;line-height:1.8;">'+L.join('<br>')+'</div>';
+}
 function _spName(id){ var x=_find(DB.service_providers,id); return x?(x.company_name||x.contact_name||('#'+id)):(id?'#'+id:'—'); }
 function _bpName(id){ var x=_find(DB.business_partners,id); if(!x) return id?'#'+id:'直客（無商務）'; return x.company_name||x.owner_name||('#'+id); }
 
@@ -3592,6 +3633,29 @@ async function _wizSaveProject(patch){
 // 步驟共用：區塊標題（強調色標線，可選右側控制項）與淺色卡片容器
 function _wizSecTitle(t,right){ return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-weight:700;font-size:13.5px;color:var(--text);margin-bottom:18px;padding-bottom:11px;border-bottom:1px solid var(--border);"><span style="display:flex;align-items:center;gap:9px;"><span style="width:4px;height:15px;border-radius:2px;background:var(--accent);display:inline-block;"></span>'+t+'</span>'+(right||'')+'</div>'; }
 function _wizCard(inner,extra){ return '<div style="background:#fbfcfe;border:1px solid var(--border);border-radius:12px;padding:22px 24px;'+(extra||'')+'">'+inner+'</div>'; }
+/* ---------- 可收合區塊（收合狀態記在 localStorage，切頁/重整都記得） ---------- */
+function _foldOpen(key,def){ try{ var v=localStorage.getItem('wizFold_'+key); return v==null?!!def:(v==='1'); }catch(e){ return !!def; } }
+function _wizToggleFold(key){
+  var body=document.getElementById('fold-body-'+key); if(!body) return;
+  var open=(body.style.display==='none');   // 以畫面現況為準，不靠預設值推算
+  try{ localStorage.setItem('wizFold_'+key, open?'1':'0'); }catch(e){}
+  body.style.display=open?'block':'none';
+  var head=document.getElementById('fold-head-'+key);
+  if(head){ head.style.marginBottom=open?'18px':'0'; head.style.paddingBottom=open?'11px':'0'; head.style.borderBottom=open?'1px solid var(--border)':'none'; }
+  var ico=document.getElementById('fold-ico-'+key); if(ico) ico.style.transform=open?'rotate(90deg)':'rotate(0deg)';
+  var sum=document.getElementById('fold-sum-'+key); if(sum) sum.style.display=open?'none':'inline';
+}
+// 收合卡片：title 左側可點；right 為右上角控制項（不觸發收合）；summary 收合時顯示的摘要
+function _wizFoldCard(key,title,right,body,def,summary){
+  var open=_foldOpen(key,def);
+  var head='<div id="fold-head-'+key+'" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;'+(open?'margin-bottom:18px;padding-bottom:11px;border-bottom:1px solid var(--border);':'margin-bottom:0;padding-bottom:0;border-bottom:none;')+'">'+
+    '<span onclick="_wizToggleFold(\''+key+'\')" style="display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none;font-weight:700;font-size:13.5px;color:var(--text);flex:1;min-width:0;">'+
+      '<svg id="fold-ico-'+key+'" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="var(--accent)" stroke-width="2.2" style="flex:none;transition:transform .15s;transform:rotate('+(open?90:0)+'deg);"><path d="M4 2l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>'+
+      '<span>'+title+'</span>'+
+      '<span id="fold-sum-'+key+'" style="display:'+(open?'none':'inline')+';font-weight:400;font-size:12px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(summary||'')+'</span>'+
+    '</span>'+(right||'')+'</div>';
+  return _wizCard(head+'<div id="fold-body-'+key+'" style="display:'+(open?'block':'none')+';">'+body+'</div>');
+}
 
 // Step 1：成立專案（客戶 + 帶單商務 + 稅率 + 客戶撰寫資料）。案號 12 碼於儲存時自動產生，不顯示欄位。
 var _LOCK_BANNER='<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:10px 14px;background:#fef3c7;border:1px solid #fcd34d;border-radius:9px;font-size:12.5px;color:#92400e;">🔒 合約已送出，此頁為唯讀。如需修改，請至「報價／合約」步驟點「修改報價」。</div>';
@@ -3703,26 +3767,23 @@ function _wizStep3(){
   var bpCurLabel=(function(){ var b=WIZ.project.business_partner_id?_find(DB.business_partners,WIZ.project.business_partner_id):null; return b&&b.payment_currency&&b.payment_currency!=='TWD'?'（業務收款 '+b.payment_currency+'）':''; })();
   var rebateCard = ''; // 居間退傭與分潤試算區塊已移除
   var _step3Locked=_isLocked();
+  // 洽談進度收合時的摘要：顯示前 26 字，一眼知道裡面有沒有東西
+  var _note=(WIZ.project.contact_note||'').replace(/\s+/g,' ').trim();
+  var _noteSum=_note?('· '+_esc(_note.slice(0,26))+(_note.length>26?'…':'')):'<span style="color:var(--text-dim);">尚未填寫</span>';
+  var _mCount=WIZ.matches.length;
   return (_step3Locked?_LOCK_BANNER:'')+
-    '<div style="display:flex;gap:20px;align-items:stretch;flex-wrap:wrap;">'+
-      '<div style="flex:1;min-width:min(440px,100%);display:flex;flex-direction:column;gap:20px;'+(_step3Locked?'pointer-events:none;opacity:0.65;':'')+'">'+
-        _wizCard(
-          _wizSecTitle('服務商與會議時間',_step3Locked?'':addProvCtrl)+
-          (meetRows||'<div style="color:var(--text-dim);font-size:12.5px;padding:4px 0;">尚未加入服務商。</div>')
-        )+
-        _wizCard(
-          _wizSecTitle('洽談項目與報價')+
-          (itemCards||'<div style="color:var(--text-dim);font-size:12.5px;padding:4px 0;">加入服務商後，可在此設定各自的服務項目與報價，最後確認要採用哪些服務。</div>')
-        )+
-        rebateCard+
-      '</div>'+
-      '<div style="width:340px;max-width:100%;flex-shrink:0;display:flex;">'+
-        _wizCard(
-          _wizSecTitle('洽談進度紀錄')+
-          '<textarea class="cm-input" id="wiz-contact" style="flex:1;min-height:360px;resize:none;line-height:1.7;background:#fff;width:100%;" placeholder="目前與客戶／服務商洽談的進度、結論…">'+_esc(WIZ.project.contact_note||'')+'</textarea>',
-          'flex:1;display:flex;flex-direction:column;'
-        )+
-      '</div>'+
+    '<div style="display:flex;flex-direction:column;gap:16px;'+(_step3Locked?'pointer-events:none;opacity:0.65;':'')+'">'+
+      _wizFoldCard('contact','洽談進度紀錄','',
+        '<textarea class="cm-input" id="wiz-contact" style="min-height:180px;resize:vertical;line-height:1.7;background:#fff;width:100%;" placeholder="目前與客戶／服務商洽談的進度、結論…">'+_esc(WIZ.project.contact_note||'')+'</textarea>',
+        false, _noteSum)+
+      _wizFoldCard('meet','服務商與會議時間',(_step3Locked?'':addProvCtrl),
+        (meetRows||'<div style="color:var(--text-dim);font-size:12.5px;padding:4px 0;">尚未加入服務商。</div>'),
+        true, (_mCount?'· 已加入 '+_mCount+' 家':'<span style="color:var(--text-dim);">尚未加入服務商</span>'))+
+      _wizCard(
+        _wizSecTitle('洽談項目與報價')+
+        (itemCards||'<div style="color:var(--text-dim);font-size:12.5px;padding:4px 0;">加入服務商後，可在此設定各自的服務項目與報價，最後確認要採用哪些服務。</div>')
+      )+
+      rebateCard+
     '</div>'+
     _wizFooter('<button class="btn btn-secondary" onclick="_wizSaveContactStep().then(function(o){if(o)_toast(\'已儲存洽談內容\');})">儲存</button>');
 }
@@ -3786,15 +3847,16 @@ function _wizItemsCard(m){
   var rows=items.map(function(it){
     var itCur=_itemCurrency(it,m.service_provider_id);
     var curBadge='<span class="badge badge-'+(itCur==='TWD'?'gray':itCur==='USD'?'green':itCur==='JPY'?'amber':'blue')+'" style="font-size:10px;padding:1px 5px;">'+itCur+'</span>';
+    var numSty='width:100%;min-width:0;text-align:right;font-variant-numeric:tabular-nums;';
     return '<tr>'+
-      '<td><input class="cm-input" id="it-name-'+it.id+'" value="'+_esc(it.item_name||'')+'" style="min-width:110px;" onchange="_wizSaveItem('+it.id+')"></td>'+
+      '<td><input class="cm-input" id="it-name-'+it.id+'" value="'+_esc(it.item_name||'')+'" style="width:100%;min-width:180px;" onchange="_wizSaveItem('+it.id+')"></td>'+
       '<td style="text-align:center;">'+curBadge+'</td>'+
-      '<td><input class="cm-input" id="it-qty-'+it.id+'" type="number" min="0" step="1" value="'+(it.qty!=null?it.qty:1)+'" style="width:54px;" oninput="_wizCalc('+m.id+','+it.id+',\'qty\')" onchange="_wizSaveItem('+it.id+')"></td>'+
-      '<td><input class="cm-input" id="it-unit-'+it.id+'" type="number" min="0" step="0.01" value="'+(it.unit_price!=null?it.unit_price:0)+'" style="width:88px;" oninput="_wizCalc('+m.id+','+it.id+',\'unit\')" onchange="_wizSaveItem('+it.id+')"></td>'+
-      '<td><input class="cm-input" id="it-amt-'+it.id+'" type="number" min="0" step="0.01" value="'+(it.amount_untaxed!=null?it.amount_untaxed:0)+'" style="width:94px;" oninput="_wizCalc('+m.id+','+it.id+',\'amt\')" onchange="_wizSaveItem('+it.id+')"></td>'+
+      '<td><input class="cm-input" id="it-qty-'+it.id+'" type="number" min="0" step="1" value="'+(it.qty!=null?it.qty:1)+'" style="'+numSty+'" oninput="_wizCalc('+m.id+','+it.id+',\'qty\')" onchange="_wizSaveItem('+it.id+')"></td>'+
+      '<td><input class="cm-input" id="it-unit-'+it.id+'" type="number" min="0" step="0.01" value="'+(it.unit_price!=null?it.unit_price:0)+'" style="'+numSty+'" oninput="_wizCalc('+m.id+','+it.id+',\'unit\')" onchange="_wizSaveItem('+it.id+')"></td>'+
+      '<td><input class="cm-input" id="it-amt-'+it.id+'" type="number" min="0" step="0.01" value="'+(it.amount_untaxed!=null?it.amount_untaxed:0)+'" style="'+numSty+'" oninput="_wizCalc('+m.id+','+it.id+',\'amt\')" onchange="_wizSaveItem('+it.id+')"></td>'+
       (inter
-        ? '<td><input class="cm-input" id="it-base-'+it.id+'" type="number" min="0" max="100" step="0.01" value="'+(it.base_price!=null?it.base_price:0)+'" style="width:72px;background:#fafafa;" oninput="_wizCalc('+m.id+','+it.id+',\'base\')" onchange="_wizSaveItem('+it.id+')"></td>'
-        : '<td><input class="cm-input" id="it-base-'+it.id+'" type="number" min="0" step="0.01" data-baseunit="'+(function(){var q=(it.qty!=null?it.qty:1)||0;var bp=(it.base_price!=null?it.base_price:0);return q>0?Math.round(bp/q*10000)/10000:bp;})()+'" value="'+(it.base_price!=null?it.base_price:0)+'" style="width:88px;background:#fafafa;" oninput="_wizCalc('+m.id+','+it.id+',\'base\')" onchange="_wizSaveItem('+it.id+')"></td>')+
+        ? '<td><input class="cm-input" id="it-base-'+it.id+'" type="number" min="0" max="100" step="0.01" value="'+(it.base_price!=null?it.base_price:0)+'" style="'+numSty+'background:#fafafa;" oninput="_wizCalc('+m.id+','+it.id+',\'base\')" onchange="_wizSaveItem('+it.id+')"></td>'
+        : '<td><input class="cm-input" id="it-base-'+it.id+'" type="number" min="0" step="0.01" data-baseunit="'+(function(){var q=(it.qty!=null?it.qty:1)||0;var bp=(it.base_price!=null?it.base_price:0);return q>0?Math.round(bp/q*10000)/10000:bp;})()+'" value="'+(it.base_price!=null?it.base_price:0)+'" style="'+numSty+'background:#fafafa;" oninput="_wizCalc('+m.id+','+it.id+',\'base\')" onchange="_wizSaveItem('+it.id+')"></td>')+
       '<td style="text-align:center;"><button title="刪除項目" onclick="_wizDelItem('+m.id+','+it.id+')" style="background:#fef2f2;border:1px solid #fecaca;cursor:pointer;color:#dc2626;font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:7px;white-space:nowrap;">刪除</button></td>'+
     '</tr>';
   }).join('');
@@ -3804,9 +3866,13 @@ function _wizItemsCard(m){
       '<div style="display:flex;gap:8px;align-items:center;"><select class="cm-input" id="cat-'+m.id+'" style="max-width:300px;"><option value="">＋ 從項目庫加入…</option>'+catOpts+'</select><button class="btn btn-secondary" onclick="_wizAddItem('+m.id+',false)">加入</button><button class="btn btn-secondary" onclick="_wizAddItem('+m.id+',true)">手動新增</button></div>'+
     '</div>'+
     (inter?'<div style="font-size:11px;color:var(--text-dim);margin:-2px 0 10px;">居間模式：各項目可個別設定退傭%；從項目庫加入時會自動帶入客戶單價與退傭%，可手動調整。</div>':'')+
-    '<div class="table-wrap"><table><thead><tr><th>項目名稱</th><th style="width:44px;text-align:center;">幣別</th><th style="width:54px;">數量</th><th style="width:88px;">單價(未稅)</th><th style="width:94px;">未稅小計</th>'+(inter?'<th style="width:72px;">退傭%</th>':'<th style="width:88px;">底價(未稅)</th>')+'<th style="width:68px;text-align:center;">操作</th></tr></thead><tbody>'+(rows||'<tr><td colspan="7" style="color:var(--text-dim);padding:10px;">尚無項目，從項目庫加入或手動新增。</td></tr>')+'</tbody></table></div>'+
-    '<div style="display:flex;justify-content:flex-end;align-items:center;margin-top:10px;">'+
-      '<div style="font-size:12.5px;color:var(--text-mid);">未稅小計 <b id="m-sub-'+m.id+'" style="color:var(--text);">'+_money(m.subtotal_untaxed)+'</b>'+(inter?'　退傭金額 <b id="m-rebate-'+m.id+'" style="color:#b45309;">'+_money((function(){ var s=0; (WIZ.itemsByMatch[m.id]||[]).forEach(function(x){ s+=Math.round((x.amount_untaxed||0)*(x.base_price||0)/100*100)/100; }); return s; })())+'</b>':'　底價 <b id="m-base-'+m.id+'">'+_money(m.base_total)+'</b>　利潤 <b id="m-profit-'+m.id+'" style="color:#16a34a;">'+_money(m.profit_untaxed)+'</b>')+'</div>'+
+    '<div class="table-wrap"><table style="width:100%;"><thead><tr><th style="min-width:180px;">項目名稱</th><th style="width:52px;text-align:center;">幣別</th><th style="width:64px;text-align:right;">數量</th><th style="width:120px;text-align:right;">單價(未稅)</th><th style="width:130px;text-align:right;">未稅小計</th>'+(inter?'<th style="width:90px;text-align:right;">退傭%</th>':'<th style="width:120px;text-align:right;">底價(未稅)</th>')+'<th style="width:78px;text-align:center;">操作</th></tr></thead><tbody>'+(rows||'<tr><td colspan="7" style="color:var(--text-dim);padding:10px;">尚無項目，從項目庫加入或手動新增。</td></tr>')+'</tbody></table></div>'+
+    '<div class="wiz-sum">'+
+      '<span class="wiz-sum-item"><span class="wiz-sum-l">未稅小計</span><b id="m-sub-'+m.id+'" class="wiz-sum-v">'+_money(m.subtotal_untaxed)+'</b></span>'+
+      (inter
+        ? '<span class="wiz-sum-item"><span class="wiz-sum-l">退傭金額</span><b id="m-rebate-'+m.id+'" class="wiz-sum-v" style="color:#b45309;">'+_money((function(){ var s=0; (WIZ.itemsByMatch[m.id]||[]).forEach(function(x){ s+=Math.round((x.amount_untaxed||0)*(x.base_price||0)/100*100)/100; }); return s; })())+'</b></span>'
+        : '<span class="wiz-sum-item"><span class="wiz-sum-l">底價</span><b id="m-base-'+m.id+'" class="wiz-sum-v">'+_money(m.base_total)+'</b></span>'+
+          '<span class="wiz-sum-item"><span class="wiz-sum-l">利潤</span><b id="m-profit-'+m.id+'" class="wiz-sum-v" style="color:#16a34a;">'+_money(m.profit_untaxed)+'</b></span>')+
     '</div>'+
   '</div>';
 }
@@ -4695,10 +4761,15 @@ function _wizDocHtml(type){
   }).join('') : '<tr><td colspan="'+cols+'" style="padding:14px;border:1px solid #e5e7eb;color:#999;text-align:center;">尚無項目</td></tr>';
   var parties = isOrder
     ? '<div style="display:flex;gap:30px;margin-bottom:20px;">'+
-        '<div style="flex:1;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;"><div style="font-size:11px;color:#888;margin-bottom:4px;">甲方（客戶）</div><div style="font-weight:700;font-size:14px;">'+_esc(cust)+'</div></div>'+
-        '<div style="flex:1;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;"><div style="font-size:11px;color:#888;margin-bottom:4px;">乙方（承製方）</div><div style="font-weight:700;font-size:14px;">'+GC_INFO.name+'</div><div style="font-size:11px;color:#666;margin-top:2px;">統編 '+GC_INFO.tax+'</div></div>'+
+        '<div style="flex:1;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;"><div style="font-size:11px;color:#888;margin-bottom:4px;">甲方（客戶）</div><div style="font-weight:700;font-size:14px;">'+_esc(cust)+'</div>'+_custInfoHtml(p.customer_id,{contact:true})+'</div>'+
+        '<div style="flex:1;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;"><div style="font-size:11px;color:#888;margin-bottom:4px;">乙方（承製方）</div><div style="font-weight:700;font-size:14px;">'+GC_INFO.name+'</div>'+
+          '<div style="font-size:11px;color:#666;margin-top:4px;line-height:1.8;">統一編號：'+GC_INFO.tax+'<br>地址：'+GC_INFO.addr+'<br>電話：'+GC_INFO.phone+'</div></div>'+
       '</div>'
-    : '<table style="width:100%;border-collapse:collapse;margin-bottom:18px;font-size:12.5px;"><tr><td style="width:90px;color:#666;padding:3px 0;">客戶</td><td style="font-weight:700;">'+_esc(cust)+'</td></tr></table>';
+    : '<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin-bottom:18px;">'+
+        '<div style="font-size:11px;color:#888;margin-bottom:4px;">報價對象（客戶）</div>'+
+        '<div style="font-weight:700;font-size:14px;">'+_esc(cust)+'</div>'+
+        _custInfoHtml(p.customer_id,{contact:true})+
+      '</div>';
   return '<div style="font-family:\'Noto Sans TC\',sans-serif;color:#111;padding:42px 44px;font-size:13px;line-height:1.6;background:#fff;box-sizing:border-box;">'+
     '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:16px;margin-bottom:22px;">'+
       '<div>'+
@@ -7673,27 +7744,38 @@ async function loadProducts(){
   renderProducts();
 }
 function hpProductName(p){ return p.name_zh||p.name_en||p.name_ja||p.name_ko||'（未命名）'; }
+// 清單顯示用：篩單一地區時取該國，否則取第一國
 function hpPickEntry(p){
-  var cps=Array.isArray(p.country_prices)?p.country_prices:[];
+  var cps=hpCpsOf(p);
+  var sel=(typeof msSel==='function')?msSel('hp-reg'):[];
   if(cps.length){
-    var sel=(typeof msSel==='function')?msSel('hp-reg'):[];
-    if(sel && sel.length===1){ var e=cps.filter(function(c){return c.region===sel[0];})[0]; if(e) return {e:e,multi:cps.length>1}; }
+    if(sel && sel.length===1){ var e=cps.filter(function(c){return c.region===sel[0];})[0]; if(e) return {e:e,multi:false}; }
     return {e:cps[0],multi:cps.length>1};
   }
-  return {e:{currency:p.currency,suggested_incl:p.suggested_price_incl,supply_excl:p.supply_price_excl,supply_incl:p.supply_price_incl}, multi:false};
+  if(p.currency||p.suggested_price_incl!=null||p.supply_price_excl!=null||p.supply_price_incl!=null)
+    return {e:hpNormCp({region:p.origin,currency:p.currency,suggested_incl:p.suggested_price_incl,supply_excl:p.supply_price_excl,supply_incl:p.supply_price_incl}), multi:false};
+  return {e:null, multi:false};
 }
-function hpPriceCell(p){
-  var cps=Array.isArray(p.country_prices)?p.country_prices:[];
-  var sel=(typeof msSel==='function')?msSel('hp-reg'):[];
-  function fmt(e){ if(!e) return ''; var v=(e.suggested_incl!=null?e.suggested_incl:(e.supply_incl!=null?e.supply_incl:e.supply_excl)); var r=hpRound(v,e.currency); return r!=null?hpEsc((e.currency||'')+' '+r):(e.currency?hpEsc(e.currency):''); }
-  if(cps.length){
-    if(sel && sel.length===1){ return fmt(cps.filter(function(c){return c.region===sel[0];})[0]); }
-    if(cps.length===1) return fmt(cps[0]);
-    return '<span style="color:#2563eb;">多國('+cps.length+')</span>';
-  }
-  var v=(p.suggested_price_incl!=null?p.suggested_price_incl:(p.supply_price_incl!=null?p.supply_price_incl:p.supply_price_excl));
-  var r=hpRound(v,p.currency);
-  return r!=null?hpEsc((p.currency||'')+' '+r):'';
+function hpMoney(v,cur){ var r=hpRound(v,cur); return r==null?null:hpEsc((cur?cur+' ':'')+r); }
+var HP_DASH='<span style="color:#c9ccd2;">—</span>';
+// 建議售價（當地幣）；沒填則退回供貨價並標「成本」小字，避免誤讀幣別
+function hpSuggCell(p){
+  var x=hpPickEntry(p), e=x.e; if(!e) return HP_DASH;
+  var tag=x.multi?' <span style="color:#2563eb;font-size:11px;">多國('+hpCpsOf(p).length+')</span>':'';
+  var t=hpMoney(e.suggested_incl,e.local_currency);
+  if(t!=null) return t+tag;
+  var c=hpMoney((e.supply_incl!=null?e.supply_incl:e.supply_excl), e.supply_currency);
+  if(c!=null) return c+' <span style="color:#9ca3af;font-size:10.5px;">成本</span>'+tag;
+  return HP_DASH+tag;
+}
+// 最低販售價（當地幣，含稅優先）
+function hpMinCell(p){
+  var e=hpPickEntry(p).e; if(!e) return HP_DASH;
+  var t=hpMoney(e.min_price_incl,e.local_currency);
+  if(t!=null) return t;
+  t=hpMoney(e.min_price_excl,e.local_currency);
+  if(t!=null) return t+' <span style="color:#9ca3af;font-size:10.5px;">未稅</span>';
+  return HP_DASH;
 }
 function hpImgPreview(url){ if(!url) return;
   var ov=document.createElement('div'); ov.id='img-preview';
@@ -7724,13 +7806,14 @@ function hpRowsHtml(rows){
       '<td style="color:#6b7280;">'+hpEsc(p.category)+'</td>'+
       '<td>'+hpEsc(p.brand)+'</td>'+
       '<td>'+chips+'</td>'+
-      '<td style="text-align:right;white-space:nowrap;">'+hpPriceCell(p)+'</td>'+
+      '<td style="text-align:right;white-space:nowrap;">'+hpSuggCell(p)+'</td>'+
+      '<td style="text-align:right;white-space:nowrap;color:#b45309;">'+hpMinCell(p)+'</td>'+
       '<td style="color:#6b7280;white-space:nowrap;">'+hpEsc(p.updated_by||p.created_by||'')+'</td>'+
       '<td style="text-align:right;white-space:nowrap;">'+
         '<button class="btn btn-secondary" style="padding:3px 9px;font-size:12px;" onclick="openProductModal(\''+p.id+'\',false)">編輯</button> '+
         '<button class="btn btn-secondary" style="padding:3px 9px;font-size:12px;color:#dc2626;" onclick="deleteProduct(\''+p.id+'\')">刪除</button>'+
       '</td></tr>';
-  }).join('') : '<tr><td colspan="10" style="text-align:center;color:var(--text-dim);padding:40px;">尚無商品，點右上「新增商品」或「批量匯入」</td></tr>';
+  }).join('') : '<tr><td colspan="11" style="text-align:center;color:var(--text-dim);padding:40px;">尚無商品，點右上「新增商品」或「批量匯入」</td></tr>';
 }
 function hpRenderProdBody(){
   var rows=hpFilteredProducts(); var total=rows.length; var pages=Math.max(1,Math.ceil(total/HP_PAGE));
@@ -7760,7 +7843,7 @@ function renderProducts(){
       '<button class="btn btn-primary" onclick="openExportDialog()">匯出貨盤表</button>'+
     '</div></div>'+
     '<div class="table-card"><div class="table-wrap"><table><thead><tr>'+
-      '<th style="width:32px;text-align:center;"><input type="checkbox" onclick="hpSelAll(this)" title="全選本頁"></th><th>縮圖</th><th>SKU</th><th>商品名稱</th><th>類別</th><th>品牌</th><th>存貨地區</th><th style="text-align:right;">建議售價</th><th>最後操作人</th><th style="text-align:right;">操作</th>'+
+      '<th style="width:32px;text-align:center;"><input type="checkbox" onclick="hpSelAll(this)" title="全選本頁"></th><th>縮圖</th><th>SKU</th><th>商品名稱</th><th>類別</th><th>品牌</th><th>存貨地區</th><th style="text-align:right;">建議售價</th><th style="text-align:right;" title="品牌方設定的當地市場價格下限，不得低於此價販售">最低販售價</th><th>最後操作人</th><th style="text-align:right;">操作</th>'+
     '</tr></thead><tbody id="hp-tbody"></tbody></table></div>'+
     '<div class="pagination"><span id="hp-count"></span><span id="hp-pager"></span></div></div>';
   hpRenderProdBody();
@@ -7772,26 +7855,50 @@ function hpToggleRegion(btn){
 }
 var HP_REGION_CUR={"台灣":"TWD","中國":"CNY","香港":"HKD","日本":"JPY","韓國":"KRW","馬來西亞":"MYR","新加坡":"SGD","泰國":"THB","越南":"VND","美國":"USD","歐洲":"EUR"};
 function hpRegionCur(r){ return HP_REGION_CUR[r]||''; }
-function hpCpRegionCur(selEl){ var row=selEl.parentNode; var cur=row.querySelector('.pf-cp-cur'); if(cur && !cur.value) cur.value=hpRegionCur(selEl.value)||''; }
+/* 各國售價一列正規化：
+   supply_currency = 成本幣別（品牌報價幣，如 JPY）；local_currency = 當地幣別（市場幣，如 TWD）
+   舊資料只有單一 currency → 兩者都沿用它（缺當地幣時再退回地區預設幣） */
+function hpNormCp(c){
+  c=c||{};
+  var sup=c.supply_currency||c.currency||null;
+  var loc=c.local_currency||c.currency||hpRegionCur(c.region)||null;
+  return {
+    region:c.region||null,
+    supply_currency:sup, supply_excl:(c.supply_excl!=null?c.supply_excl:null), supply_incl:(c.supply_incl!=null?c.supply_incl:null),
+    local_currency:loc, suggested_incl:(c.suggested_incl!=null?c.suggested_incl:null),
+    min_price_excl:(c.min_price_excl!=null?c.min_price_excl:null), min_price_incl:(c.min_price_incl!=null?c.min_price_incl:null),
+    local_code:c.local_code||null
+  };
+}
+function hpCpsOf(p){ var cps=Array.isArray(p.country_prices)?p.country_prices:[]; return cps.map(hpNormCp); }
+function hpCpRegionCur(selEl){ var row=selEl.parentNode; var lc=row.querySelector('.pf-cp-lcur'); if(lc && !lc.value) lc.value=hpRegionCur(selEl.value)||''; }
+function hpOriginCur(){ var o=document.getElementById('pf-origin'); return o?(hpRegionCur((o.value||'').trim())||''):''; }
 function hpAddCountry(c){
-  c=c||{}; var wrap=document.getElementById('pf-countryrows'); if(!wrap) return;
-  var div=document.createElement('div'); div.className='pf-cp-row'; div.style.cssText='display:flex;gap:6px;margin-bottom:6px;align-items:center;';
+  c=hpNormCp(c||{}); var wrap=document.getElementById('pf-countryrows'); if(!wrap) return;
+  var div=document.createElement('div'); div.className='pf-cp-row'; div.style.cssText='display:flex;gap:5px;margin-bottom:6px;align-items:center;';
   var regOpts='<option value="">地區</option>'+HP_REGIONS.map(function(r){return '<option value="'+r+'">'+r+'</option>';}).join('');
   var curOpts='<option value="">幣別</option>'+HP_CUR.map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join('');
+  var gray='background-color:#eef0f4;';
   div.innerHTML=
     '<select class="cm-input pf-cp-region" style="width:96px;flex:none;" onchange="hpCpRegionCur(this)">'+regOpts+'</select>'+
-    '<select class="cm-input pf-cp-cur" style="width:78px;flex:none;">'+curOpts+'</select>'+
-    '<input class="cm-input pf-cp-sugg" type="number" style="width:92px;flex:none;" placeholder="建議售價">'+
-    '<input class="cm-input pf-cp-excl" type="number" style="width:92px;flex:none;" placeholder="供貨未稅">'+
-    '<input class="cm-input pf-cp-incl" type="number" style="width:92px;flex:none;" placeholder="供貨含稅">'+
-    '<input class="cm-input pf-cp-code" style="flex:1;min-width:90px;" placeholder="當地商品編號">'+
-    '<button type="button" class="btn btn-secondary" style="padding:0 10px;flex:none;" onclick="this.parentNode.remove()">✕</button>';
+    '<select class="cm-input pf-cp-scur" style="width:84px;flex:none;'+gray+'" title="成本幣別（品牌報價幣）">'+curOpts+'</select>'+
+    '<input class="cm-input pf-cp-excl" type="number" style="width:78px;flex:none;'+gray+'" placeholder="未稅" title="供貨價(未稅)＝成本">'+
+    '<input class="cm-input pf-cp-incl" type="number" style="width:78px;flex:none;'+gray+'" placeholder="含稅" title="供貨價(含稅)＝成本">'+
+    '<select class="cm-input pf-cp-lcur" style="width:84px;flex:none;" title="當地幣別（該市場行情幣）">'+curOpts+'</select>'+
+    '<input class="cm-input pf-cp-sugg" type="number" style="width:84px;flex:none;" placeholder="建議售價" title="建議售價(含稅)，當地幣">'+
+    '<input class="cm-input pf-cp-mnex" type="number" style="width:78px;flex:none;" placeholder="未稅" title="最低販售價(未稅)，當地幣">'+
+    '<input class="cm-input pf-cp-mnin" type="number" style="width:78px;flex:none;" placeholder="含稅" title="最低販售價(含稅)，當地幣">'+
+    '<input class="cm-input pf-cp-code" style="flex:1;min-width:80px;" placeholder="當地商品編號">'+
+    '<button type="button" class="btn btn-secondary" style="padding:0 9px;flex:none;" onclick="this.parentNode.remove()">✕</button>';
   wrap.appendChild(div);
   if(c.region) div.querySelector('.pf-cp-region').value=c.region;
-  div.querySelector('.pf-cp-cur').value=c.currency||hpRegionCur(c.region)||'';
-  if(c.suggested_incl!=null) div.querySelector('.pf-cp-sugg').value=c.suggested_incl;
+  div.querySelector('.pf-cp-scur').value=c.supply_currency||hpOriginCur()||'';
+  div.querySelector('.pf-cp-lcur').value=c.local_currency||hpRegionCur(c.region)||'';
   if(c.supply_excl!=null) div.querySelector('.pf-cp-excl').value=c.supply_excl;
   if(c.supply_incl!=null) div.querySelector('.pf-cp-incl').value=c.supply_incl;
+  if(c.suggested_incl!=null) div.querySelector('.pf-cp-sugg').value=c.suggested_incl;
+  if(c.min_price_excl!=null) div.querySelector('.pf-cp-mnex').value=c.min_price_excl;
+  if(c.min_price_incl!=null) div.querySelector('.pf-cp-mnin').value=c.min_price_incl;
   if(c.local_code) div.querySelector('.pf-cp-code').value=c.local_code;
 }
 function openProductModal(id,isNew){
@@ -7812,7 +7919,7 @@ function openProductModal(id,isNew){
   var imgPrev=p.photo_url?'<img id="pf-photo-prev" src="'+hpEsc(p.photo_url)+'" onclick="hpImgPreview(this.src)" title="點擊放大" style="cursor:zoom-in;width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">':'<div id="pf-photo-prev" style="width:70px;height:70px;border-radius:8px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;color:#c0c4cc;font-size:12px;">無圖</div>';
   var ov=document.createElement('div'); ov.id='prod-modal';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:200;display:flex;align-items:center;justify-content:center;';
-  ov.innerHTML='<div style="background:#fff;border-radius:14px;width:880px;max-width:94vw;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.14);">'+
+  ov.innerHTML='<div style="background:#fff;border-radius:14px;width:1080px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.14);">'+
     '<div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'+
       '<div style="font-family:Syne,sans-serif;font-weight:700;">'+(isNew?'新增商品':'編輯商品')+(p.sku?'　<span style="font-family:monospace;font-size:12px;color:var(--text-dim);">'+hpEsc(p.sku)+'</span>':'　<span style="font-size:12px;color:var(--text-dim);">SKU 儲存後自動產生</span>')+'</div>'+
       '<button onclick="document.getElementById(\'prod-modal\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:18px;">✕</button></div>'+
@@ -7827,9 +7934,14 @@ function openProductModal(id,isNew){
         '<div style="margin-top:16px;"><label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:8px;">存貨地區（可複選）</label>'+regChips+'</div></div></div>'+
       '<div class="cm-section"><div><div class="cm-sec-title">多語系內容</div><div class="cm-sec-desc">至少填一個語言的商品名稱，其餘可留待翻譯</div></div>'+
         '<div><div style="margin-bottom:14px;">'+langTabs+'</div>'+langPanels+'</div></div>'+
-      '<div class="cm-section"><div><div class="cm-sec-title">各國售價與編號</div><div class="cm-sec-desc">一國一列、可多國。價格為原幣、不含 GC 利潤；至少一國、且該國至少填一個價格。幣別會依地區自動帶、可改。</div></div>'+
+      '<div class="cm-section"><div><div class="cm-sec-title">各國售價與編號</div><div class="cm-sec-desc">一國一列、可多國。<b>成本</b>用品牌報價幣（灰底、不外流）；<b>建議售價／最低販售價</b>用當地幣別。至少一國、且該國至少填一個價格。</div></div>'+
         '<div>'+
-          '<div style="display:flex;gap:6px;font-size:11px;color:var(--text-dim);margin-bottom:4px;padding:0 2px;"><span style="width:96px;flex:none;">地區</span><span style="width:78px;flex:none;">幣別</span><span style="width:92px;flex:none;">建議售價(含稅)</span><span style="width:92px;flex:none;">供貨價(未稅)</span><span style="width:92px;flex:none;">供貨價(含稅)</span><span style="flex:1;min-width:90px;">當地商品編號</span><span style="width:34px;flex:none;"></span></div>'+
+          '<div style="display:flex;gap:5px;margin-bottom:3px;padding:0 2px;">'+
+            '<span style="width:96px;flex:none;"></span>'+
+            '<span style="width:250px;flex:none;font-size:10.5px;color:#6b7280;background:#eef0f4;border-radius:4px;padding:1px 0;text-align:center;">成本（內部，不會出現在匯出檔）</span>'+
+            '<span style="width:339px;flex:none;font-size:10.5px;color:#2563eb;background:#eff4ff;border-radius:4px;padding:1px 0;text-align:center;">對外售價（當地幣別）</span>'+
+          '</div>'+
+          '<div style="display:flex;gap:5px;font-size:11px;color:var(--text-dim);margin-bottom:4px;padding:0 2px;"><span style="width:96px;flex:none;">地區</span><span style="width:84px;flex:none;">成本幣別</span><span style="width:78px;flex:none;">供貨未稅</span><span style="width:78px;flex:none;">供貨含稅</span><span style="width:84px;flex:none;">當地幣別</span><span style="width:84px;flex:none;">建議售價</span><span style="width:78px;flex:none;">最低未稅</span><span style="width:78px;flex:none;">最低含稅</span><span style="flex:1;min-width:80px;">當地商品編號</span><span style="width:32px;flex:none;"></span></div>'+
           '<div id="pf-countryrows"></div>'+
           '<button type="button" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;margin-top:2px;" onclick="hpAddCountry()">＋ 新增國家</button>'+
         '</div></div>'+
@@ -7854,16 +7966,16 @@ function openProductModal(id,isNew){
       '<button class="btn btn-primary" onclick="saveProduct(\''+(id||'')+'\')">保存</button></div></div>';
   document.body.appendChild(ov);
   // 帶入既有各國售價（新結構優先；否則由舊單一價格/當地碼轉入）
-  var cps=Array.isArray(p.country_prices)?p.country_prices:[];
+  var cps=hpCpsOf(p);
   if(!cps.length){
     var codes=Array.isArray(p.local_codes)?p.local_codes:[];
     if(p.currency||p.suggested_price_incl!=null||p.supply_price_excl!=null||p.supply_price_incl!=null||p.local_code||codes.length){
       var r0=(codes[0]&&codes[0].region)||(regs[0]||p.origin||'');
-      cps=[{region:r0,currency:p.currency||hpRegionCur(r0),suggested_incl:p.suggested_price_incl,supply_excl:p.supply_price_excl,supply_incl:p.supply_price_incl,local_code:p.local_code||(codes[0]&&codes[0].code)||''}];
-      codes.slice(1).forEach(function(c){ cps.push({region:c.region,currency:hpRegionCur(c.region),local_code:c.code}); });
+      cps=[hpNormCp({region:r0,currency:p.currency||hpRegionCur(r0),suggested_incl:p.suggested_price_incl,supply_excl:p.supply_price_excl,supply_incl:p.supply_price_incl,local_code:p.local_code||(codes[0]&&codes[0].code)||''})];
+      codes.slice(1).forEach(function(c){ cps.push(hpNormCp({region:c.region,local_code:c.code})); });
     }
   }
-  if(!cps.length) cps=[{region:(regs[0]||''),currency:hpRegionCur(regs[0]||'')}];
+  if(!cps.length) cps=[hpNormCp({region:(regs[0]||'')})];
   cps.forEach(function(c){ hpAddCountry(c); });
 }
 function hpTab(l){
@@ -7891,11 +8003,16 @@ async function saveProduct(id){
   function n(el){ var v=el.value.trim(); return v===''?null:Number(v); }
   var cps=[];
   document.querySelectorAll('#prod-modal .pf-cp-row').forEach(function(r){
-    var region=r.querySelector('.pf-cp-region').value, currency=r.querySelector('.pf-cp-cur').value;
-    var s=n(r.querySelector('.pf-cp-sugg')), ex=n(r.querySelector('.pf-cp-excl')), ic=n(r.querySelector('.pf-cp-incl')), code=r.querySelector('.pf-cp-code').value.trim();
-    if(region||currency||s!=null||ex!=null||ic!=null||code) cps.push({region:region||null,currency:currency||null,suggested_incl:s,supply_excl:ex,supply_incl:ic,local_code:code||null});
+    var region=r.querySelector('.pf-cp-region').value;
+    var scur=r.querySelector('.pf-cp-scur').value, lcur=r.querySelector('.pf-cp-lcur').value;
+    var ex=n(r.querySelector('.pf-cp-excl')), ic=n(r.querySelector('.pf-cp-incl'));
+    var s=n(r.querySelector('.pf-cp-sugg')), mx=n(r.querySelector('.pf-cp-mnex')), mi=n(r.querySelector('.pf-cp-mnin'));
+    var code=r.querySelector('.pf-cp-code').value.trim();
+    if(region||scur||lcur||s!=null||ex!=null||ic!=null||mx!=null||mi!=null||code)
+      cps.push(hpNormCp({region:region||null,supply_currency:scur||null,supply_excl:ex,supply_incl:ic,
+        local_currency:lcur||null,suggested_incl:s,min_price_excl:mx,min_price_incl:mi,local_code:code||null}));
   });
-  var hasPrice=cps.some(function(c){ return c.suggested_incl!=null||c.supply_excl!=null||c.supply_incl!=null; });
+  var hasPrice=cps.some(function(c){ return c.suggested_incl!=null||c.supply_excl!=null||c.supply_incl!=null||c.min_price_incl!=null||c.min_price_excl!=null; });
   var miss=[];
   if(!category) miss.push('類別');
   if(!origin) miss.push('原產地');
@@ -7911,7 +8028,7 @@ async function saveProduct(id){
     desc_zh:hpVal('pf-desc_zh'), desc_en:hpVal('pf-desc_en'), desc_ja:hpVal('pf-desc_ja'), desc_ko:hpVal('pf-desc_ko'),
     selling_zh:hpVal('pf-selling_zh'), selling_en:hpVal('pf-selling_en'), selling_ja:hpVal('pf-selling_ja'), selling_ko:hpVal('pf-selling_ko'),
     country_prices:cps,
-    local_codes:codes, local_code:(codes.length?codes[0].code:null), currency:first.currency||null,
+    local_codes:codes, local_code:(codes.length?codes[0].code:null), currency:first.supply_currency||null,
     suggested_price_incl:first.suggested_incl!=null?first.suggested_incl:null, supply_price_excl:first.supply_excl!=null?first.supply_excl:null, supply_price_incl:first.supply_incl!=null?first.supply_incl:null,
     hscode:hpVal('pf-hscode'), units_per_carton:hpNum('pf-units_per_carton'),
     box_l:hpNum('pf-box_l'), box_w:hpNum('pf-box_w'), box_h:hpNum('pf-box_h'),
@@ -7948,13 +8065,27 @@ var hpImpRows=[];
 function hpImpVal(v){ v=(v==null?'':String(v)).trim(); return v===''?null:v; }
 function hpImpNum(v){ var s=hpImpVal(v); if(s==null) return null; var n=Number(String(s).replace(/,/g,'')); return isNaN(n)?null:n; }
 function hpImpGet(row,sub){ var ks=Object.keys(row); for(var i=0;i<ks.length;i++){ if(ks[i].replace(/\s/g,'').indexOf(sub)>=0) return row[ks[i]]; } return ''; }
+function hpImpHas(row,sub){ return Object.keys(row).some(function(k){ return k.replace(/\s/g,'').indexOf(sub)>=0; }); }
 function hpPriceRowCp(row){
   function g(sub){ return hpImpGet(row,sub); }
   var region=hpImpVal(g('國家'))||hpImpVal(g('地區'));
-  return {region:region||null, currency:hpImpVal(g('幣別'))||hpRegionCur(region)||null,
-    suggested_incl:hpImpNum(g('建議售價')), supply_excl:hpImpNum(g('供貨價(未稅)')), supply_incl:hpImpNum(g('供貨價(含稅)')),
-    local_code:hpImpVal(g('當地商品編號'))||null};
+  // 注意：hpImpGet 是子字串比對，g('幣別') 會同時命中「成本幣別」與「當地幣別」。
+  // 因此新格式一律用明確欄名；只有舊檔（單一「幣別」欄）才回退到 g('幣別')。
+  var isNew=hpImpHas(row,'成本幣別')||hpImpHas(row,'當地幣別');
+  var legacyCur=isNew?null:hpImpVal(g('幣別'));
+  var mnex=hpImpNum(g('最低販售價(未稅)')), mnin=hpImpNum(g('最低販售價(含稅)'));
+  if(mnex==null&&mnin==null&&!hpImpHas(row,'最低販售價(')) mnin=hpImpNum(g('最低販售價'));
+  return hpNormCp({
+    region:region||null, currency:legacyCur,
+    supply_currency:hpImpVal(g('成本幣別'))||legacyCur||null,
+    supply_excl:hpImpNum(g('供貨價(未稅)')), supply_incl:hpImpNum(g('供貨價(含稅)')),
+    local_currency:hpImpVal(g('當地幣別'))||null,
+    suggested_incl:hpImpNum(g('建議售價')),
+    min_price_excl:mnex, min_price_incl:mnin,
+    local_code:hpImpVal(g('當地商品編號'))||null});
 }
+function hpCpHasData(cp){ return !!(cp.region||cp.supply_currency||cp.local_currency||cp.local_code||cp.suggested_incl!=null||cp.supply_excl!=null||cp.supply_incl!=null||cp.min_price_excl!=null||cp.min_price_incl!=null); }
+function hpCpHasPrice(cp){ return cp.suggested_incl!=null||cp.supply_excl!=null||cp.supply_incl!=null||cp.min_price_excl!=null||cp.min_price_incl!=null; }
 function hpMapImportRow(row, extCps){
   function g(sub){ return hpImpGet(row,sub); }
   var category=hpImpVal(g('類別')), origin=hpImpVal(g('原產地'));
@@ -7966,24 +8097,32 @@ function hpMapImportRow(row, extCps){
   else {
     cpRaw=hpImpVal(g('各國售價')); cps=[];
     if(cpRaw){
+      // 地區｜成本幣別｜建議售價｜供貨未稅｜供貨含稅｜當地編號｜當地幣別｜最低未稅｜最低含稅（前 6 段與舊格式相容）
       cpRaw.split(/[;；\n]+/).forEach(function(seg){ seg=seg.trim(); if(!seg) return;
         var f=seg.split(/[｜|]/).map(function(x){return x.trim();});
-        if(!f[0]&&!f[2]&&!f[3]&&!f[4]&&!f[5]) return;
-        cps.push({region:f[0]||null, currency:f[1]||hpRegionCur(f[0])||null, suggested_incl:hpImpNum(f[2]), supply_excl:hpImpNum(f[3]), supply_incl:hpImpNum(f[4]), local_code:f[5]||null});
+        if(!f[0]&&!f[2]&&!f[3]&&!f[4]&&!f[5]&&!f[7]&&!f[8]) return;
+        cps.push(hpNormCp({region:f[0]||null, currency:f[1]||null, supply_currency:f[1]||null,
+          suggested_incl:hpImpNum(f[2]), supply_excl:hpImpNum(f[3]), supply_incl:hpImpNum(f[4]), local_code:f[5]||null,
+          local_currency:f[6]||null, min_price_excl:hpImpNum(f[7]), min_price_incl:hpImpNum(f[8])}));
       });
     }
     if(!cps.length){ // 相容舊單欄
       var lcRaw=hpImpVal(g('當地商品編號')); var lcs=[];
       if(lcRaw){ lcRaw.split(/[;；\n]+/).forEach(function(part){ part=part.trim(); if(!part) return; var mm=part.split(/[:：]/); if(mm.length>=2) lcs.push({region:(mm[0].trim()||null),code:mm.slice(1).join(':').trim()}); else lcs.push({region:(regions[0]||null),code:part}); }); }
-      var cur=hpImpVal(g('幣別')), s=hpImpNum(g('建議售價')), ex=hpImpNum(g('供貨價(未稅)')), ic=hpImpNum(g('供貨價(含稅)'));
+      var isNew1=hpImpHas(row,'成本幣別')||hpImpHas(row,'當地幣別');
+      var cur=isNew1?null:hpImpVal(g('幣別'));
+      var scur=hpImpVal(g('成本幣別'))||cur, lcur=hpImpVal(g('當地幣別'));
+      var s=hpImpNum(g('建議售價')), ex=hpImpNum(g('供貨價(未稅)')), ic=hpImpNum(g('供貨價(含稅)'));
+      var mx=hpImpNum(g('最低販售價(未稅)')), mn=hpImpNum(g('最低販售價(含稅)'));
+      if(mx==null&&mn==null&&!hpImpHas(row,'最低販售價(')) mn=hpImpNum(g('最低販售價'));
       var r0=(lcs[0]&&lcs[0].region)||regions[0]||origin||null;
-      if(cur||s!=null||ex!=null||ic!=null||lcs.length){
-        cps=[{region:r0,currency:cur||hpRegionCur(r0),suggested_incl:s,supply_excl:ex,supply_incl:ic,local_code:(lcs[0]&&lcs[0].code)||null}];
-        lcs.slice(1).forEach(function(c){ cps.push({region:c.region,currency:hpRegionCur(c.region),local_code:c.code}); });
+      if(scur||lcur||s!=null||ex!=null||ic!=null||mx!=null||mn!=null||lcs.length){
+        cps=[hpNormCp({region:r0,currency:cur,supply_currency:scur,local_currency:lcur,suggested_incl:s,supply_excl:ex,supply_incl:ic,min_price_excl:mx,min_price_incl:mn,local_code:(lcs[0]&&lcs[0].code)||null})];
+        lcs.slice(1).forEach(function(c){ cps.push(hpNormCp({region:c.region,local_code:c.code})); });
       }
     }
   }
-  var hasPrice=cps.some(function(c){ return c.suggested_incl!=null||c.supply_excl!=null||c.supply_incl!=null; });
+  var hasPrice=cps.some(hpCpHasPrice);
   if(!category&&!origin&&!hasPrice&&!hasName&&!cpRaw) return null; // 空列
   var errs=[];
   if(!category) errs.push('缺類別'); if(!origin) errs.push('缺原產地'); if(!hasPrice) errs.push('缺價格'); if(!hasName) errs.push('缺商品名稱');
@@ -7998,7 +8137,7 @@ function hpMapImportRow(row, extCps){
     selling_zh:hpImpVal(g('產品賣點_中')),selling_en:hpImpVal(g('產品賣點_英')),selling_ja:hpImpVal(g('產品賣點_日')),selling_ko:hpImpVal(g('產品賣點_韓')),
     country_prices:cps,
     local_code:localCode, local_codes:codes,
-    currency:first.currency||null, suggested_price_incl:(first.suggested_incl!=null?first.suggested_incl:null), supply_price_excl:(first.supply_excl!=null?first.supply_excl:null), supply_price_incl:(first.supply_incl!=null?first.supply_incl:null),
+    currency:first.supply_currency||null, suggested_price_incl:(first.suggested_incl!=null?first.suggested_incl:null), supply_price_excl:(first.supply_excl!=null?first.supply_excl:null), supply_price_incl:(first.supply_incl!=null?first.supply_incl:null),
     hscode:hpImpVal(g('HSCODE')), units_per_carton:hpImpNum(g('箱入數')),
     box_l:hpImpNum(g('箱長')), box_w:hpImpNum(g('箱寬')), box_h:hpImpNum(g('箱高')),
     gross_weight:hpImpNum(g('單箱毛重')), shelf_life_months:hpImpNum(g('有效期限')),
@@ -8013,6 +8152,21 @@ function hpMapImportRow(row, extCps){
   });
   return {payload:payload, errors:errs, mode:(match?'update':'new'), id:(match?match.id:null), name:(names.zh||names.en||names.ja||names.ko||'')};
 }
+function hpDownloadProductTemplate(){
+  if(typeof XLSX==='undefined'){ alert('Excel 函式庫尚未載入，請重新整理頁面再試。'); return; }
+  var pHead=['商品代號','類別','原產地','品牌名稱','窗口','存貨地區','商品名稱_中','商品名稱_英','商品名稱_日','商品名稱_韓','產品敘述_中','產品敘述_英','產品敘述_日','產品敘述_韓','產品賣點_中','產品賣點_英','產品賣點_日','產品賣點_韓','HSCODE','箱入數','箱長','箱寬','箱高','單箱毛重','有效期限(月)','網站連結','照片(網址)','備註'];
+  var pEx=['P001','餅乾','日本','ABC Foods','山田太郎','日本、台灣','範例商品','Sample Product','サンプル商品','샘플 상품','中文產品敘述','English description','日本語の説明','한국어 설명','中文賣點','English selling point','日本語の売り','한국어 셀링','1905.31','24','40','30','25','8.5','12','https://abcfoods.jp/p001','https://abcfoods.jp/img/p001.jpg','此列為範例，上傳前請刪除'];
+  var pWs=XLSX.utils.aoa_to_sheet([pHead, pEx]);
+  var cHead=['商品代號','國家/地區','成本幣別','供貨價(未稅)','供貨價(含稅)','當地幣別','建議售價(含稅)','最低販售價(未稅)','最低販售價(含稅)','當地商品編號'];
+  var cEx1=['P001','日本','JPY','600','660','JPY','980','838','880','JP-0001'];
+  var cEx2=['P001','台灣','JPY','600','660','TWD','350','238','250','TW-0001'];
+  var cWs=XLSX.utils.aoa_to_sheet([cHead, cEx1, cEx2]);
+  cWs['!cols']=[{wch:10},{wch:10},{wch:10},{wch:12},{wch:12},{wch:10},{wch:14},{wch:15},{wch:15},{wch:14}];
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, pWs, '商品資料');
+  XLSX.utils.book_append_sheet(wb, cWs, '各國售價');
+  XLSX.writeFile(wb, '商品_批量匯入範本.xlsx');
+}
 function openImportDialog(){
   if(typeof XLSX==='undefined'){ alert('Excel 函式庫尚未載入，請重新整理頁面再試。'); return; }
   hpImpRows=[];
@@ -8023,7 +8177,8 @@ function openImportDialog(){
       '<div style="font-family:Syne,sans-serif;font-weight:700;">批量匯入商品</div>'+
       '<button onclick="document.getElementById(\'imp-modal\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:18px;">✕</button></div>'+
     '<div style="padding:20px 24px;overflow-y:auto;flex:1;">'+
-      '<div style="font-size:13px;color:var(--text-mid);margin-bottom:12px;line-height:1.7;">上傳範本 .xlsx：<b>商品資料</b>分頁（一商品一列、內容）＋<b>各國售價</b>分頁（一國一列、價格），兩分頁以<b>商品代號</b>對應。系統依<b>當地商品編號</b>比對新增/更新（缺則用 品牌＋中文名＋原產地），新品自動配 SKU。</div>'+
+      '<div style="font-size:13px;color:var(--text-mid);margin-bottom:12px;line-height:1.7;">上傳範本 .xlsx：<b>商品資料</b>分頁（一商品一列、內容）＋<b>各國售價</b>分頁（一國一列、價格），兩分頁以<b>商品代號</b>對應。各國售價分頁分成<b>成本</b>（成本幣別＋供貨價）與<b>對外售價</b>（當地幣別＋建議售價＋最低販售價）兩組，幣別可不同。系統依<b>當地商品編號</b>比對新增/更新（缺則用 品牌＋中文名＋原產地），新品自動配 SKU。</div>'+
+      '<div style="margin-bottom:12px;"><button class="btn btn-secondary" onclick="hpDownloadProductTemplate()" style="display:inline-flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>下載空白範本</button></div>'+
       '<input type="file" accept=".xlsx" id="hp-imp-file" onchange="hpImpParse(this)">'+
       '<div id="hp-imp-status" style="font-size:12px;color:var(--text-dim);margin-top:8px;"></div>'+
       '<div id="hp-imp-result" style="margin-top:14px;"></div>'+
@@ -8046,7 +8201,7 @@ function hpImpParse(input){
       if(pSheet && cpSheet){ // 雙分頁：商品資料 + 各國售價（以 商品代號 / 商品名稱(中) 對應）
         var prices=XLSX.utils.sheet_to_json(cpSheet,{defval:''});
         var pmap={};
-        prices.forEach(function(r){ var k=hpImpVal(hpImpGet(r,'商品代號'))||hpImpVal(hpImpGet(r,'商品名稱')); if(!k) return; var cp=hpPriceRowCp(r); if(cp.region||cp.currency||cp.suggested_incl!=null||cp.supply_excl!=null||cp.supply_incl!=null||cp.local_code){ (pmap[k]=pmap[k]||[]).push(cp); } });
+        prices.forEach(function(r){ var k=hpImpVal(hpImpGet(r,'商品代號'))||hpImpVal(hpImpGet(r,'商品名稱')); if(!k) return; var cp=hpPriceRowCp(r); if(hpCpHasData(cp)){ (pmap[k]=pmap[k]||[]).push(cp); } });
         var prods=XLSX.utils.sheet_to_json(pSheet,{defval:''});
         prods.forEach(function(row,idx){ var k=hpImpVal(hpImpGet(row,'商品代號'))||hpImpVal(hpImpGet(row,'商品名稱_中'))||hpImpVal(hpImpGet(row,'商品名稱')); var m=hpMapImportRow(row, pmap[k]||[]); if(m){ m.rowNum=idx+2; hpImpRows.push(m); } });
       } else { // 單分頁（相容舊格式）
@@ -8103,33 +8258,64 @@ async function hpImpRun(){
 }
 
 /* ---------- 匯出貨盤表 ---------- */
-var HP_EXP_HEADERS={
-  zh:['SKU','照片','類別','品牌','商品名稱','產品敘述','產品賣點','幣別','建議售價(含稅)','供貨價','有效期限(月數)','原產地','存貨地區','當地商品編號'],
-  en:['SKU','Photo','Category','Brand','Product Name','Description','Selling Points','Currency','Suggested Retail (incl. tax)','Supply Price','Shelf life (mo)','Origin','Stock regions','Local code'],
-  ja:['SKU','写真','カテゴリー','ブランド','商品名','商品説明','セールスポイント','通貨','希望小売価格(税込)','供給価格','賞味期限(月)','原産国','在庫地域','現地商品番号'],
-  ko:['SKU','사진','카테고리','브랜드','상품명','상품 설명','판매 포인트','통화','권장가(세금 포함)','공급가','유통기한(개월)','원산지','재고 지역','현지 상품 번호']
-};
+/* 匯出欄位定義：key → 四語表頭。成本／供貨價「不在清單中」，永遠不會被匯出。 */
+var HP_EXP_COLS=[
+  {k:'sku',        w:16, def:1, zh:'SKU',              en:'SKU',                          ja:'SKU',              ko:'SKU'},
+  {k:'photo',      w:11, def:1, zh:'照片',             en:'Photo',                        ja:'写真',             ko:'사진'},
+  {k:'category',   w:14, def:1, zh:'類別',             en:'Category',                     ja:'カテゴリー',       ko:'카테고리'},
+  {k:'brand',      w:14, def:1, zh:'品牌',             en:'Brand',                        ja:'ブランド',         ko:'브랜드'},
+  {k:'name',       w:34, def:1, zh:'商品名稱',         en:'Product Name',                 ja:'商品名',           ko:'상품명'},
+  {k:'currency',   w:10, def:1, zh:'幣別',             en:'Currency',                     ja:'通貨',             ko:'통화'},
+  {k:'gc_price',   w:15, def:1, zh:'GC 報價',          en:'Quoted Price',                 ja:'見積価格',         ko:'견적가'},
+  {k:'min_price',  w:16, def:1, zh:'最低販售價',       en:'Min. Selling Price',           ja:'最低販売価格',     ko:'최저 판매가'},
+  {k:'suggested',  w:16, def:1, zh:'建議售價(含稅)',   en:'Suggested Retail (incl. tax)', ja:'希望小売価格(税込)', ko:'권장가(세금 포함)'},
+  {k:'desc',       w:34, def:1, zh:'產品敘述',         en:'Description',                  ja:'商品説明',         ko:'상품 설명'},
+  {k:'selling',    w:34, def:1, zh:'產品賣點',         en:'Selling Points',               ja:'セールスポイント', ko:'판매 포인트'},
+  {k:'shelf',      w:14, def:1, zh:'有效期限(月數)',   en:'Shelf life (mo)',              ja:'賞味期限(月)',     ko:'유통기한(개월)'},
+  {k:'origin',     w:16, def:1, zh:'原產地',           en:'Origin',                       ja:'原産国',           ko:'원산지'},
+  {k:'regions',    w:16, def:1, zh:'存貨地區',         en:'Stock regions',                ja:'在庫地域',         ko:'재고 지역'},
+  {k:'local_code', w:16, def:1, zh:'當地商品編號',     en:'Local code',                   ja:'現地商品番号',     ko:'현지 상품 번호'},
+  {k:'hscode',     w:13, def:0, zh:'HSCODE',           en:'HSCODE',                       ja:'HSコード',         ko:'HS코드'},
+  {k:'units',      w:11, def:0, zh:'箱入數',           en:'PCS / Box',                    ja:'入数',             ko:'박스당 수량'}
+];
+function hpExpColDef(k){ for(var i=0;i<HP_EXP_COLS.length;i++){ if(HP_EXP_COLS[i].k===k) return HP_EXP_COLS[i]; } return null; }
+function hpExpLabel(k,lang){ var d=hpExpColDef(k); return d?(d[lang]||d.zh):k; }
+function hpExpSelCols(){
+  var out=[]; document.querySelectorAll('#exp-cols .exp-col:checked').forEach(function(c){ out.push(c.value); });
+  // 依 HP_EXP_COLS 原始順序輸出
+  return HP_EXP_COLS.filter(function(d){ return out.indexOf(d.k)>=0; }).map(function(d){ return d.k; });
+}
 function openExportDialog(){
   if(typeof ExcelJS==='undefined'){ alert('Excel 函式庫尚未載入，請重新整理頁面再試。'); return; }
   var n=hpFilteredProducts().length;
-  var curOpts=['__ORIG__'].concat(HP_CUR).map(function(c){return '<option value="'+c+'">'+(c==='__ORIG__'?'原幣（不換算）':c)+'</option>';}).join('');
+  var curOpts=HP_CUR.map(function(c){return '<option value="'+c+'"'+(c==='TWD'?' selected':'')+'>'+c+'</option>';}).join('');
   if(typeof msSel==='function'){ msSel('exp-country').length=0; }  // 每次開啟清空出貨國家複選
+  var colBoxes=HP_EXP_COLS.map(function(d){
+    return '<label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#374151;cursor:pointer;padding:2px 0;">'+
+      '<input type="checkbox" class="exp-col" value="'+d.k+'"'+(d.def?' checked':'')+'>'+hpEsc(d.zh)+'</label>';
+  }).join('');
   var ov=document.createElement('div'); ov.id='exp-modal';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:200;display:flex;align-items:center;justify-content:center;';
-  ov.innerHTML='<div style="background:#fff;border-radius:14px;width:460px;max-width:94vw;box-shadow:0 8px 40px rgba(0,0,0,0.14);">'+
+  ov.innerHTML='<div style="background:#fff;border-radius:14px;width:580px;max-width:94vw;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.14);">'+
     '<div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'+
       '<div style="font-family:Syne,sans-serif;font-weight:700;">匯出貨盤表</div>'+
       '<button onclick="document.getElementById(\'exp-modal\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:18px;">✕</button></div>'+
-    '<div style="padding:20px 24px;font-size:13px;">'+
+    '<div style="padding:20px 24px;font-size:13px;overflow-y:auto;flex:1;">'+
       '<div style="margin-bottom:14px;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">出貨國家（可複選，每國一個分頁；不選＝各商品第一國、單一分頁）</label><div>'+msDropdown('exp-country','不選＝各商品第一國',HP_REGIONS.map(function(r){return {v:r,l:r};}),'')+'</div></div>'+
-      '<div style="margin-bottom:14px;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">顯示語系（表頭與內容）</label><select class="cm-input" id="exp-lang"><option value="zh">中文</option><option value="en">English</option><option value="ja">日本語</option><option value="ko">한국어</option></select></div>'+
       '<div style="display:flex;gap:12px;margin-bottom:14px;">'+
+        '<div style="flex:1;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">顯示語系（表頭與內容）</label><select class="cm-input" id="exp-lang"><option value="zh">中文</option><option value="en">English</option><option value="ja">日本語</option><option value="ko">한국어</option></select></div>'+
         '<div style="flex:1;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">GC 利潤率 (%)</label><input class="cm-input" id="exp-margin" type="number" value="5"></div>'+
-        '<div style="flex:1;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">目標幣別</label><select class="cm-input" id="exp-cur" onchange="hpExpRenderFx()">'+curOpts+'</select></div>'+
       '</div>'+
+      '<div style="margin-bottom:14px;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">報價幣別</label>'+
+        '<label style="display:flex;align-items:center;gap:7px;margin-bottom:7px;cursor:pointer;"><input type="radio" name="exp-conv" value="local" checked onchange="hpExpRenderFx()"><span>各國用<b>當地幣別</b>（日本分頁 JPY、台灣分頁 TWD…）</span></label>'+
+        '<label style="display:flex;align-items:center;gap:7px;cursor:pointer;"><input type="radio" name="exp-conv" value="unified" onchange="hpExpRenderFx()"><span>統一換成</span>'+
+          '<select class="cm-input" id="exp-cur" style="width:110px;flex:none;" onchange="document.querySelector(\'input[name=exp-conv][value=unified]\').checked=true;hpExpRenderFx();">'+curOpts+'</select></label>'+
+      '</div>'+
+      '<div style="margin-bottom:14px;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">匯出欄位（<b>成本／供貨價不會匯出</b>）</label>'+
+        '<div id="exp-cols" style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px 10px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:#fcfcfd;">'+colBoxes+'</div></div>'+
       '<div id="exp-fx" style="margin-bottom:14px;"></div>'+
       '<div style="margin-bottom:14px;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">備註（會存進匯出紀錄，例：給哪家經紀公司／用途）</label><textarea class="cm-input" id="exp-note" rows="2" style="resize:vertical;" placeholder="選填"></textarea></div>'+
-      '<div style="background:#f9fafb;border-radius:7px;padding:9px 12px;font-size:12px;color:#6b7280;">將依<b>目前清單篩選</b>匯出（最多 '+n+' 筆）。<b>出貨國家複選</b>時每個國家產生一個分頁，各分頁只列有該國價格的商品、並抓該國價格。供貨價 = 該國供貨價(含稅)×(1+利潤率)；無含稅則用未稅。建議售價僅供對照。圖片內嵌儲存格，缺匯率的幣別保留原幣。</div>'+
+      '<div style="background:#f9fafb;border-radius:7px;padding:9px 12px;font-size:12px;color:#6b7280;line-height:1.7;">將依<b>目前清單篩選</b>匯出（最多 '+n+' 筆）。<b>出貨國家複選</b>時每國一個分頁，各分頁只列有該國價格的商品。<br><b>GC 報價</b> ＝ 該國供貨價(含稅，無則未稅) ×(1＋利潤率)，由成本幣換算到報價幣。<b>最低販售價／建議售價</b>為當地幣，統一幣別模式才換算。圖片內嵌儲存格。</div>'+
       '<div id="exp-status" style="font-size:12px;color:var(--text-dim);margin-top:10px;"></div>'+
     '</div>'+
     '<div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;">'+
@@ -8138,19 +8324,19 @@ function openExportDialog(){
   document.body.appendChild(ov);
   hpExpRenderFx();
 }
-// 這次匯出可能用到的幣別（來源幣別集合）
+function hpExpMode(){ var r=document.querySelector('input[name="exp-conv"]:checked'); return r?r.value:'local'; }
+// 這次匯出會用到的所有幣別（成本幣 ∪ 當地幣 ∪ 目標幣）
 function hpExpCurList(){
-  var set={}; hpFilteredProducts().forEach(function(p){ hpEntriesOf(p).forEach(function(e){ if(e.currency) set[e.currency]=1; }); });
+  var set={};
+  hpFilteredProducts().forEach(function(p){ hpEntriesOf(p).forEach(function(e){ if(e.supply_currency) set[e.supply_currency]=1; if(e.local_currency) set[e.local_currency]=1; }); });
+  if(hpExpMode()==='unified'){ var t=(document.getElementById('exp-cur')||{}).value; if(t) set[t]=1; }
   return Object.keys(set);
 }
-// 依目標幣別渲染可編輯匯率列（1 外幣 = ? TWD）
+// 渲染可編輯匯率列（1 外幣 = ? TWD）
 function hpExpRenderFx(){
   var box=document.getElementById('exp-fx'); if(!box) return;
-  var tgt=((document.getElementById('exp-cur')||{}).value)||'__ORIG__';
-  var inv={}; hpExpCurList().forEach(function(c){ if(c!=='TWD') inv[c]=1; });
-  if(tgt!=='__ORIG__'&&tgt!=='TWD') inv[tgt]=1;
-  var curs=Object.keys(inv);
-  if(tgt==='__ORIG__'||!curs.length){ box.innerHTML='<div style="font-size:11.5px;color:var(--text-dim);">目標幣別為「原幣」時不換算，無需匯率。</div>'; return; }
+  var curs=hpExpCurList().filter(function(c){ return c!=='TWD'; });
+  if(!curs.length){ box.innerHTML='<div style="font-size:11.5px;color:var(--text-dim);">本次匯出只涉及新台幣，無需匯率。</div>'; return; }
   var rows=curs.map(function(c){
     var s=(typeof BOT_RATES!=='undefined')?BOT_RATES[c]:null; var mid=s?Math.round((s.buy+s.sell)/2*10000)/10000:'';
     return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'+
@@ -8159,15 +8345,15 @@ function hpExpRenderFx(){
       '<span style="font-size:12px;color:#6b7280;">TWD</span></div>';
   }).join('');
   box.innerHTML='<label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">換算匯率（1 外幣 = ? 新台幣，預設為後台內建匯率、可手動修改）</label>'+rows+
-    '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">＊換算透過新台幣中轉；本次使用的匯率會一併存入匯出紀錄。</div>';
+    '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">＊換算透過新台幣中轉；成本幣→報價幣的 GC 報價換算會用到這些匯率。本次使用的匯率會存入匯出紀錄。</div>';
 }
 function hpRateTWD(cur, fx){ if(cur==null||cur==='TWD') return 1; if(fx&&fx[cur]!=null) return fx[cur]; var s=(typeof BOT_RATES!=='undefined')?BOT_RATES[cur]:null; return s?((s.buy+s.sell)/2):null; }
-function hpConvFx(amt,from,to,fx){ if(amt==null) return null; if(!to||to==='__ORIG__'||from===to) return amt; var rf=hpRateTWD(from,fx), rt=hpRateTWD(to,fx); if(rf==null||rt==null) return null; return amt*rf/rt; }
+function hpConvFx(amt,from,to,fx){ if(amt==null) return null; if(!to||!from||from===to) return amt; var rf=hpRateTWD(from,fx), rt=hpRateTWD(to,fx); if(rf==null||rt==null) return null; return amt*rf/rt; }
 function hpEntriesOf(p){
-  var cps=Array.isArray(p.country_prices)?p.country_prices:[];
+  var cps=hpCpsOf(p);
   if(cps.length) return cps;
   if(p.currency||p.supply_price_excl!=null||p.supply_price_incl!=null||p.suggested_price_incl!=null||p.local_code)
-    return [{region:(p.origin||''),currency:p.currency,suggested_incl:p.suggested_price_incl,supply_excl:p.supply_price_excl,supply_incl:p.supply_price_incl,local_code:p.local_code}];
+    return [hpNormCp({region:(p.origin||''),currency:p.currency,suggested_incl:p.suggested_price_incl,supply_excl:p.supply_price_excl,supply_incl:p.supply_price_incl,local_code:p.local_code})];
   return [];
 }
 function hpSheetName(name, wb){
@@ -8196,41 +8382,53 @@ async function hpExpThumb(url){
   }catch(e){ return null; }
 }
 // 填一個分頁：country='__FIRST__' 取各商品第一國；否則只列有該國價格者。回傳 {skipped,used}
-async function hpExpFillSheet(wb, ws, rows, country, lang, margin, targetCur, imgCache, st, fx){
-  var heads=HP_EXP_HEADERS[lang]||HP_EXP_HEADERS.zh;
-  ws.columns=heads.map(function(h,i){ return {header:h, width:(i===1?11:(i===0||i===11?16:(i>=4&&i<=6?34:14)))}; });
+// mode='local' → 每列用該國當地幣別；mode='unified' → 全部換成 targetCur
+async function hpExpFillSheet(wb, ws, rows, country, lang, margin, mode, targetCur, cols, imgCache, st, fx, fxMiss){
+  ws.columns=cols.map(function(k){ var d=hpExpColDef(k); return {header:hpExpLabel(k,lang), width:(d?d.w:14)}; });
   ws.getRow(1).font={bold:true}; ws.getRow(1).height=22;
+  var photoIdx=cols.indexOf('photo');
   var skipped=0, used=0;
   for(var i=0;i<rows.length;i++){
     var p=rows[i];
     var ents=hpEntriesOf(p), e;
     if(country && country!=='__FIRST__'){ e=ents.filter(function(x){return x.region===country;})[0]; if(!e){ skipped++; continue; } }
-    else { e=ents[0]||{}; }
-    var name=p['name_'+lang]||p.name_zh||p.name_en||p.name_ja||p.name_ko||'';
-    var desc=p['desc_'+lang]||''; var selling=p['selling_'+lang]||'';
-    var srcCur=e.currency||''; var base=(e.supply_incl!=null?e.supply_incl:e.supply_excl);
-    var cur=srcCur; var gc=(base!=null)?base*(1+margin/100):null;
-    var sugg=(e.suggested_incl!=null?e.suggested_incl:null);
-    var doConv=(targetCur && targetCur!=='__ORIG__' && srcCur && targetCur!==srcCur);
-    if(doConv){
-      if(gc!=null){ var cv=hpConvFx(gc,srcCur,targetCur,fx); if(cv!=null){ gc=cv; cur=targetCur; } }
-      if(sugg!=null){ var sc=hpConvFx(sugg,srcCur,targetCur,fx); if(sc!=null){ sugg=sc; cur=targetCur; } }
+    else { e=ents[0]||hpNormCp({}); }
+    // 本列的報價幣別：當地幣模式＝該國當地幣（缺則退回成本幣）；統一模式＝目標幣
+    var cur=(mode==='unified')?targetCur:(e.local_currency||e.supply_currency||'');
+    function conv(v,from){
+      if(v==null) return null;
+      if(!from||!cur||from===cur) return v;
+      var r=hpConvFx(v,from,cur,fx);
+      if(r==null){ fxMiss[from+' → '+cur]=1; return null; }
+      return r;
     }
-    gc=hpRound(gc,cur); sugg=hpRound(sugg,cur);
-    var lc=e.local_code||'';
-    var regions=(p.stock_regions||[]).join('、');
-    var row=ws.addRow([p.sku||'','',p.category||'',p.brand||'',name,desc,selling,cur,(sugg==null?'':sugg),(gc==null?'':gc),(p.shelf_life_months==null?'':p.shelf_life_months),p.origin||'',regions,lc]);
+    // GC 報價：成本×(1+利潤率)，由成本幣換算到報價幣。成本本身永不輸出。
+    var base=(e.supply_incl!=null?e.supply_incl:e.supply_excl);
+    var gc=conv((base!=null)?base*(1+margin/100):null, e.supply_currency);
+    var mn=conv((e.min_price_incl!=null?e.min_price_incl:e.min_price_excl), e.local_currency);
+    var sugg=conv(e.suggested_incl, e.local_currency);
+    gc=hpRound(gc,cur); mn=hpRound(mn,cur); sugg=hpRound(sugg,cur);
+    var vals={
+      sku:p.sku||'', photo:'', category:p.category||'', brand:p.brand||'',
+      name:(p['name_'+lang]||p.name_zh||p.name_en||p.name_ja||p.name_ko||''),
+      currency:cur||'', gc_price:(gc==null?'':gc), min_price:(mn==null?'':mn), suggested:(sugg==null?'':sugg),
+      desc:(p['desc_'+lang]||''), selling:(p['selling_'+lang]||''),
+      shelf:(p.shelf_life_months==null?'':p.shelf_life_months),
+      origin:p.origin||'', regions:(p.stock_regions||[]).join('、'), local_code:e.local_code||'',
+      hscode:p.hscode||'', units:(p.units_per_carton==null?'':p.units_per_carton)
+    };
+    var row=ws.addRow(cols.map(function(k){ return vals[k]; }));
     row.height=48; row.alignment={vertical:'middle',wrapText:true}; used++;
-    if(p.photo_url){
+    if(photoIdx>=0 && p.photo_url){
       try{
         if(st) st.textContent='處理圖片…';
         var im=imgCache[p.photo_url];
         if(im===undefined){ im=await hpExpThumb(p.photo_url); imgCache[p.photo_url]=im; }  // 縮圖快取（失敗存 null，不重試）
         if(im){
           var imgId=wb.addImage({buffer:im.buffer, extension:im.extension});
-          ws.addImage(imgId,{tl:{col:1,row:row.number-1},ext:{width:60,height:60}});
+          ws.addImage(imgId,{tl:{col:photoIdx,row:row.number-1},ext:{width:60,height:60}});
         }
-      }catch(e){ /* 圖片抓取失敗則略過 */ }
+      }catch(e2){ /* 圖片抓取失敗則略過 */ }
     }
   }
   return {skipped:skipped, used:used};
@@ -8238,10 +8436,14 @@ async function hpExpFillSheet(wb, ws, rows, country, lang, margin, targetCur, im
 async function hpExportRun(){
   var lang=document.getElementById('exp-lang').value;
   var sel=(typeof msSel==='function')?msSel('exp-country').slice():[];
-  var margin=Number(document.getElementById('exp-margin').value)||0, targetCur=document.getElementById('exp-cur').value;
+  var margin=Number(document.getElementById('exp-margin').value)||0;
+  var mode=hpExpMode(), targetCur=document.getElementById('exp-cur').value;
+  var cols=hpExpSelCols();
+  if(!cols.length){ alert('請至少勾選一個匯出欄位。'); return; }
   // 讀取本次使用的匯率（1 外幣 = ? TWD），供換算與記錄
   var fx={}; Array.prototype.forEach.call(document.querySelectorAll('#exp-fx .fx-rate'),function(inp){ var v=parseFloat(inp.value); if(!isNaN(v)&&v>0) fx[inp.getAttribute('data-cur')]=v; });
-  var fxUsed=(targetCur&&targetCur!=='__ORIG__'&&Object.keys(fx).length)?fx:null;
+  var fxUsed=Object.keys(fx).length?fx:null;
+  var fxMiss={};
   var rows=hpFilteredProducts();
   var st=document.getElementById('exp-status'); var btn=document.getElementById('exp-run'); if(btn){btn.disabled=true;btn.textContent='匯出中…';}
   try{
@@ -8250,11 +8452,11 @@ async function hpExportRun(){
       for(var s=0;s<sel.length;s++){
         var c=sel[s];
         if(st) st.textContent='產生分頁：'+c+'（'+(s+1)+'/'+sel.length+'）…';
-        var r1=await hpExpFillSheet(wb, wb.addWorksheet(hpSheetName(c,wb)), rows, c, lang, margin, targetCur, imgCache, st, fx);
+        var r1=await hpExpFillSheet(wb, wb.addWorksheet(hpSheetName(c,wb)), rows, c, lang, margin, mode, targetCur, cols, imgCache, st, fx, fxMiss);
         cnt+=r1.used; if(r1.used===0) emptyCountries.push(c);
       }
     } else {
-      var r0=await hpExpFillSheet(wb, wb.addWorksheet('貨盤表'), rows, '__FIRST__', lang, margin, targetCur, imgCache, st, fx);
+      var r0=await hpExpFillSheet(wb, wb.addWorksheet('貨盤表'), rows, '__FIRST__', lang, margin, mode, targetCur, cols, imgCache, st, fx, fxMiss);
       cnt=r0.used;
     }
     var country=sel.length?sel.join('、'):'__FIRST__';
@@ -8275,15 +8477,26 @@ async function hpExportRun(){
     // 寫入匯出紀錄
     try{
       var rec={ created_time:stamp.toISOString(), created_by:(currentUser?currentUser.full_name:'admin'),
-        note:note||null, lang:lang, country:country, target_currency:targetCur, margin:margin,
-        product_count:cnt, file_name:dlName, file_url:fileUrl, fx_rates:(fxUsed?JSON.stringify(fxUsed):null) };
+        note:note||null, lang:lang, country:country, target_currency:(mode==='unified'?targetCur:'__LOCAL__'), margin:margin,
+        product_count:cnt, file_name:dlName, file_url:fileUrl, fx_rates:(fxUsed?JSON.stringify(fxUsed):null),
+        conv_mode:mode, columns:cols.join(',') };
       var ins=await sb.from('export_logs').insert([rec]);
-      if(ins&&ins.error&&/fx_rates/.test(ins.error.message||'')){ delete rec.fx_rates; await sb.from('export_logs').insert([rec]); }
+      // 欄位還沒 ALTER TABLE 也不要讓匯出失敗：把缺的欄位拿掉重試
+      if(ins&&ins.error){
+        var msg=ins.error.message||'';
+        if(/fx_rates/.test(msg)) delete rec.fx_rates;
+        if(/conv_mode/.test(msg)) delete rec.conv_mode;
+        if(/columns/.test(msg)) delete rec.columns;
+        var ins2=await sb.from('export_logs').insert([rec]);
+        if(ins2&&ins2.error){ delete rec.fx_rates; delete rec.conv_mode; delete rec.columns; await sb.from('export_logs').insert([rec]); }
+      }
     }catch(e){}
     // 瀏覽器下載
     var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=dlName; a.click();
     setTimeout(function(){ URL.revokeObjectURL(a.href); },4000);
     if(emptyCountries.length) alert('以下出貨國家沒有任何商品有價格，該分頁為空：'+emptyCountries.join('、'));
+    var miss=Object.keys(fxMiss);
+    if(miss.length) alert('以下換算缺匯率，相關金額欄留空：\n'+miss.join('\n')+'\n\n請在匯出視窗的「換算匯率」補上該幣別的匯率後重新匯出。');
     if(upErr) alert('檔案已下載到本機，但存到雲端失敗，匯出紀錄會顯示「未存檔」、無法再次下載/預覽。\n原因：'+upErr+'\n\n請確認已在 Supabase 執行建立 export-files bucket 的 SQL（貨盤管理_匯出紀錄_建表.sql）。');
     document.getElementById('exp-modal').remove();
     if(typeof currentPage!=='undefined' && currentPage==='export_logs'){ loadExportLogs(); }
@@ -8351,7 +8564,8 @@ function renderExportLogs(){
     var t=x.created_time?new Date(x.created_time):null;
     var ts=t?(t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')+' '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')):'';
     var ctryL=(x.country&&x.country!=='__FIRST__')?x.country:'各商品第一國';
-    var curL=(x.target_currency&&x.target_currency!=='__ORIG__')?x.target_currency:'原幣（不換算）';
+    var curL=(x.conv_mode==='local'||x.target_currency==='__LOCAL__')?'各國當地幣別'
+      :((x.target_currency&&x.target_currency!=='__ORIG__')?x.target_currency:'原幣（不換算）');
     var fxTxt='';
     if(x.fx_rates){ try{ var fo=JSON.parse(x.fx_rates); var parts=Object.keys(fo).map(function(k){return '1'+k+'='+fo[k]+'TWD';}); if(parts.length) fxTxt='<div style="font-size:10.5px;color:var(--text-dim);margin-top:2px;">匯率：'+hpEsc(parts.join('、'))+'</div>'; }catch(e){} }
     var dl=x.file_url?
@@ -8466,6 +8680,15 @@ function hpSupMapRow(row){
   var match=(DB.suppliers||[]).filter(function(s){return s.supplier_name===name;})[0];
   return {payload:payload, errors:errs, mode:(match?'update':'new'), id:(match?match.id:null), name:name||''};
 }
+function hpSupDownloadTemplate(){
+  if(typeof XLSX==='undefined'){ alert('Excel 函式庫尚未載入，請重新整理頁面再試。'); return; }
+  var note=['品牌方批量匯入範本：第 2 列為欄位標題（請勿刪除或更名），第 3 列起填資料'];
+  var headers=['品牌方名稱','負責地區/國家','聯絡人','職稱','電話','Email','通訊軟體(LINE/WeChat/WhatsApp)','品牌連結','收款幣別','付款方式/帳期','最低起訂量MOQ','最低起訂金額','備註'];
+  var example=['（範例）ABC Foods','日本','山田太郎','業務課長','+81-3-1234-5678','sales@abcfoods.jp','LINE: abcfoods','https://abcfoods.jp','JPY','T/T 月結30天','100','50000','此列為範例，上傳前請刪除'];
+  var ws=XLSX.utils.aoa_to_sheet([note, headers, example]);
+  var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '品牌方資料');
+  XLSX.writeFile(wb, '品牌方_批量匯入範本.xlsx');
+}
 function openSupplierImportDialog(){
   if(typeof XLSX==='undefined'){ alert('Excel 函式庫尚未載入，請重新整理頁面再試。'); return; }
   hpSupImpRows=[];
@@ -8477,6 +8700,7 @@ function openSupplierImportDialog(){
       '<button onclick="document.getElementById(\'supimp-modal\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:18px;">✕</button></div>'+
     '<div style="padding:20px 24px;overflow-y:auto;flex:1;">'+
       '<div style="font-size:13px;color:var(--text-mid);margin-bottom:12px;line-height:1.7;">上傳範本的<b>「品牌方資料」分頁</b>（.xlsx）。依<b>品牌方名稱</b>比對：已存在→更新、不存在→新增並配發 UID。</div>'+
+      '<div style="margin-bottom:12px;"><button class="btn btn-secondary" onclick="hpSupDownloadTemplate()" style="display:inline-flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>下載空白範本</button></div>'+
       '<input type="file" accept=".xlsx" id="hp-supimp-file" onchange="hpSupImpParse(this)">'+
       '<div id="hp-supimp-status" style="font-size:12px;color:var(--text-dim);margin-top:8px;"></div>'+
       '<div id="hp-supimp-result" style="margin-top:14px;"></div>'+
