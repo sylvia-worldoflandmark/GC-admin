@@ -8074,27 +8074,29 @@ function slFmtMonths(v){ if(v==null||v==='') return null; var n=Number(v); if(is
 function slFmtRatio(v){ if(v==null||v==='') return null; var n=Number(v); if(isNaN(n)) return null; var s=Math.round(n*10)/10; return (s===Math.round(s)?String(Math.round(s)):String(s))+'%'; }
 // 取某類別的有效規則
 function slRulesFor(cat){ return (DB.shelf_life_rules||[]).filter(function(r){ return r.is_active!==false && r.category===cat; }); }
-// 商品清單用：依商品類別帶出進貨效期標準（HTML）
-function hpShelfStdCell(p){
+// 數字去尾（66.7 / 12）
+function slNumClean(n){ var s=Math.round(n*10)/10; return (s===Math.round(s))?String(Math.round(s)):String(s); }
+// 匯出貨盤表用：依商品類別帶出進貨效期標準（純文字，隨匯出語系本地化，作為給品牌方的提示）
+function hpShelfStdText(p, lang){
+  lang=lang||'zh';
   var rules=slRulesFor(p.category);
-  if(!rules.length) return '<span style="color:#c9ccd2;">未設定</span>';
-  var base=rules.filter(function(r){ return !r.sub_label; })[0]||null;
-  var subs=rules.filter(function(r){ return r.sub_label; });
-  var out;
-  if(base){
-    var parts=[]; var mm=slFmtMonths(base.min_months); if(mm) parts.push('≥ '+mm);
-    var rr=slFmtRatio(base.min_ratio); if(rr) parts.push('剩 ≥ '+rr);
-    out = parts.length? '<span style="color:#374151;">'+parts.join(' ／ ')+'</span>' : '<span style="color:#c9ccd2;">未填標準</span>';
-    if(base.min_ratio!=null && base.min_ratio!=='' && p.shelf_life_months){
-      var eff=Math.ceil(Number(p.shelf_life_months)*Number(base.min_ratio)/100);
-      var floor=(base.min_months!=null&&base.min_months!=='')?Number(base.min_months):0;
-      var need=Math.max(eff,floor);
-      if(need>0) out+=' <span style="color:#9ca3af;font-size:10.5px;">此品≥'+need+'個月</span>';
-    }
-  } else { out='<span style="color:#6b7280;">見細項</span>'; }
-  if(subs.length){
-    var tip=subs.map(function(r){ var pp=[]; var m=slFmtMonths(r.min_months); if(m)pp.push('≥'+m); var rt=slFmtRatio(r.min_ratio); if(rt)pp.push('剩≥'+rt); return r.sub_label+'：'+(pp.join(' ／ ')||'—'); }).join('　｜　');
-    out+=' <span title="'+hpEsc(tip)+'" style="color:#2563eb;font-size:10.5px;cursor:help;">＋細項'+subs.length+'</span>';
+  if(!rules.length) return '';
+  var base=rules.filter(function(r){ return !r.sub_label; })[0]||rules[0];
+  var mmN=(base.min_months!=null&&base.min_months!=='')?Number(base.min_months):null;
+  var rrN=(base.min_ratio!=null&&base.min_ratio!=='')?Number(base.min_ratio):null;
+  if(mmN==null && rrN==null) return '';
+  var T={
+    zh:{mo:function(n){return '≥ '+n+' 個月';}, ratio:function(n){return '剩餘效期 ≥ '+n+'%';}, item:function(n){return '（本品 ≥ '+n+' 個月）';}, sep:' ／ '},
+    en:{mo:function(n){return '≥ '+n+' months';}, ratio:function(n){return '≥ '+n+'% shelf life remaining';}, item:function(n){return ' (this item: ≥ '+n+' months)';}, sep:' / '},
+    ja:{mo:function(n){return '≥ '+n+' ヶ月';}, ratio:function(n){return '残存期限 ≥ '+n+'%';}, item:function(n){return '（本品：≥ '+n+' ヶ月）';}, sep:' ／ '},
+    ko:{mo:function(n){return '≥ '+n+' 개월';}, ratio:function(n){return '잔여 유통기한 ≥ '+n+'%';}, item:function(n){return ' (본 상품: ≥ '+n+' 개월)';}, sep:' / '}
+  };
+  var t=T[lang]||T.zh;
+  var parts=[]; if(mmN!=null) parts.push(t.mo(slNumClean(mmN))); if(rrN!=null) parts.push(t.ratio(slNumClean(rrN)));
+  var out=parts.join(t.sep);
+  if(rrN!=null && p.shelf_life_months){
+    var need=Math.max(Math.ceil(Number(p.shelf_life_months)*rrN/100), (mmN||0));
+    if(need>0) out+=t.item(need);
   }
   return out;
 }
@@ -8300,7 +8302,6 @@ function hpRowsHtml(rows){
       '<td style="font-family:monospace;color:#374151;white-space:nowrap;">'+hpEsc(p.sku)+'</td>'+
       '<td>'+hpEsc(hpProductName(p))+'</td>'+
       '<td style="color:#6b7280;">'+hpEsc(p.category)+'</td>'+
-      '<td style="white-space:nowrap;">'+hpShelfStdCell(p)+'</td>'+
       '<td>'+hpEsc(p.brand)+'</td>'+
       '<td>'+chips+'</td>'+
       '<td style="text-align:right;white-space:nowrap;">'+hpSuggCell(p)+'</td>'+
@@ -8310,7 +8311,7 @@ function hpRowsHtml(rows){
         '<button class="btn btn-secondary" style="padding:3px 9px;font-size:12px;" onclick="openProductModal(\''+p.id+'\',false)">編輯</button> '+
         '<button class="btn btn-secondary" style="padding:3px 9px;font-size:12px;color:#dc2626;" onclick="deleteProduct(\''+p.id+'\')">刪除</button>'+
       '</td></tr>';
-  }).join('') : '<tr><td colspan="'+(hpSelMode?12:11)+'" style="text-align:center;color:var(--text-dim);padding:40px;">尚無商品，點右上「新增商品」或「批量匯入」</td></tr>';
+  }).join('') : '<tr><td colspan="'+(hpSelMode?11:10)+'" style="text-align:center;color:var(--text-dim);padding:40px;">尚無商品，點右上「新增商品」或「批量匯入」</td></tr>';
 }
 function hpRenderProdBody(){
   var rows=hpFilteredProducts(); var total=rows.length; var pages=Math.max(1,Math.ceil(total/HP_PAGE));
@@ -8345,7 +8346,7 @@ function renderProducts(){
           '<button class="btn btn-primary" onclick="openExportDialog()">匯出貨盤表</button>')+
     '</div></div>'+
     '<div class="table-card"><div class="table-wrap"><table><thead><tr>'+
-      (hpSelMode?'<th style="width:32px;text-align:center;"><input type="checkbox" onclick="hpSelAll(this)" title="全選本頁"></th>':'')+'<th>縮圖</th><th>SKU</th><th>商品名稱</th><th>類別</th><th title="依類別對照效期標準；填了比例會依該商品總效期換算實際要求月數">進貨效期標準</th><th>品牌</th><th>存貨地區</th><th style="text-align:right;">建議售價</th><th style="text-align:right;" title="品牌方設定的當地市場價格下限，不得低於此價販售">最低販售價</th><th>最後操作人</th><th style="text-align:right;">操作</th>'+
+      (hpSelMode?'<th style="width:32px;text-align:center;"><input type="checkbox" onclick="hpSelAll(this)" title="全選本頁"></th>':'')+'<th>縮圖</th><th>SKU</th><th>商品名稱</th><th>類別</th><th>品牌</th><th>存貨地區</th><th style="text-align:right;">建議售價</th><th style="text-align:right;" title="品牌方設定的當地市場價格下限，不得低於此價販售">最低販售價</th><th>最後操作人</th><th style="text-align:right;">操作</th>'+
     '</tr></thead><tbody id="hp-tbody"></tbody></table></div>'+
     '<div class="pagination"><span id="hp-count"></span><span id="hp-pager"></span></div></div>';
   hpRenderProdBody();
@@ -8781,6 +8782,7 @@ var HP_EXP_COLS=[
   {k:'desc',       w:34, def:1, zh:'產品敘述',         en:'Description',                  ja:'商品説明',         ko:'상품 설명'},
   {k:'selling',    w:34, def:1, zh:'產品賣點',         en:'Selling Points',               ja:'セールスポイント', ko:'판매 포인트'},
   {k:'shelf',      w:14, def:1, zh:'有效期限(月數)',   en:'Shelf life (mo)',              ja:'賞味期限(月)',     ko:'유통기한(개월)'},
+  {k:'shelf_std',  w:26, def:1, zh:'進貨效期標準',     en:'Min. remaining shelf life',    ja:'入荷時の最低残存期限', ko:'입고 시 최소 잔여 유통기한'},
   {k:'origin',     w:16, def:1, zh:'原產地',           en:'Origin',                       ja:'原産国',           ko:'원산지'},
   {k:'regions',    w:16, def:1, zh:'存貨地區',         en:'Stock regions',                ja:'在庫地域',         ko:'재고 지역'},
   {k:'local_code', w:16, def:1, zh:'當地商品編號',     en:'Local code',                   ja:'現地商品番号',     ko:'현지 상품 번호'},
@@ -8954,6 +8956,7 @@ async function hpExpFillSheet(wb, ws, rows, country, lang, margin, mode, targetC
       currency:curCell||'', gc_price:gcCell, min_price:mnCell, suggested:suggCell,
       desc:(p['desc_'+lang]||''), selling:(p['selling_'+lang]||''),
       shelf:(p.shelf_life_months==null?'':p.shelf_life_months),
+      shelf_std:hpShelfStdText(p, lang),
       origin:p.origin||'', regions:(p.stock_regions||[]).join('、'), local_code:e.local_code||'',
       hscode:p.hscode||'', units:(p.units_per_carton==null?'':p.units_per_carton)
     };
