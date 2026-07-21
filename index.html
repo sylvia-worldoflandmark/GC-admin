@@ -8099,13 +8099,13 @@ function exportShelfLife(){
 }
 
 /* ---------- 商品 products ---------- */
-var hpFSearch='', HP_PAGE=25, hpProdPage=1, hpSupPage=1;
+var hpFSearch='', HP_PAGE=25, hpProdPage=1, hpSupPage=1, hpProdSize=25;
 // ─── 商品清單勾選：勾選常駐，選取的 id 用 Set 記住，跨頁／跨篩選都保留（供「匯出勾選」「刪除勾選」共用）───
 var hpSelIds = new Set();
 function hpSelHas(id){ return hpSelIds.has(String(id)); }
 function hpSelToggle(id,on){ id=String(id); if(on){ hpSelIds.add(id); } else { hpSelIds.delete(id); } hpUpdateSelBar(); hpSyncHeadChk(); }
 function hpSelClear(){ hpSelIds.clear(); hpRenderProdBody(); hpUpdateSelBar(); }
-function _hpPageRows(){ return hpFilteredProducts().slice((hpProdPage-1)*HP_PAGE, hpProdPage*HP_PAGE); }
+function _hpPageRows(){ return hpFilteredProducts().slice((hpProdPage-1)*hpProdSize, hpProdPage*hpProdSize); }
 // 表頭全選框：全選／取消「目前篩選＋本頁」可見的列
 function hpSelAllPage(cb){
   _hpPageRows().forEach(function(p){ if(cb.checked) hpSelIds.add(String(p.id)); else hpSelIds.delete(String(p.id)); });
@@ -8138,6 +8138,7 @@ function hpPager(page,pages,fn){
   return b+'</div>';
 }
 function hpGoProd(n){ hpProdPage=n; hpRenderProdBody(); }
+function hpSetPageSize(v){ v=parseInt(v)||25; hpProdSize=v; hpProdPage=1; hpRenderProdBody(); }
 function hpGoSup(n){ hpSupPage=n; renderSupResults(); }
 async function loadProducts(){
   var main=hpMain(); if(main) main.innerHTML='<div style="padding:60px;text-align:center;color:var(--text-dim);font-size:13px;">載入中…</div>';
@@ -8213,18 +8214,25 @@ function hpRowsHtml(rows){
       '<td>'+chips+'</td>'+
       '<td style="text-align:right;white-space:nowrap;">'+hpSuggCell(p)+'</td>'+
       '<td style="text-align:right;white-space:nowrap;color:#b45309;">'+hpMinCell(p)+'</td>'+
+      '<td style="white-space:nowrap;">'+hpWindowCell(p)+'</td>'+
       '<td style="color:#6b7280;white-space:nowrap;">'+hpEsc(p.updated_by||p.created_by||'')+'</td>'+
       '<td style="text-align:right;white-space:nowrap;">'+
         '<button class="btn btn-secondary" style="padding:3px 9px;font-size:12px;" onclick="openProductModal(\''+p.id+'\',false)">編輯</button> '+
         '<button class="btn btn-secondary" style="padding:3px 9px;font-size:12px;color:#dc2626;" onclick="deleteProduct(\''+p.id+'\')">刪除</button>'+
       '</td></tr>';
-  }).join('') : '<tr><td colspan="11" style="text-align:center;color:var(--text-dim);padding:40px;">尚無商品，點右上「新增商品」或「批量匯入」</td></tr>';
+  }).join('') : '<tr><td colspan="12" style="text-align:center;color:var(--text-dim);padding:40px;">尚無商品，點右上「新增商品」或「批量匯入」</td></tr>';
+}
+// 品牌窗口：商品的 source_supplier（＝品牌窗口），若品牌方有聯絡人一併顯示
+function hpWindowCell(p){
+  var sn=p.source_supplier; if(!sn) return '<span style="color:#c0c4cc;">—</span>';
+  var contact=''; (DB.suppliers||[]).forEach(function(s){ if(!contact && s.supplier_name===sn && s.contact_name) contact=s.contact_name; });
+  return hpEsc(sn)+(contact?'<span style="color:#9ca3af;"> · '+hpEsc(contact)+'</span>':'');
 }
 function hpRenderProdBody(){
-  var rows=hpFilteredProducts(); var total=rows.length; var pages=Math.max(1,Math.ceil(total/HP_PAGE));
+  var rows=hpFilteredProducts(); var total=rows.length; var pages=Math.max(1,Math.ceil(total/hpProdSize));
   if(hpProdPage>pages) hpProdPage=pages; if(hpProdPage<1) hpProdPage=1;
   _persistView('products');
-  var pageRows=rows.slice((hpProdPage-1)*HP_PAGE, hpProdPage*HP_PAGE);
+  var pageRows=rows.slice((hpProdPage-1)*hpProdSize, hpProdPage*hpProdSize);
   var tb=document.getElementById('hp-tbody'); if(tb) tb.innerHTML=hpRowsHtml(pageRows);
   var c=document.getElementById('hp-count'); if(c) c.textContent='共 '+total+' 筆　第 '+hpProdPage+' / '+pages+' 頁';
   var pg=document.getElementById('hp-pager'); if(pg) pg.innerHTML=hpPager(hpProdPage,pages,'hpGoProd');
@@ -8249,9 +8257,16 @@ function renderProducts(){
       '<button class="btn btn-primary" onclick="openExportDialog(\'filtered\')">匯出貨盤表</button>'+
     '</div></div>'+
     '<div class="table-card"><div class="table-wrap"><table><thead><tr>'+
-      '<th style="width:32px;text-align:center;"><input type="checkbox" id="hp-head-chk" onclick="hpSelAllPage(this)" title="全選／取消本頁" style="width:15px;height:15px;cursor:pointer;"></th>'+'<th>縮圖</th><th>SKU</th><th>商品名稱</th><th>類別</th><th>品牌</th><th>存貨地區</th><th style="text-align:right;">建議售價</th><th style="text-align:right;" title="品牌方設定的當地市場價格下限，不得低於此價販售">最低販售價</th><th>最後操作人</th><th style="text-align:right;">操作</th>'+
+      '<th style="width:32px;text-align:center;"><input type="checkbox" id="hp-head-chk" onclick="hpSelAllPage(this)" title="全選／取消本頁" style="width:15px;height:15px;cursor:pointer;"></th>'+'<th>縮圖</th><th>SKU</th><th>商品名稱</th><th>類別</th><th>品牌</th><th>存貨地區</th><th style="text-align:right;">建議售價</th><th style="text-align:right;" title="品牌方設定的當地市場價格下限，不得低於此價販售">最低販售價</th><th>品牌窗口</th><th>最後操作人</th><th style="text-align:right;">操作</th>'+
     '</tr></thead><tbody id="hp-tbody"></tbody></table></div>'+
-    '<div class="pagination"><span id="hp-count"></span><span id="hp-pager"></span></div></div>'+
+    '<div class="pagination"><span id="hp-count"></span>'+
+      '<div style="display:flex;align-items:center;gap:14px;">'+
+        '<div style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-dim);">每頁'+
+          '<select id="hp-pagesize" onchange="hpSetPageSize(this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;cursor:pointer;background:#fff;">'+
+            [10,25,50,100].map(function(n){ return '<option value="'+n+'"'+(n===hpProdSize?' selected':'')+'>'+n+'</option>'; }).join('')+
+          '</select>筆</div>'+
+        '<span id="hp-pager"></span>'+
+      '</div></div></div>'+
     // 底部操作列：勾選 ≥1 才滑出（跨頁／跨篩選都保留勾選）
     '<div id="hp-selbar" style="position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:120;display:none;align-items:center;gap:12px;background:#111827;color:#fff;padding:11px 16px;border-radius:12px;box-shadow:0 10px 34px rgba(0,0,0,0.28);font-size:13px;">'+
       '<span id="hp-selcount" style="font-weight:600;">已選 0 項</span>'+
@@ -9039,7 +9054,8 @@ var WEB_TABLES={
       {k:'owner_name', l:'負責人'},
       {k:'phone', l:'電話'},
       {k:'email', l:'Email'},
-      {k:'services_provided', l:'可提供服務', trunc:36}
+      {k:'services_provided', l:'可提供服務', trunc:28},
+      {k:'ops_status', l:'狀態', fmt:'opsstatus', w:'90px'}
     ]},
   web_forms:{ table:'form_submissions', title:'需求診斷表', comment:'官網需求診斷表單（gc-form）的完整填答',
     cols:[
@@ -9124,7 +9140,6 @@ function renderWebTable(){
     '</div><div class="toolbar-right" style="gap:8px;">'+
       '<button class="btn btn-secondary" onclick="loadWebTable(\''+_webKey+'\')">↻ 重新整理</button>'+
       _exportBtn('webExportCsv')+
-      '<button class="btn btn-secondary" onclick="webExportXlsx()" style="font-size:12.5px;padding:5px 14px;display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>匯出 Excel</button>'+
     '</div></div>'+
     '<div class="table-card"><div class="table-wrap"><table><thead><tr>'+
       cfg.cols.map(function(c){ return '<th style="'+(c.w?'width:'+c.w+';':'')+(c.align?'text-align:'+c.align+';':'')+'">'+c.l+'</th>'; }).join('')+
@@ -9134,7 +9149,7 @@ function renderWebTable(){
   _webRenderBody();
 }
 // ─── 檢視彈窗 ───
-function _webModal(title,bodyHtml){
+function _webModal(title,bodyHtml,footerLeft,footerRight,footerPrimary){
   var old=document.getElementById('web-modal'); if(old) old.remove();
   var ov=document.createElement('div'); ov.id='web-modal';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;';
@@ -9143,8 +9158,11 @@ function _webModal(title,bodyHtml){
       '<div style="font-family:Syne,sans-serif;font-weight:700;">'+_esc(title)+'</div>'+
       '<button onclick="document.getElementById(\'web-modal\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:18px;">✕</button></div>'+
     '<div style="padding:20px 24px;overflow-y:auto;flex:1;font-size:13px;">'+bodyHtml+'</div>'+
-    '<div style="padding:12px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">'+
-      '<button class="btn btn-secondary" onclick="document.getElementById(\'web-modal\').remove()">關閉</button></div></div>';
+    '<div style="padding:12px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">'+
+      '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'+(footerLeft||'')+'</div>'+
+      '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'+(footerRight||'')+
+        '<button class="btn btn-secondary" onclick="document.getElementById(\'web-modal\').remove()">關閉</button>'+(footerPrimary||'')+'</div>'+
+    '</div></div>';
   ov.addEventListener('mousedown',function(e){ if(e.target===ov) ov.remove(); });
   document.body.appendChild(ov);
 }
@@ -9158,14 +9176,57 @@ function _webTextBlock(label,v){
   return '<div style="margin-top:14px;"><div style="font-size:11.5px;color:#6b7280;margin-bottom:4px;">'+_esc(label)+'</div><div style="font-size:13px;line-height:1.8;background:#f9fafb;border-radius:8px;padding:10px 14px;white-space:pre-wrap;word-break:break-all;">'+((v==null||v==='')?'—':_esc(String(v)))+'</div></div>';
 }
 function _webJson(v){ if(v==null) return null; if(typeof v==='string'){ try{ return JSON.parse(v); }catch(e){ return null; } } return v; }
+// ─── 需求診斷表：依官網表單的分區顯示（對應 gc-form 送出的欄位）───
+var FORM_GROUPS=[
+  {t:'基本資料', keys:['介紹方','公司名稱','聯絡人','職稱','電子信箱','其他聯絡方式','公司登記地','品牌名稱','得知管道']},
+  {t:'產品類別與商品特性', keys:['產品類別','類別補充說明','商品特性','出口國家／地區','產品說明']},
+  {t:'現況評估', keys:['是否有外銷經驗','過去外銷國家','過去外銷主力產品','年度外銷營收','過去外銷方式','現有SKU數量','產品平均售價']},
+  {t:'目標市場與銷售條件', keys:['目標市場','已有經銷商／進口商','預計每月品牌項目投入預算（不含行銷費用）','每月行銷預算','年度營收目標','樣品提供','啟動時間']},
+  {t:'拓銷方式與進階問題', keys:['希望拓銷方式','直播帶貨經驗','廠商代表（直播）','海外參展經驗','參展國家','當地語言代表','電商經驗','現有電商平台','自有電商營運團隊','電商產品認證','實體通路經驗','實體通路國家','合作通路類型','實體通路認證','接受寄賣','可提供寄賣數量']},
+  {t:'其他', keys:['其他補充說明']}
+];
+function _formRow(k,v){
+  return '<tr>'+
+    '<td style="padding:8px 12px;color:#6b7280;vertical-align:top;width:38%;border-bottom:1px solid #eef0f2;background:#fafafa;">'+_esc(k)+'</td>'+
+    '<td style="padding:8px 12px;border-bottom:1px solid #eef0f2;word-break:break-word;white-space:pre-wrap;line-height:1.7;">'+_esc(String(v))+'</td>'+
+  '</tr>';
+}
+function _formSection(title,rowsHtml){
+  return '<div style="margin-top:20px;">'+
+    '<div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;margin-bottom:8px;"><span style="width:4px;height:15px;background:#16a34a;border-radius:2px;"></span>'+_esc(title)+'</div>'+
+    '<table style="width:100%;font-size:12.5px;border-collapse:collapse;border:1px solid #eef0f2;border-radius:8px;overflow:hidden;">'+rowsHtml+'</table></div>';
+}
+function _webFormGroups(d,row){
+  var used={}, html='';
+  FORM_GROUPS.forEach(function(g){
+    var rows='';
+    if(g.t==='基本資料'){ rows+=_formRow('提交時間', _webDtStr(row.created_at)); }
+    g.keys.forEach(function(k){
+      used[k]=1;
+      if(!(k in d)) return;
+      var v=d[k]; if(Array.isArray(v)) v=v.join('、');
+      if(v==null||v==='') return;   // 空值不顯示（與信件一致）
+      rows+=_formRow(k,v);
+    });
+    if(rows) html+=_formSection(g.t,rows);
+  });
+  var extra='';
+  Object.keys(d).forEach(function(k){
+    if(used[k]) return;
+    var v=d[k]; if(Array.isArray(v)) v=v.join('、');
+    if(v==null||v==='') return;
+    extra+=_formRow(k,v);
+  });
+  if(extra) html+=_formSection('其他資料',extra);
+  return html;
+}
 function webDetail(idx){
   var cfg=WEB_TABLES[_webKey]; var row=(WEB_DB[_webKey]||[])[idx]; if(!row) return;
-  var body='';
+  var body='', footerLeft='', footerRight='', footerPrimary='';
   if(_webKey==='web_inquiries'){
-    body+='<div style="display:flex;justify-content:flex-end;margin:-4px 0 12px;">'+
-      '<button class="btn btn-secondary" onclick="webExportInquiryXlsx('+idx+')" style="font-size:12.5px;padding:5px 14px;display:flex;align-items:center;gap:6px;">'+
-      '<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>下載詢價單 Excel</button></div>';
-    body+=_webKVGrid([['送出時間',_webDtStr(row.created_at)],['公司名稱',row.company_name],['聯絡人',row.contact_name],['Email',row.email],['其他聯絡方式',row.other_contact],['品項數',row.item_count]]);
+    _opsInit(row,idx);
+    body+=_opsProgressCard(row);
+    body+=_webKVGrid([['公司名稱',row.company_name],['聯絡人',row.contact_name],['Email',row.email],['其他聯絡方式',row.other_contact],['品項數',row.item_count]]);
     body+=_webTextBlock('備註／需求說明',row.message);
     var ps=_webJson(row.products);
     if(ps&&ps.length){
@@ -9173,59 +9234,138 @@ function webDetail(idx){
         '<table style="width:100%;font-size:12.5px;border-collapse:collapse;"><thead><tr>'+['SKU','名稱','品牌','類別','產地','存貨地區'].map(function(h){ return '<th style="text-align:left;padding:4px 8px 4px 0;color:#6b7280;font-weight:500;border-bottom:1px solid var(--border);">'+h+'</th>'; }).join('')+'</tr></thead><tbody>'+
         ps.map(function(p){ return '<tr>'+[p.sku,(p.name||p.name_en),p.brand,p.category,p.origin,(p.stock_regions||[]).join('、')].map(function(v){ return '<td style="padding:5px 8px 5px 0;border-bottom:1px solid #f3f4f6;">'+((v==null||v==='')?'—':_esc(String(v)))+'</td>'; }).join('')+'</tr>'; }).join('')+'</tbody></table>';
     }
-    body+=_opsEditor(row,idx);
+    body+=_opsEditor(row);
+    footerLeft='<button class="btn btn-secondary" onclick="webExportInquiryXlsx('+idx+')" style="padding:6px 12px;display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>下載詢價單 Excel</button>'+
+      (row.pdf_url?'<a class="btn btn-secondary" href="'+_esc(row.pdf_url)+'" target="_blank" rel="noopener" style="padding:6px 12px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>下載 PDF</a>':'');
+    footerPrimary='<div id="ops-action" style="display:flex;align-items:center;gap:10px;">'+_opsActionHtml()+'</div>';
   } else if(_webKey==='web_partner_apps'){
     body+=_webKVGrid([['送出時間',_webDtStr(row.created_at)],['公司名稱',row.company_name],['聯絡人',row.contact_name],['負責人',row.owner_name],['電話',row.phone],['Email',row.email],['其他聯絡方式',row.other_contact]]);
     body+=_webTextBlock('可提供服務',row.services_provided);
     body+=_webTextBlock('公司／服務說明',row.description);
+    if(row.ops_status==='已聯繫'&&row.ops_updated_at){ body+='<div style="font-size:11px;color:#9ca3af;margin-top:12px;">已聯繫 · '+_esc(_webDtStr(row.ops_updated_at))+(row.ops_updated_by?'　by '+_esc(String(row.ops_updated_by)):'')+'</div>'; }
+    footerPrimary='<div id="pa-action" style="display:flex;align-items:center;gap:10px;">'+_paActionHtml(row,idx)+'</div>';
   } else {
-    body+=_webKVGrid([['送出時間',_webDtStr(row.created_at)],['公司名稱',row.company_name],['品牌名稱',row.brand_name],['聯絡人',row.contact_name],['Email',row.email]]);
-    var d=_webJson(row.data);
-    if(d){
-      body+='<div style="font-weight:600;margin:18px 0 8px;font-size:13px;">完整填答</div><table style="width:100%;font-size:12.5px;border-collapse:collapse;">'+
-        Object.keys(d).map(function(k){ var v=d[k]; if(Array.isArray(v)) v=v.join('、'); return '<tr><td style="padding:5px 12px 5px 0;color:#6b7280;vertical-align:top;white-space:nowrap;border-bottom:1px solid #f3f4f6;">'+_esc(k)+'</td><td style="padding:5px 0;border-bottom:1px solid #f3f4f6;word-break:break-all;">'+((v==null||v==='')?'—':_esc(String(v)))+'</td></tr>'; }).join('')+'</table>';
+    var d=_webJson(row.data)||{};
+    body+=_webFormGroups(d,row);
+    if(row.pdf_url){
+      footerPrimary='<a class="btn btn-primary" href="'+_esc(row.pdf_url)+'" target="_blank" rel="noopener" style="padding:8px 16px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>下載 PDF</a>';
+    }else{
+      footerLeft='<span style="font-size:11.5px;color:#9ca3af;">PDF 產生中或未啟用（送出後約數秒回填）</span>';
     }
   }
-  _webModal(cfg.title+'．詳細內容',body);
+  _webModal(cfg.title+'．詳細內容',body,footerLeft,footerRight,footerPrimary);
 }
-// ─── 營運紀錄編輯區（處理狀態＋營運備註，存回 inquiries） ───
-function _opsEditor(row,idx){
-  var cur=row.ops_status||'待處理';
-  var opts=OPS_STATUS.map(function(o){ return '<option value="'+_esc(o.v)+'"'+(cur===o.v?' selected':'')+'>'+_esc(o.v)+'</option>'; }).join('');
-  var meta='';
-  if(row.ops_updated_at){ meta='<div style="font-size:11px;color:#9ca3af;margin-top:10px;">最後更新：'+_esc(_webDtStr(row.ops_updated_at))+(row.ops_updated_by?'　by '+_esc(String(row.ops_updated_by)):'')+'</div>'; }
-  return '<div style="margin-top:20px;padding:16px 18px;background:#f8fafc;border:1px solid var(--border);border-radius:10px;">'+
-    '<div style="font-weight:600;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:7px;"><span style="color:#2563eb;">●</span>營運紀錄</div>'+
-    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">'+
-      '<label style="font-size:12px;color:#6b7280;">處理狀態</label>'+
-      '<select id="ops-status-sel" class="cm-input" style="width:auto;font-size:13px;padding:5px 12px;cursor:pointer;">'+opts+'</select>'+
-    '</div>'+
-    '<div style="font-size:12px;color:#6b7280;margin-bottom:5px;">營運備註</div>'+
-    '<textarea id="ops-note-inp" class="cm-input" style="width:100%;box-sizing:border-box;min-height:72px;font-size:13px;padding:8px 11px;resize:vertical;line-height:1.6;" placeholder="記錄跟進情形、報價金額、聯繫結果…">'+_esc(row.ops_note||'')+'</textarea>'+
-    meta+
-    '<div style="margin-top:14px;display:flex;justify-content:flex-end;">'+
-      '<button id="ops-save-btn" class="btn btn-primary" onclick="webSaveOps('+idx+')">儲存營運紀錄</button>'+
-    '</div>'+
+// ═══ 營運紀錄 UI（版型 C：唯讀進度條 + 推進按鈕，推進即儲存狀態）═══
+var _opsSel=null, _opsRowIdx=-1;
+function _opsInit(row,idx){ _opsSel=row.ops_status||'待處理'; _opsRowIdx=idx; }
+function _opsIdx(v){ for(var i=0;i<OPS_STATUS.length;i++){ if(OPS_STATUS[i].v===v) return i; } return 0; }
+// 收到時間 + 狀態進度條（唯讀）+ 推進按鈕
+function _opsProgressCard(row){
+  var recv=_webDtStr(row.created_at);
+  return '<div style="padding:14px 16px;background:#f8fafc;border:1px solid var(--border);border-radius:12px;margin-bottom:16px;">'+
+    '<div style="font-size:11.5px;color:#6b7280;margin-bottom:11px;">處理進度　·　收到時間 '+(recv?_esc(recv):'—')+'</div>'+
+    '<div id="ops-stepper">'+_opsStepperHtml()+'</div>'+
   '</div>';
 }
-async function webSaveOps(idx){
-  var row=(WEB_DB.web_inquiries||[])[idx]; if(!row) return;
-  if(row.id==null){ alert('這筆資料沒有 id 欄位，無法儲存營運紀錄。'); return; }
-  var sel=document.getElementById('ops-status-sel'), note=document.getElementById('ops-note-inp'), btn=document.getElementById('ops-save-btn');
-  var st=sel?sel.value:'', nt=note?note.value:'';
-  var by=(typeof currentUser!=='undefined'&&currentUser)?(currentUser.full_name||currentUser.email||'admin'):'admin';
-  var payload={ ops_status:st||null, ops_note:(nt&&nt.trim())?nt:null, ops_updated_at:new Date().toISOString(), ops_updated_by:by };
+// 唯讀進度條：畫出「待處理 → 已聯繫 → 已報價」目前進度（不可點）
+function _opsStepperHtml(){
+  var curIdx=_opsIdx(_opsSel||'待處理');
+  var html='<div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;">';
+  OPS_STATUS.forEach(function(o,i){
+    var done=i<curIdx, isCur=i===curIdx;
+    if(i>0){ var barDone=i<=curIdx; html+='<span style="width:34px;height:2px;background:'+(barDone?'#2563eb':'#e5e7eb')+';margin:0 6px;"></span>'; }
+    var dotBg=(done||isCur)?'#2563eb':'#e5e7eb', dotCol=(done||isCur)?'#fff':'#9ca3af', ring=isCur?'box-shadow:0 0 0 4px #eff6ff;':'';
+    var lblCol=isCur?'#111827':(done?'#374151':'#9ca3af');
+    html+='<div style="display:flex;align-items:center;gap:7px;padding:2px;">'+
+      '<span style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:'+dotBg+';color:'+dotCol+';'+ring+'">'+(done?'✓':(i+1))+'</span>'+
+      '<span style="font-size:12.5px;font-weight:600;color:'+lblCol+';white-space:nowrap;">'+_esc(o.v)+'</span>'+
+    '</div>';
+  });
+  return html+'</div>';
+}
+// 推進按鈕：顯示「下一階段」，點下去直接把狀態存入資料庫並前進；已到最後一階段則顯示完成
+function _opsActionHtml(){
+  var ci=_opsIdx(_opsSel||'待處理');
+  if(ci>=OPS_STATUS.length-1){
+    return '<span style="font-size:12.5px;color:#16a34a;font-weight:600;">✓ 已完成報價</span>';
+  }
+  var next=OPS_STATUS[ci+1].v;
+  return '<button id="ops-adv-btn" onclick="opsAdvance()" class="btn btn-primary" style="padding:8px 18px;font-size:13px;">標記為「'+_esc(next)+'」→</button>';
+}
+// 推進到下一階段：立即寫入資料庫（取代原本的「儲存變更」）
+async function opsAdvance(){
+  var idx=_opsRowIdx, ci=_opsIdx(_opsSel||'待處理');
+  if(ci>=OPS_STATUS.length-1) return;
+  var prev=_opsSel, btn=document.getElementById('ops-adv-btn');
   if(btn){ btn.disabled=true; btn.textContent='儲存中…'; }
-  var r=await sb.from('inquiries').update(payload).eq('id',row.id);
+  _opsSel=OPS_STATUS[ci+1].v;
+  var ok=await webSaveOps(idx,'status');
+  if(!ok) _opsSel=prev;
+  _opsRefreshStatusUI();
+}
+function _opsRefreshStatusUI(){
+  var s=document.getElementById('ops-stepper'); if(s) s.innerHTML=_opsStepperHtml();
+  var a=document.getElementById('ops-action'); if(a) a.innerHTML=_opsActionHtml();
+}
+// 營運備註：文字欄上方有獨立的「儲存」文字按鈕
+function _opsEditor(row){
+  var meta='';
+  if(row.ops_updated_at){ meta='<div style="font-size:11px;color:#9ca3af;margin-top:8px;">最後更新：'+_esc(_webDtStr(row.ops_updated_at))+(row.ops_updated_by?'　by '+_esc(String(row.ops_updated_by)):'')+'</div>'; }
+  return '<div style="margin-top:18px;">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">'+
+      '<span style="font-size:12px;color:#6b7280;font-weight:600;">營運備註</span>'+
+      '<button id="ops-note-save" onclick="opsSaveNote()" style="background:none;border:none;color:#2563eb;font-size:12.5px;font-weight:600;cursor:pointer;padding:2px 4px;font-family:inherit;">儲存</button>'+
+    '</div>'+
+    '<textarea id="ops-note-inp" class="cm-input" style="width:100%;box-sizing:border-box;min-height:72px;font-size:13px;padding:8px 11px;resize:vertical;line-height:1.6;" placeholder="記錄跟進情形、報價金額、聯繫結果…">'+_esc(row.ops_note||'')+'</textarea>'+
+    meta+
+  '</div>';
+}
+function opsSaveNote(){ webSaveOps(_opsRowIdx,'note'); }
+// ─── 服務商申請：已聯繫註記（底部按鈕，寫回 partner_applications） ───
+function _paActionHtml(row,idx){
+  if(row.ops_status==='已聯繫'){
+    return '<span style="font-size:12.5px;color:#2563eb;font-weight:600;">✓ 已聯繫</span>'+
+      '<button id="pa-act-btn" onclick="paSetContacted('+idx+',false)" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;">取消註記</button>';
+  }
+  return '<button id="pa-act-btn" onclick="paSetContacted('+idx+',true)" class="btn btn-primary" style="padding:8px 18px;font-size:13px;">標記為已聯繫</button>';
+}
+async function paSetContacted(idx,on){
+  var row=(WEB_DB.web_partner_apps||[])[idx]; if(!row) return;
+  if(row.id==null){ alert('這筆資料沒有 id 欄位，無法儲存。'); return; }
+  var btn=document.getElementById('pa-act-btn'); if(btn){ btn.disabled=true; btn.textContent='儲存中…'; }
+  var by=(typeof currentUser!=='undefined'&&currentUser)?(currentUser.full_name||currentUser.email||'admin'):'admin';
+  var payload={ ops_status:on?'已聯繫':'待處理', ops_updated_at:new Date().toISOString(), ops_updated_by:by };
+  var r=await sb.from('partner_applications').update(payload).eq('id',row.id);
   if(r.error){
-    if(btn){ btn.disabled=false; btn.textContent='儲存營運紀錄'; }
-    alert('儲存失敗：'+r.error.message+'\n\n若訊息為欄位不存在（column ops_status/ops_note does not exist）或權限（RLS）相關，請先在 Supabase SQL Editor 執行「詢價管理_營運紀錄_建欄.sql」。');
+    if(btn){ btn.disabled=false; btn.textContent=on?'標記為已聯繫':'取消註記'; }
+    alert('儲存失敗：'+r.error.message+'\n\n若訊息為欄位不存在（column ops_status does not exist）或權限（RLS）相關，請先在 Supabase SQL Editor 執行「服務商申請_已聯繫註記_建欄.sql」。');
     return;
   }
-  row.ops_status=payload.ops_status; row.ops_note=payload.ops_note; row.ops_updated_at=payload.ops_updated_at; row.ops_updated_by=payload.ops_updated_by;
-  if(typeof _toast==='function') _toast('已儲存營運紀錄');
+  row.ops_status=payload.ops_status; row.ops_updated_at=payload.ops_updated_at; row.ops_updated_by=payload.ops_updated_by;
+  if(typeof _toast==='function') _toast(on?'已標記為已聯繫':'已取消註記');
   _webRenderBody();
-  if(btn){ btn.disabled=false; btn.textContent='已儲存 ✓'; setTimeout(function(){ if(btn&&document.body.contains(btn)) btn.textContent='儲存營運紀錄'; },1600); }
+  var a=document.getElementById('pa-action'); if(a) a.innerHTML=_paActionHtml(row,idx);
+}
+// which: 'status'（推進按鈕）或 'note'（備註儲存鍵）；回傳是否成功
+async function webSaveOps(idx,which){
+  var row=(WEB_DB.web_inquiries||[])[idx]; if(!row) return false;
+  if(row.id==null){ alert('這筆資料沒有 id 欄位，無法儲存營運紀錄。'); return false; }
+  var note=document.getElementById('ops-note-inp'), nbtn=document.getElementById('ops-note-save');
+  var st=_opsSel||row.ops_status||'待處理', nt=note?note.value:'';
+  var by=(typeof currentUser!=='undefined'&&currentUser)?(currentUser.full_name||currentUser.email||'admin'):'admin';
+  var payload={ ops_status:st||null, ops_note:(nt&&nt.trim())?nt:null, ops_updated_at:new Date().toISOString(), ops_updated_by:by };
+  if(which==='note'&&nbtn){ nbtn.disabled=true; nbtn.textContent='儲存中…'; }
+  var r=await sb.from('inquiries').update(payload).eq('id',row.id);
+  if(r.error){
+    if(which==='note'&&nbtn){ nbtn.disabled=false; nbtn.textContent='儲存'; }
+    alert('儲存失敗：'+r.error.message+'\n\n若訊息為欄位不存在（column ops_status/ops_note does not exist）或權限（RLS）相關，請先在 Supabase SQL Editor 執行「詢價管理_營運紀錄_建欄.sql」。');
+    return false;
+  }
+  row.ops_status=payload.ops_status; row.ops_note=payload.ops_note; row.ops_updated_at=payload.ops_updated_at; row.ops_updated_by=payload.ops_updated_by;
+  if(typeof _toast==='function') _toast(which==='note'?'已儲存營運備註':'已更新狀態為「'+st+'」');
+  _webRenderBody();
+  if(which==='note'&&nbtn){ nbtn.disabled=false; nbtn.textContent='已儲存 ✓'; setTimeout(function(){ if(nbtn&&document.body.contains(nbtn)) nbtn.textContent='儲存'; },1500); }
+  return true;
 }
 // ─── 下載單張詢價單 Excel ───
 function webExportInquiryXlsx(idx){
@@ -9259,32 +9399,6 @@ function webExportInquiryXlsx(idx){
   XLSX.writeFile(wb, '詢價單_'+safe+'_'+dstr+'.xlsx');
   if(typeof _toast==='function') _toast('已下載詢價單 Excel');
 }
-// ─── 整批匯出目前表格為 Excel（含篩選結果） ───
-function webExportXlsx(){
-  if(typeof XLSX==='undefined'){ if(typeof _toast==='function') _toast('Excel 元件尚未載入','err'); return; }
-  var cfg=WEB_TABLES[_webKey]; var rows=_webRows();
-  if(!rows.length){ if(typeof _toast==='function') _toast('目前沒有資料可匯出','err'); return; }
-  var header,data;
-  if(_webKey==='web_inquiries'){
-    header=['時間','公司名稱','聯絡人','Email','其他聯絡方式','品項數','備註','處理狀態','營運備註','營運更新時間','營運更新人','詢價商品'];
-    data=rows.map(function(r){ var ps=_webJson(r.products)||[];
-      var pstr=ps.map(function(p){ return (p.sku||'')+' '+(p.name||p.name_en||''); }).join('；');
-      return [_webDtStr(r.created_at),r.company_name,r.contact_name,r.email,r.other_contact,r.item_count,r.message,(r.ops_status||'待處理'),r.ops_note,_webDtStr(r.ops_updated_at),r.ops_updated_by,pstr]; });
-  } else if(_webKey==='web_partner_apps'){
-    header=['時間','公司名稱','聯絡人','負責人','電話','Email','其他聯絡方式','可提供服務','說明'];
-    data=rows.map(function(r){ return [_webDtStr(r.created_at),r.company_name,r.contact_name,r.owner_name,r.phone,r.email,r.other_contact,r.services_provided,r.description]; });
-  } else {
-    header=['時間','公司名稱','品牌名稱','聯絡人','Email','完整填答'];
-    data=rows.map(function(r){ var d=_webJson(r.data);
-      var s=d?Object.keys(d).map(function(k){ var v=d[k]; if(Array.isArray(v)) v=v.join('、'); return k+'：'+(v==null?'':v); }).join('\n'):'';
-      return [_webDtStr(r.created_at),r.company_name,r.brand_name,r.contact_name,r.email,s]; });
-  }
-  var ws=XLSX.utils.aoa_to_sheet([header].concat(data));
-  var wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, String(cfg.title).slice(0,28));
-  XLSX.writeFile(wb, cfg.title+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
-  if(typeof _toast==='function') _toast('已匯出 '+data.length+' 筆');
-}
 async function webDelete(idx){
   var cfg=WEB_TABLES[_webKey]; var row=(WEB_DB[_webKey]||[])[idx]; if(!row) return;
   if(row.id==null){ alert('這筆資料沒有 id 欄位，無法從後台刪除。'); return; }
@@ -9304,8 +9418,8 @@ function webExportCsv(){
       var pstr=ps.map(function(p){ return (p.sku||'')+' '+(p.name||p.name_en||''); }).join('；');
       return [_webDtStr(r.created_at),r.company_name,r.contact_name,r.email,r.other_contact,r.item_count,r.message,(r.ops_status||'待處理'),r.ops_note,_webDtStr(r.ops_updated_at),r.ops_updated_by,pstr]; });
   } else if(_webKey==='web_partner_apps'){
-    header=['時間','公司名稱','聯絡人','負責人','電話','Email','其他聯絡方式','可提供服務','說明'];
-    data=rows.map(function(r){ return [_webDtStr(r.created_at),r.company_name,r.contact_name,r.owner_name,r.phone,r.email,r.other_contact,r.services_provided,r.description]; });
+    header=['時間','公司名稱','聯絡人','負責人','電話','Email','其他聯絡方式','可提供服務','說明','狀態','狀態更新時間','狀態更新人'];
+    data=rows.map(function(r){ return [_webDtStr(r.created_at),r.company_name,r.contact_name,r.owner_name,r.phone,r.email,r.other_contact,r.services_provided,r.description,(r.ops_status||'待處理'),_webDtStr(r.ops_updated_at),r.ops_updated_by]; });
   } else {
     header=['時間','公司名稱','品牌名稱','聯絡人','Email','完整填答'];
     data=rows.map(function(r){ var d=_webJson(r.data);
