@@ -2553,7 +2553,7 @@ function _downloadCsv(filename,header,rows){
 }
 // 共用「匯出 CSV」按鈕 HTML
 function _exportBtn(fnName){
-  return '<button class="btn btn-secondary" onclick="'+fnName+'()" style="font-size:12.5px;padding:5px 14px;display:flex;align-items:center;gap:6px;">'+
+  return '<button class="btn btn-secondary" onclick="'+fnName+'()" style="display:inline-flex;align-items:center;gap:6px;">'+
     '<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>匯出 CSV</button>';
 }
 
@@ -3116,7 +3116,7 @@ function updateProjTable(){
   var head='<thead><tr><th style="width:60px;">ID</th><th style="min-width:120px;">案號</th><th style="min-width:150px;">專案名稱</th><th style="min-width:150px;">客戶</th><th style="min-width:130px;">帶單商務</th><th style="width:100px;">狀態</th><th style="width:130px;text-align:right;">報價含稅</th><th style="width:70px;">已結算</th><th style="width:150px;">建立時間</th><th style="width:110px;">最後操作人</th><th style="width:70px;text-align:right;">操作</th></tr></thead>';
   var body=slice.length? slice.map(function(p,i){
     return '<tr style="cursor:pointer;" onclick="openProjectWizard('+p.id+')"><td class="id-cell">'+(rows.length-(projPage-1)*PAGE_SIZE-i)+'</td><td><span class="cell-name">'+_esc(p.project_no||('專案 #'+p.id))+'</span></td><td>'+(_projName(p)?_esc(_projName(p)):'<span style="color:var(--text-dim);">—</span>')+'</td><td>'+_esc(_custName(p.customer_id))+'</td><td>'+_esc(p.business_partner_id?_bpName(p.business_partner_id):'直客')+'</td>'+
-      '<td>'+_statusBadge(p.status)+'</td><td style="text-align:right;font-variant-numeric:tabular-nums;">'+_money(p.total_amount)+'</td><td>'+(p.is_settled?_badge('已結算','green'):_badge('未結','gray'))+'</td><td style="white-space:nowrap;">'+_dt(p.created_time)+'</td>'+
+      '<td>'+((p.status==='signed'&&p.cooperation_mode!=='intermediary'&&!p.provider_signed_time)?_badge('客戶已回簽','amber'):_statusBadge(p.status))+'</td><td style="text-align:right;font-variant-numeric:tabular-nums;">'+_money(p.total_amount)+'</td><td>'+(p.is_settled?_badge('已結算','green'):_badge('未結','gray'))+'</td><td style="white-space:nowrap;">'+_dt(p.created_time)+'</td>'+
       '<td style="white-space:nowrap;color:var(--text-mid);">'+_esc(p.updated_by||'—')+'</td>'+
       '<td style="text-align:right;"><div class="row-actions"><button class="action-btn" title="開啟"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4l8 6-8 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></td></tr>';
   }).join(''):renderEmptyState(11);
@@ -3129,8 +3129,8 @@ function goProjPage(p){ projPage=p; updateProjTable(); }
 var WIZ=null;
 function _wizGetSteps(){
   if(WIZ&&WIZ.project&&WIZ.project.cooperation_mode==='principal')
-    return ['成立專案','洽談合作','報價／合約','客戶回簽','開立 Invoice','收付款管理'];
-  return ['成立專案','洽談合作','報價／合約','客戶回簽','開立 Invoice','收款結案'];
+    return ['成立專案','洽談合作','報價／合約','合約回簽','開立 Invoice','收付款管理'];
+  return ['成立專案','洽談合作','報價／合約','合約回簽','開立 Invoice','收款結案'];
 }
 function _wizGetStepFn(step){
   if(WIZ&&WIZ.project&&WIZ.project.cooperation_mode==='principal')
@@ -3510,7 +3510,7 @@ function _wizTabsHtml(){
       var bg=active?'#2563eb':isLockedStep?'#f3f4f6':'#fff';
       var color=active?'#fff':isLockedStep?'#6b7280':'var(--text-mid)';
       var border=active?'#2563eb':isLockedStep?'#d1d5db':'var(--border)';
-      var lockTitle=isLockedStep?(invoicedLocked&&n<=4?'已開立 Invoice，可瀏覽但不可修改':signedLocked&&n<=3?'客戶已回簽，可瀏覽但不可修改':'合約已送出，可瀏覽但不可修改'):'';
+      var lockTitle=isLockedStep?(invoicedLocked&&n<=4?'已開立 Invoice，可瀏覽但不可修改':signedLocked&&n<=3?'合約已回簽，可瀏覽但不可修改':'合約已送出，可瀏覽但不可修改'):'';
       // 灰色 tab 仍可點擊（唯讀瀏覽），只是視覺上反灰
       return '<div onclick="_wizNav('+n+')" style="cursor:pointer;padding:8px 14px;border-radius:9px;font-size:12.5px;font-weight:'+(active?'600':'500')+';background:'+bg+';color:'+color+';border:1px solid '+border+';"'+(isLockedStep?' title="'+lockTitle+'"':'')+'>'+
         '<span style="opacity:0.65;margin-right:5px;">'+n+'</span>'+name+'</div>';
@@ -3717,7 +3717,18 @@ async function _persistProjectName(id,nm){
   _projNameLSset(id,nm);
 }
 function _wizBump(target){ return _statusRank(WIZ.project.status)<_statusRank(target)?target:WIZ.project.status; }
-async function _wizSaveProject(patch){
+async function _wizSaveProject(patch, forceStamp){
+  // 只有實際變更專案資料時才更新「最後操作人／更新時間」；純瀏覽、切換步驟（值沒變）不動。
+  // forceStamp=true：由 _wizSaveStep4 在偵測到報價項目／媒合有變更時強制蓋章。
+  if(WIZ.id && WIZ.project && !forceStamp){
+    var _changed=false;
+    for(var _k in patch){ if(!patch.hasOwnProperty(_k)) continue;
+      if(_k==='updated_time'||_k==='updated_by') continue;
+      var _cur=WIZ.project[_k];
+      if(String(_cur==null?'':_cur)!==String(patch[_k]==null?'':patch[_k])){ _changed=true; break; }
+    }
+    if(!_changed) return true;   // 無任何變更 → 不寫入、不更新最後操作人
+  }
   patch.updated_time=new Date().toISOString();
   patch.updated_by=currentUser?currentUser.full_name:'admin';
   var r;
@@ -3764,7 +3775,7 @@ function _wizFoldCard(key,title,right,body,def,summary){
 
 // Step 1：成立專案（客戶 + 帶單商務 + 稅率 + 客戶撰寫資料）。案號 12 碼於儲存時自動產生，不顯示欄位。
 var _LOCK_BANNER='<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:10px 14px;background:#fef3c7;border:1px solid #fcd34d;border-radius:9px;font-size:12.5px;color:#92400e;">🔒 合約已送出，此頁為唯讀。如需修改，請至「報價／合約」步驟點「修改報價」。</div>';
-var _SIGN_LOCK_BANNER='<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:10px 14px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:9px;font-size:12.5px;color:#5b21b6;">🔒 客戶已回簽，此頁為唯讀。如需修改，請至「客戶回簽」步驟重新開啟編輯。</div>';
+var _SIGN_LOCK_BANNER='<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:10px 14px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:9px;font-size:12.5px;color:#5b21b6;">🔒 合約已回簽，此頁為唯讀。如需修改，請至「合約回簽」步驟重新開啟編輯。</div>';
 function _wizStep1(){
   var p=WIZ.project;
   var bpOpts=DB.business_partners.map(function(b){ return '<option value="'+b.id+'"'+(String(p.business_partner_id||'')===String(b.id)?' selected':'')+'>'+_esc(_bpLabel(b.id))+'</option>'; }).join('');
@@ -4172,7 +4183,7 @@ async function _wizDelItem(mid,itid){
 }
 async function _wizSaveStep4(){
   if(!WIZ.id) return true;
-  var grand=0, totalRebate=0;
+  var grand=0, totalRebate=0, anyChange=false; // anyChange：本次有實際改動項目／媒合時才蓋「最後操作人」
   var inter=(WIZ.project.cooperation_mode==='intermediary');
   for(var mi=0; mi<WIZ.matches.length; mi++){
     var m=WIZ.matches[mi];
@@ -4185,6 +4196,10 @@ async function _wizSaveStep4(){
       var unit=parseFloat((document.getElementById('it-unit-'+it.id)||{}).value)||0;
       var amt=parseFloat((document.getElementById('it-amt-'+it.id)||{}).value)||0;
       var b=parseFloat((document.getElementById('it-base-'+it.id)||{}).value)||0;
+      // 與現值比對，只有真的改了才寫 DB（純瀏覽不動）
+      var itemChanged=String(it.item_name==null?'':it.item_name)!==String(name==null?'':name)
+        || (Number(it.qty)||0)!==qty || (Number(it.unit_price)||0)!==unit
+        || (Number(it.amount_untaxed)||0)!==amt || (Number(it.base_price)||0)!==b;
       it.item_name=name; it.qty=qty; it.unit_price=unit; it.amount_untaxed=amt; it.base_price=b;
       // 各項目幣別可能不同（USD/TWD），存入 subtotal 前先換算成 TWD，確保 total_untaxed 以 TWD 計
       var itCur=_itemCurrency(it,m.service_provider_id);
@@ -4193,14 +4208,16 @@ async function _wizSaveStep4(){
       sub+=amtTwd;
       if(inter){ var r=Math.round(amtTwd*b/100*100)/100; totalRebate+=r; matchRebate+=r; } // TWD 保留兩位小數，與 _wizInterRebateTotal 一致
       else base+=basePriceTwd;
-      await sb.from('project_match_items').update({ item_name:name, qty:qty, unit_price:unit, amount_untaxed:amt, base_price:b, updated_time:new Date().toISOString() }).eq('id',it.id);
+      if(itemChanged){ anyChange=true; await sb.from('project_match_items').update({ item_name:name, qty:qty, unit_price:unit, amount_untaxed:amt, base_price:b, updated_time:new Date().toISOString() }).eq('id',it.id); }
     }
     var meetEl=document.getElementById('m-meet-'+m.id);
     var meet=meetEl&&meetEl.value?new Date(meetEl.value).toISOString():null;
     var matchProfit=inter?matchRebate:sub-base; // 居間：退傭額；主理人：利潤
+    var _oldSub=Number(m.subtotal_untaxed)||0, _oldBase=Number(m.base_total)||0, _oldProfit=Number(m.profit_untaxed)||0, _oldMeet=m.meeting_time||null;
     m.subtotal_untaxed=sub;
     m.base_total=inter?0:base; m.profit_untaxed=matchProfit; m.meeting_time=meet;
-    await sb.from('project_matches').update({ subtotal_untaxed:sub, base_total:inter?0:base, profit_untaxed:matchProfit, meeting_time:meet, updated_time:new Date().toISOString(), updated_by:currentUser?currentUser.full_name:'admin' }).eq('id',m.id);
+    var matchChanged=_oldSub!==sub || _oldBase!==(inter?0:base) || _oldProfit!==matchProfit || String(_oldMeet==null?'':_oldMeet)!==String(meet==null?'':meet);
+    if(matchChanged){ anyChange=true; await sb.from('project_matches').update({ subtotal_untaxed:sub, base_total:inter?0:base, profit_untaxed:matchProfit, meeting_time:meet, updated_time:new Date().toISOString(), updated_by:currentUser?currentUser.full_name:'admin' }).eq('id',m.id); }
     grand+=sub;
   }
   grand=Math.round(grand); // 防禦性取整，確保 TWD 不帶小數
@@ -4209,7 +4226,7 @@ async function _wizSaveStep4(){
   var patch={ total_untaxed:grand, total_tax:tax, total_amount:grand+tax, status:_wizBump(tgt) };
   // 居間：計算加權平均退傭%（供 preview/文件沿用），存回 projects.rebate_percent
   if(inter){ patch.rebate_percent=grand>0?Math.round(totalRebate/grand*10000)/100:0; WIZ.project.rebate_percent=patch.rebate_percent; }
-  return await _wizSaveProject(patch);
+  return await _wizSaveProject(patch, anyChange);
 }
 
 // 居間模式：退傭與分潤試算（畫面顯示用，實際結算於收款結案）
@@ -5535,102 +5552,117 @@ async function _wizUnlockRate(){
   if(r){ _toast('匯率已解除鎖定（匯率數值保留，可點「更新台銀匯率」刷新）'); _wizRender(); }
 }
 
-// Step 6：客戶回簽（上傳回簽合約留存 + 記錄回簽時間）
-// WIZ._signedPhase: undefined=鎖定, 1=第一次點擊(確認提示), 2=編輯模式
+// 合約回簽的合約留存槽：主理人＝客戶合約＋服務商合約；居間＝只有服務商合約
+// 沿用現有 kind='contract'（主理人＝客戶合約、居間＝服務商合約），主理人另新增 kind='contract_provider'（服務商合約）
+function _contractSlots(){
+  var inter=(WIZ.project&&WIZ.project.cooperation_mode==='intermediary');
+  return inter
+    ? [{kind:'contract', label:'服務商合約'}]
+    : [{kind:'contract', label:'客戶合約'}, {kind:'contract_provider', label:'服務商合約'}];
+}
+function _contractSlotFiles(kind){ return (WIZ.attachments||[]).filter(function(a){ return a.kind===kind; }); }
+function _contractFileRow(a, canDelete, tag){
+  var isImg=_isImgName(a.file_name);
+  var thumb=isImg
+    ?'<img class="att-thumb" data-path="'+_esc(a.file_path||'')+'" src="" alt="" style="width:38px;height:38px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer;flex-shrink:0;background:#f8f9fb;" onclick="_wizPreviewAttachById('+a.id+')">'
+    :'<div style="width:38px;height:38px;border-radius:6px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-dim);flex-shrink:0;background:#f8f9fb;"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3h7l3 3v11H5z"/><path d="M12 3v3h3"/></svg></div>';
+  return '<div style="display:flex;align-items:center;gap:8px;font-size:12.5px;padding:6px 0;border-bottom:1px solid #f3f4f6;">'+
+    thumb+
+    '<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-mid);">'+_esc(a.file_name||'檔案')+'</div>'+
+    (tag?'<span style="font-size:11px;padding:1px 7px;border-radius:4px;background:#f1f5f9;color:#64748b;flex-shrink:0;">'+_esc(tag)+'</span>':'')+
+    '<button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="_wizPreviewAttachById('+a.id+')">預覽</button>'+
+    (canDelete?'<button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;color:#dc2626;" onclick="_wizDelAttach('+a.id+')">刪除</button>':'')+
+  '</div>';
+}
+// Step 6：合約回簽（依模式上傳一／兩份合約留存 + 記錄回簽時間）
+function _isInter(){ return WIZ&&WIZ.project&&WIZ.project.cooperation_mode==='intermediary'; }
+function _provKind(){ return _isInter()?'contract':'contract_provider'; }
+// 整體回簽完成（顯示用）：主理人＝客戶＋服務商都簽；居間＝服務商簽
+function _bothSigned(){ var p=WIZ&&WIZ.project; if(!p) return false; return _isInter()? !!p.provider_signed_time : (!!p.customer_signed_time && !!p.provider_signed_time); }
+// 回簽欄位（版型 A）：主理人＝客戶＋服務商兩欄；居間＝只有服務商一欄。billing=計費側（客戶／居間服務商）
+function _signCols(){
+  var p=WIZ.project;
+  if(_isInter()) return [{side:'prov', title:'服務商回簽', kind:'contract', signed:!!p.provider_signed_time, time:p.provider_signed_time, billing:true}];
+  return [
+    {side:'cust', title:'客戶回簽', kind:'contract', signed:!!p.customer_signed_time, time:p.customer_signed_time, billing:true},
+    {side:'prov', title:'服務商回簽', kind:'contract_provider', signed:!!p.provider_signed_time, time:p.provider_signed_time, billing:false}
+  ];
+}
+function _signColHtml(c, invoicedLocked, settled){
+  var dot=c.side==='cust'?'#2563eb':'#7c3aed';
+  var badge=c.signed
+    ?'<span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;color:#16a34a;background:#f0fdf4;">✓ 已回簽</span>'
+    :'<span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;color:#6b7280;background:#f3f4f6;">待回簽</span>';
+  var files=_contractSlotFiles(c.kind);
+  var timeVal=_toLocalInput(c.time||new Date().toISOString());
+  var lbl=function(t,warn){ return '<div style="font-size:12px;color:var(--text-dim);margin:12px 0 5px;font-weight:600;">'+t+(warn?' <span style="color:#dc2626;font-weight:400;">（尚未上傳）</span>':'')+'</div>'; };
+  var body=lbl((c.side==='cust'?'客戶合約':'服務商合約'), (!files.length&&!c.signed));
+  if(c.signed){
+    body+=files.map(function(a){ return _contractFileRow(a,false); }).join('')||'<div style="font-size:12px;color:var(--text-dim);">尚無附件</div>';
+  }else{
+    body+=files.map(function(a){ return _contractFileRow(a,true); }).join('');
+    body+='<label class="btn btn-secondary" style="display:inline-block;cursor:pointer;margin-top:'+(files.length?'8px':'0')+';">選擇檔案<input type="file" style="display:none;" onchange="_wizUpload(\''+c.kind+'\',this)"></label>';
+  }
+  var lockedTime=c.signed && (c.billing? invoicedLocked : settled);
+  body+=lbl((c.side==='cust'?'客戶回簽時間':'服務商回簽時間'), false);
+  body+='<input class="cm-input" id="wiz-signed-'+c.side+'" type="datetime-local" value="'+timeVal+'" '+(lockedTime?'disabled':'')+' style="background:#fff;width:100%;box-sizing:border-box;">';
+  var act='';
+  if(c.signed){
+    var canResign=c.billing? !invoicedLocked : !settled;
+    if(!lockedTime) act+='<button class="btn btn-secondary" onclick="_wizUpdateSign(\''+c.side+'\')">更新時間</button>';
+    if(canResign) act+='<button class="btn btn-secondary" onclick="_wizResign(\''+c.side+'\')" style="border-color:#dc2626;color:#dc2626;">重簽</button>';
+  }else{
+    act+='<button class="btn btn-primary" onclick="_wizConfirmSign(\''+c.side+'\')">確認'+(c.side==='cust'?'客戶':'服務商')+'回簽</button>';
+  }
+  return '<div style="border:1px solid var(--border);border-radius:12px;padding:16px;background:#fbfcfe;">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">'+
+      '<div style="font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:7px;"><span style="width:8px;height:8px;border-radius:50%;background:'+dot+';flex-shrink:0;"></span>'+c.title+'</div>'+badge+
+    '</div>'+
+    body+
+    (act?'<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">'+act+'</div>':'')+
+  '</div>';
+}
 function _wizStep6(){
   if(!WIZ.id) return '<div style="color:var(--text-dim);padding:20px 0;">請先完成前面的步驟。</div>'+_wizFooter();
   var p=WIZ.project;
-  var signed=_statusRank(p.status)>=_statusRank('signed');
-  var invoicedLocked=_statusRank(p.status)>=_statusRank('invoiced'); // Invoice 已開立後，回簽步驟完全唯讀
-  var signedVal=_toLocalInput(p.signed_time||new Date().toISOString());
-  var editMode=signed&&!invoicedLocked&&(WIZ._signedPhase===2); // 只在未開 Invoice 前允許編輯
-  var locked=signed&&!editMode;              // 回簽完成且未解鎖 = 唯讀
-
-  // 頁尾右側按鈕（取代「儲存並下一步」）
-  var footerRightBtn='';
-  if(invoicedLocked){
-    footerRightBtn=''; // Invoice 已開立 → 回簽步驟無任何操作按鈕
-  } else if(!signed){
-    footerRightBtn='<button class="btn btn-primary" onclick="_wizConfirmSigned()">確認客戶已回簽</button>';
-  } else if(editMode){
-    footerRightBtn='<button class="btn btn-secondary" onclick="_wizUpdateSigned()">更新回簽時間</button>';
-  } else {
-    footerRightBtn='<button class="btn btn-secondary" onclick="_wizPrepareSigned()" style="border-color:#dc2626;color:#dc2626;">合約重簽</button>';
-  }
-
-  var attachSectionHtml;
-  if(locked){
-    // 唯讀模式：只顯示附件清單，不顯示上傳按鈕
-    var files=(WIZ.attachments||[]).filter(function(a){ return a.kind==='contract'; });
-    var list=files.map(function(a){
-      var isImg=_isImgName(a.file_name);
-      var thumb=isImg
-        ?'<img class="att-thumb" data-path="'+_esc(a.file_path||'')+'" src="" alt="" style="width:42px;height:42px;object-fit:cover;border-radius:7px;border:1px solid var(--border);cursor:pointer;flex-shrink:0;background:#f8f9fb;" onclick="_wizPreviewAttachById('+a.id+')">'
-        :'<div style="width:42px;height:42px;border-radius:7px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-dim);flex-shrink:0;background:#f8f9fb;"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3h7l3 3v11H5z"/><path d="M12 3v3h3"/></svg></div>';
-      return '<div style="display:flex;align-items:center;gap:10px;font-size:12.5px;padding:7px 0;border-bottom:1px solid #f3f4f6;">'+
-        thumb+
-        '<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;">'+_esc(a.file_name||'檔案')+'</div>'+
-        '<button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="_wizPreviewAttachById('+a.id+')">預覽</button>'+
-      '</div>';
-    }).join('');
-    attachSectionHtml='<div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px;"><div style="font-size:12.5px;color:var(--text-mid);margin-bottom:6px;">回簽合約附件</div>'+
-      (list||'<div style="font-size:12px;color:var(--text-dim);">尚無附件</div>')+
-    '</div>';
-  } else {
-    // 合約重簽模式：保留原始合約（唯讀預覽），另開上傳區給新合約
-    var existFiles=(WIZ.attachments||[]).filter(function(a){ return a.kind==='contract'; });
-    var existList=existFiles.map(function(a){
-      var isImg=_isImgName(a.file_name);
-      var thumb=isImg
-        ?'<img class="att-thumb" data-path="'+_esc(a.file_path||'')+'" src="" alt="" style="width:38px;height:38px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer;flex-shrink:0;background:#f8f9fb;" onclick="_wizPreviewAttachById('+a.id+')">'
-        :'<div style="width:38px;height:38px;border-radius:6px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-dim);flex-shrink:0;background:#f8f9fb;"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3h7l3 3v11H5z"/><path d="M12 3v3h3"/></svg></div>';
-      return '<div style="display:flex;align-items:center;gap:8px;font-size:12.5px;padding:6px 0;border-bottom:1px solid #f3f4f6;">'+
-        thumb+
-        '<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-mid);">'+_esc(a.file_name||'檔案')+'</div>'+
-        '<span style="font-size:11px;padding:1px 7px;border-radius:4px;background:#f1f5f9;color:#64748b;">原始合約</span>'+
-        '<button class="btn btn-secondary" style="padding:3px 10px;font-size:11.5px;" onclick="_wizPreviewAttachById('+a.id+')">預覽</button>'+
-      '</div>';
-    }).join('');
-    attachSectionHtml='<div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px;">'+
-      (existFiles.length?'<div style="font-size:12px;color:var(--text-mid);font-weight:600;margin-bottom:6px;">原始合約文件（已保留）</div>'+existList+'<div style="height:14px;"></div>':'') +
-      '<div style="font-size:12px;color:var(--text-mid);font-weight:600;margin-bottom:6px;">上傳新回簽合約</div>'+
-      '<label class="btn btn-secondary" style="display:inline-block;cursor:pointer;">選擇檔案<input type="file" style="display:none;" onchange="_wizUpload(\'contract\',this)"></label>'+
-    '</div>';
-  }
-
-  return '<div style="max-width:640px;">'+
+  var invoicedLocked=_statusRank(p.status)>=_statusRank('invoiced');
+  var settled=!!p.is_settled||_statusRank(p.status)>=_statusRank('paid');
+  var cols=_signCols();
+  var grid=cols.length>1
+    ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">'+cols.map(function(c){return _signColHtml(c,invoicedLocked,settled);}).join('')+'</div>'
+    : '<div style="max-width:380px;">'+_signColHtml(cols[0],invoicedLocked,settled)+'</div>';
+  var doneBanner=_bothSigned()
+    ? '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:12px 15px;font-size:13px;color:#166534;margin-bottom:14px;">✓ 合約已回簽'+(_isInter()?'（服務商 '+_dt(p.provider_signed_time)+'）':'（客戶 '+_dt(p.customer_signed_time)+'、服務商 '+_dt(p.provider_signed_time)+'）')+'</div>'
+    : (p.customer_signed_time&&!_isInter()?'<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:9px;padding:12px 15px;font-size:13px;color:#92400e;margin-bottom:14px;">客戶已回簽（'+_dt(p.customer_signed_time)+'），服務商合約待回簽。</div>':'');
+  return '<div style="max-width:'+(cols.length>1?'1040px':'440px')+';">'+
     _wizCard(
-      _wizSecTitle('客戶回簽')+
-      '<div style="font-size:13px;color:var(--text-mid);margin-bottom:16px;line-height:1.7;">客戶確認並回簽合約後，於此上傳回簽的合約留存並記錄回簽時間。確認後狀態進入「已回簽」。</div>'+
-      (signed?'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:14px 16px;font-size:13px;color:#166534;margin-bottom:14px;">✓ 已於 '+_dt(p.signed_time)+' 回簽</div>':'')+
-      '<div style="'+(locked?'pointer-events:none;opacity:0.65;':'')+'">'+
-        '<div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">'+
-          '<div><label style="font-size:12.5px;color:var(--text-mid);display:block;margin-bottom:6px;">回簽時間</label><input class="cm-input" id="wiz-signed" type="datetime-local" value="'+signedVal+'" style="background:#fff;"></div>'+
-        '</div>'+
+      _wizSecTitle('合約回簽')+
+      '<div style="font-size:13px;color:var(--text-mid);margin-bottom:16px;line-height:1.7;">'+
+        (_isInter()
+          ?'上傳與服務商簽約的合約留存並記錄回簽時間，確認後即完成回簽。'
+          :'客戶與服務商各自回簽：於各欄上傳合約、填回簽時間並確認。<b>客戶回簽</b>會建立應收帳並開放請款；<b>服務商回簽</b>為合約留存，不影響請款。')+
       '</div>'+
-      attachSectionHtml
+      doneBanner+
+      grid
     )+
-    _wizFooter(footerRightBtn)+
+    _wizFooter('')+
   '</div>';
 }
-async function _wizPrepareSigned(){
-  if(!confirm('確定進行合約重簽？\n\n將清除目前的回簽記錄，回到「合約已送出」狀態，可重新修改合約並請客戶重新回簽。原有合約附件將保留。')) return;
-  var r=await _wizSaveProject({ status:'contract_sent', signed_time:null });
-  if(!r) return;
-  WIZ._signedPhase=undefined;
-  _toast('已重置回簽狀態，可重新整理合約後請客戶回簽');
-  _wizRender();
-}
-async function _wizConfirmSigned(){
-  var el=document.getElementById('wiz-signed');
+// 確認某一側回簽（side：cust／prov）
+async function _wizConfirmSign(side){
+  var p=WIZ.project;
+  var kind=(side==='cust')?'contract':_provKind();
+  if(_contractSlotFiles(kind).length===0){ _toast('請先上傳'+(side==='cust'?'客戶':'服務商')+'合約','err'); return; }
+  var el=document.getElementById('wiz-signed-'+side);
   var t=(el&&el.value)?new Date(el.value).toISOString():new Date().toISOString();
-  var r=await _wizSaveProject({ signed_time:t, status:_wizBump('signed') });
+  var isBilling=_isInter()?(side==='prov'):(side==='cust');
+  var patch={}; patch[side==='cust'?'customer_signed_time':'provider_signed_time']=t;
+  if(isBilling){ patch.signed_time=t; patch.status=_wizBump('signed'); }
+  var r=await _wizSaveProject(patch);
   if(!r) return;
-  WIZ._signedPhase=undefined;
-  // 建立或更新帳務紀錄（應收客戶），金額以回簽當下報價鎖定值為準
-  // 居間模式 GC 不向客戶收款（僅收服務商退傭，結案時另建 receivable_provider），跳過此筆
-  var p=WIZ.project; var now=new Date().toISOString();
-  if(p.cooperation_mode!=='intermediary'){
+  // 計費側且主理人：建立／更新應收客戶帳（居間不向客戶收款，跳過）
+  if(isBilling && !_isInter()){
+    var now=new Date().toISOString();
     var existing=await sb.from('financial_records').select('id').eq('project_id',WIZ.id).eq('record_type','receivable').maybeSingle();
     if(existing.data){
       await sb.from('financial_records').update({ counterparty_id:p.customer_id, amount_untaxed:Number(p.total_untaxed||0), tax:Number(p.total_tax||0), amount:Number(p.total_amount||0), status:'pending', updated_time:now, updated_by:currentUser?currentUser.full_name:'admin' }).eq('id',existing.data.id);
@@ -5639,13 +5671,29 @@ async function _wizConfirmSigned(){
     }
   }
   WIZ.financials=(await sb.from('financial_records').select('*').eq('project_id',WIZ.id).order('id')).data||[];
-  _toast('已記錄客戶回簽'); _wizRender();
+  _toast('已記錄'+(side==='cust'?'客戶':'服務商')+'回簽'); _wizRender();
 }
-async function _wizUpdateSigned(){
-  var el=document.getElementById('wiz-signed');
+// 某一側重簽：計費側已開 Invoice 不可重簽；留存側已結算／收款不可重簽
+async function _wizResign(side){
+  var p=WIZ.project;
+  var isBilling=_isInter()?(side==='prov'):(side==='cust');
+  if(isBilling){ if(_statusRank(p.status)>=_statusRank('invoiced')){ _toast('已開立 Invoice，無法重簽','err'); return; } }
+  else { if(p.is_settled||_statusRank(p.status)>=_statusRank('paid')){ _toast('已結算／收款，無法重簽','err'); return; } }
+  if(!confirm('確定重簽'+(side==='cust'?'客戶':'服務商')+'合約？\n\n將清除該側回簽記錄'+(isBilling?'，回到「合約已送出」狀態':'')+'。原合約附件會保留。')) return;
+  var patch={}; patch[side==='cust'?'customer_signed_time':'provider_signed_time']=null;
+  if(isBilling){ patch.signed_time=null; patch.status='contract_sent'; }
+  var r=await _wizSaveProject(patch);
+  if(r){ _toast('已重置'+(side==='cust'?'客戶':'服務商')+'回簽'); _wizRender(); }
+}
+async function _wizUpdateSign(side){
+  var el=document.getElementById('wiz-signed-'+side);
   if(!el||!el.value){ _toast('請選擇回簽時間','err'); return; }
-  var r=await _wizSaveProject({ signed_time:new Date(el.value).toISOString() });
-  if(r){ WIZ._signedPhase=undefined; _toast('已更新回簽時間'); _wizRender(); }
+  var t=new Date(el.value).toISOString();
+  var patch={}; patch[side==='cust'?'customer_signed_time':'provider_signed_time']=t;
+  var isBilling=_isInter()?(side==='prov'):(side==='cust');
+  if(isBilling) patch.signed_time=t;
+  var r=await _wizSaveProject(patch);
+  if(r){ _toast('已更新回簽時間'); _wizRender(); }
 }
 // Step 7：開立 Invoice
 function _wizStep7(){
@@ -9036,37 +9084,57 @@ async function hpExportRun(){
 var WEB_TABLES={
   web_inquiries:{ table:'inquiries', title:'詢價管理', comment:'官網「商品貨盤」頁送出的詢價需求',
     cols:[
-      {k:'created_at', l:'時間', fmt:'dt', w:'130px'},
+      {k:'id', l:'序號', fmt:'serial', w:'86px'},
       {k:'company_name', l:'公司名稱'},
       {k:'contact_name', l:'聯絡人'},
       {k:'email', l:'Email'},
       {k:'other_contact', l:'其他聯絡方式'},
       {k:'item_count', l:'品項數', align:'right'},
-      {k:'message', l:'備註', trunc:30},
+      {k:'message', l:'備註', trunc:24},
       {k:'ops_status', l:'處理狀態', fmt:'opsstatus', w:'96px'},
-      {k:'ops_note', l:'營運備註', trunc:20}
+      {k:'ops_note', l:'營運備註', trunc:18},
+      {k:'created_time', l:'建立時間', fmt:'dt', w:'130px'},
+      {k:'ops_updated_by', l:'最後操作者', w:'104px'}
     ]},
   web_partner_apps:{ table:'partner_applications', title:'服務商申請', comment:'官網「成為服務商」頁送出的申請',
     cols:[
-      {k:'created_at', l:'時間', fmt:'dt', w:'130px'},
+      {k:'id', l:'序號', fmt:'serial', w:'86px'},
       {k:'company_name', l:'公司名稱'},
       {k:'contact_name', l:'聯絡人'},
       {k:'owner_name', l:'負責人'},
       {k:'phone', l:'電話'},
       {k:'email', l:'Email'},
-      {k:'services_provided', l:'可提供服務', trunc:28},
-      {k:'ops_status', l:'狀態', fmt:'opsstatus', w:'90px'}
+      {k:'services_provided', l:'可提供服務', trunc:24},
+      {k:'ops_status', l:'狀態', fmt:'opsstatus', w:'90px'},
+      {k:'created_time', l:'建立時間', fmt:'dt', w:'130px'},
+      {k:'ops_updated_by', l:'最後操作者', w:'104px'}
     ]},
   web_forms:{ table:'form_submissions', title:'需求診斷表', comment:'官網需求診斷表單（gc-form）的完整填答',
     cols:[
-      {k:'created_at', l:'時間', fmt:'dt', w:'130px'},
+      {k:'id', l:'序號', fmt:'serial', w:'86px'},
       {k:'company_name', l:'公司名稱'},
       {k:'brand_name', l:'品牌名稱'},
       {k:'contact_name', l:'聯絡人'},
-      {k:'email', l:'Email'}
+      {k:'email', l:'Email'},
+      {k:'ops_status', l:'狀態', fmt:'opsstatus', w:'90px'},
+      {k:'created_time', l:'建立時間', fmt:'dt', w:'130px'},
+      {k:'ops_updated_by', l:'最後操作者', w:'104px'}
     ]}
 };
-var WEB_DB={}, webSearch='', webPageNo=1, WEB_PAGE_SIZE=25, _webKey=null;
+var WEB_DB={}, webSearch='', webPageNo=1, WEB_PAGE_SIZE=25, _webKey=null, webStatusFilter='';
+// 各表可篩選的狀態
+var WEB_STATUS_OPTS={
+  web_inquiries:['待處理','已聯繫','已報價'],
+  web_partner_apps:['待處理','已聯繫'],
+  web_forms:['待處理','已聯繫','已建案','已流案']
+};
+function _webStatusFilter(){
+  var opts=WEB_STATUS_OPTS[_webKey]||[];
+  return '<select class="cm-input" onchange="webStatusFilter=this.value;webPageNo=1;_webRenderBody()" style="width:auto;cursor:pointer;">'+
+    '<option value="">全部狀態</option>'+
+    opts.map(function(s){ return '<option value="'+_esc(s)+'"'+(webStatusFilter===s?' selected':'')+'>'+_esc(s)+'</option>'; }).join('')+
+  '</select>';
+}
 function _wb2(n){ return (n<10?'0':'')+n; }
 function _webDtStr(v){ if(!v) return ''; var d=new Date(v); if(isNaN(d)) return String(v); return d.getFullYear()+'/'+_wb2(d.getMonth()+1)+'/'+_wb2(d.getDate())+' '+_wb2(d.getHours())+':'+_wb2(d.getMinutes()); }
 var WEB_DASH='<span style="color:#c9ccd2;">—</span>';
@@ -9076,9 +9144,23 @@ var OPS_STATUS=[
   {v:'已聯繫', color:'blue'},
   {v:'已報價', color:'green'}
 ];
-function _opsColor(v){ for(var i=0;i<OPS_STATUS.length;i++){ if(OPS_STATUS[i].v===v) return OPS_STATUS[i].color; } return 'gray'; }
+// 全狀態色票（詢價／服務商／需求診斷表共用）
+var STATUS_COLOR={'待處理':'gray','已聯繫':'blue','已報價':'green','已建案':'green','已流案':'red'};
+function _opsColor(v){ return STATUS_COLOR[v]||'gray'; }
 function _opsBadge(v){ var s=(v==null||v==='')?'待處理':String(v); return _badge(s,_opsColor(s)); }
+// 序號：由各表的 id 產生（每表獨立），格式 前綴-00042
+var SERIAL_PREFIX={ web_inquiries:'INQ', web_partner_apps:'SP', web_forms:'FORM' };
+function _serial(key,id){ if(id==null) return '—'; return (SERIAL_PREFIX[key]||'NO')+'-'+String(id).padStart(5,'0'); }
+// 檢視視窗共用資訊列：序號 · 建立時間 · 更新時間 · 最後操作人
+function _recMetaHtml(key,row,id){
+  var parts=['序號 '+_serial(key,row.id)];
+  parts.push('建立 '+(_webDtStr(row.created_time)||'—'));
+  if(row.ops_updated_at) parts.push('更新 '+_webDtStr(row.ops_updated_at));
+  if(row.ops_updated_by) parts.push('操作人 '+String(row.ops_updated_by));
+  return '<div'+(id?' id="'+id+'"':'')+' style="margin-top:16px;padding-top:12px;border-top:1px solid #f0f0f0;font-size:11.5px;color:#9ca3af;">'+parts.map(_esc).join('　·　')+'</div>';
+}
 function _webFmt(v,c){
+  if(c.fmt==='serial') return _esc(_serial(_webKey,v));
   if(c.fmt==='opsstatus') return _opsBadge(v);
   if(v==null||v==='') return WEB_DASH;
   if(c.fmt==='dt') return _esc(_webDtStr(v));
@@ -9087,13 +9169,13 @@ function _webFmt(v,c){
   return _esc(s);
 }
 async function loadWebTable(key){
-  _webKey=key; webSearch=''; webPageNo=1;
+  _webKey=key; webSearch=''; webPageNo=1; webStatusFilter='';
   var main=document.getElementById('main-content');
   if(main) main.innerHTML='<div style="padding:60px;text-align:center;color:var(--text-dim);font-size:13px;">載入中…</div>';
   var cfg=WEB_TABLES[key];
-  var r=await sb.from(cfg.table).select('*').order('created_at',{ascending:false});
-  // 資料表若沒有 created_at 欄位，退回不排序讀取
-  if(r.error && /created_at/i.test(r.error.message||'')){ r=await sb.from(cfg.table).select('*'); }
+  var r=await sb.from(cfg.table).select('*').order('created_time',{ascending:false});
+  // 資料表若沒有 created_time 欄位，退回不排序讀取
+  if(r.error && /created_time/i.test(r.error.message||'')){ r=await sb.from(cfg.table).select('*'); }
   if(r.error){
     if(main) main.innerHTML='<div style="padding:60px 24px;text-align:center;color:#dc2626;font-size:13px;line-height:2;">讀取失敗：'+_esc(r.error.message)+
       '<div style="font-size:12px;color:#6b7280;max-width:600px;margin:12px auto 0;text-align:left;background:#f9fafb;border-radius:8px;padding:12px 16px;line-height:1.9;">若訊息是 permission denied／RLS 相關，表示資料表 <b>'+cfg.table+'</b> 尚未開放後台登入者讀取。請在 Supabase SQL Editor 執行：<br>'+
@@ -9107,6 +9189,7 @@ function _webRows(){
   var rows=(WEB_DB[_webKey]||[]).slice();
   var q=(webSearch||'').trim().toLowerCase();
   if(q) rows=rows.filter(function(x){ try{ return JSON.stringify(x).toLowerCase().indexOf(q)>=0; }catch(e){ return true; } });
+  if(webStatusFilter) rows=rows.filter(function(x){ return (x.ops_status||'待處理')===webStatusFilter; });
   return rows;
 }
 function webGo(n){ webPageNo=n; _webRenderBody(); }
@@ -9137,8 +9220,8 @@ function renderWebTable(){
     '<div class="toolbar"><div class="toolbar-left">'+
       '<div class="search-box"><svg class="search-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M15 15l3 3" stroke-linecap="round"/></svg>'+
       '<input type="text" placeholder="搜尋公司／聯絡人／內容" oninput="webSearch=this.value;webPageNo=1;_webRenderBody()"></div>'+
+      _webStatusFilter()+
     '</div><div class="toolbar-right" style="gap:8px;">'+
-      '<button class="btn btn-secondary" onclick="loadWebTable(\''+_webKey+'\')">↻ 重新整理</button>'+
       _exportBtn('webExportCsv')+
     '</div></div>'+
     '<div class="table-card"><div class="table-wrap"><table><thead><tr>'+
@@ -9200,7 +9283,7 @@ function _webFormGroups(d,row){
   var used={}, html='';
   FORM_GROUPS.forEach(function(g){
     var rows='';
-    if(g.t==='基本資料'){ rows+=_formRow('提交時間', _webDtStr(row.created_at)); }
+    if(g.t==='基本資料'){ rows+=_formRow('提交時間', _webDtStr(row.created_time)); }
     g.keys.forEach(function(k){
       used[k]=1;
       if(!(k in d)) return;
@@ -9220,6 +9303,46 @@ function _webFormGroups(d,row){
   if(extra) html+=_formSection('其他資料',extra);
   return html;
 }
+// ═══ 需求診斷表 版型 D：公司名稱橫幅 + 推進/結案分支按鈕（按下即存）═══
+function _formBanner(row){
+  var st=row.ops_status||'待處理';
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin:-2px 0 6px;padding-bottom:14px;border-bottom:1px solid var(--border);">'+
+    '<div><div style="font-size:19px;font-weight:800;color:#111;line-height:1.25;">'+_esc(row.company_name||'（未填公司名稱）')+'</div>'+
+      '<div style="font-size:12px;color:var(--text-dim);margin-top:3px;">需求診斷表　·　建立 '+_esc(_webDtStr(row.created_time)||'—')+(row.brand_name?'　·　'+_esc(row.brand_name):'')+'</div></div>'+
+    '<span id="form-badge">'+_opsBadge(st)+'</span>'+
+  '</div>';
+}
+// 底部（關閉右邊）動作：待處理→標記已聯繫；已聯繫→建案/流案；結案→顯示結果＋重設
+function _formActionHtml(row,idx){
+  var st=row.ops_status||'待處理';
+  if(st==='待處理'){
+    return '<button id="form-act" onclick="formSetStatus('+idx+',\'已聯繫\')" class="btn btn-primary" style="padding:8px 16px;">標記為已聯繫</button>';
+  }
+  if(st==='已聯繫'){
+    return '<button onclick="formSetStatus('+idx+',\'已建案\')" class="btn" style="background:#16a34a;border:1px solid #16a34a;color:#fff;">建案</button>'+
+      '<button onclick="formSetStatus('+idx+',\'已流案\')" class="btn" style="background:#fff;border:1px solid #f0b4b4;color:#dc2626;">流案</button>';
+  }
+  var done=(st==='已建案'), lbl=done?'✓ 已建案':'✗ 已流案', col=done?'#16a34a':'#dc2626';
+  return '<span style="font-size:12.5px;font-weight:700;color:'+col+';">'+lbl+'</span>'+
+    '<button onclick="formSetStatus('+idx+',\'已聯繫\')" class="btn btn-secondary">重設</button>';
+}
+async function formSetStatus(idx,status){
+  var row=(WEB_DB.web_forms||[])[idx]; if(!row) return;
+  if(row.id==null){ alert('這筆資料沒有 id 欄位，無法儲存狀態。'); return; }
+  var by=(typeof currentUser!=='undefined'&&currentUser)?(currentUser.full_name||currentUser.email||'admin'):'admin';
+  var payload={ ops_status:status, ops_updated_at:new Date().toISOString(), ops_updated_by:by };
+  var r=await sb.from('form_submissions').update(payload).eq('id',row.id);
+  if(r.error){
+    alert('儲存失敗：'+r.error.message+'\n\n若訊息為欄位不存在（column ops_status does not exist）或權限（RLS）相關，請先在 Supabase SQL Editor 執行「需求診斷表_狀態_建欄.sql」。');
+    return;
+  }
+  row.ops_status=status; row.ops_updated_at=payload.ops_updated_at; row.ops_updated_by=payload.ops_updated_by;
+  if(typeof _toast==='function') _toast('已更新狀態為「'+status+'」');
+  _webRenderBody();
+  var b=document.getElementById('form-badge'); if(b) b.innerHTML=_opsBadge(status);
+  var a=document.getElementById('form-action'); if(a) a.innerHTML=_formActionHtml(row,idx);
+  var m=document.getElementById('form-meta'); if(m) m.outerHTML=_recMetaHtml('web_forms',row,'form-meta');
+}
 function webDetail(idx){
   var cfg=WEB_TABLES[_webKey]; var row=(WEB_DB[_webKey]||[])[idx]; if(!row) return;
   var body='', footerLeft='', footerRight='', footerPrimary='';
@@ -9235,23 +9358,27 @@ function webDetail(idx){
         ps.map(function(p){ return '<tr>'+[p.sku,(p.name||p.name_en),p.brand,p.category,p.origin,(p.stock_regions||[]).join('、')].map(function(v){ return '<td style="padding:5px 8px 5px 0;border-bottom:1px solid #f3f4f6;">'+((v==null||v==='')?'—':_esc(String(v)))+'</td>'; }).join('')+'</tr>'; }).join('')+'</tbody></table>';
     }
     body+=_opsEditor(row);
-    footerLeft='<button class="btn btn-secondary" onclick="webExportInquiryXlsx('+idx+')" style="padding:6px 12px;display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>下載詢價單 Excel</button>'+
-      (row.pdf_url?'<a class="btn btn-secondary" href="'+_esc(row.pdf_url)+'" target="_blank" rel="noopener" style="padding:6px 12px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>下載 PDF</a>':'');
+    body+=_recMetaHtml('web_inquiries',row);
+    footerLeft='<button class="btn btn-secondary" onclick="webExportInquiryXlsx('+idx+')" style="display:inline-flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>下載詢價單 Excel</button>'+
+      (row.pdf_url?'<a class="btn btn-secondary" href="'+_esc(row.pdf_url)+'" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>下載 PDF</a>':'');
     footerPrimary='<div id="ops-action" style="display:flex;align-items:center;gap:10px;">'+_opsActionHtml()+'</div>';
   } else if(_webKey==='web_partner_apps'){
-    body+=_webKVGrid([['送出時間',_webDtStr(row.created_at)],['公司名稱',row.company_name],['聯絡人',row.contact_name],['負責人',row.owner_name],['電話',row.phone],['Email',row.email],['其他聯絡方式',row.other_contact]]);
+    body+=_webKVGrid([['送出時間',_webDtStr(row.created_time)],['公司名稱',row.company_name],['聯絡人',row.contact_name],['負責人',row.owner_name],['電話',row.phone],['Email',row.email],['其他聯絡方式',row.other_contact]]);
     body+=_webTextBlock('可提供服務',row.services_provided);
     body+=_webTextBlock('公司／服務說明',row.description);
-    if(row.ops_status==='已聯繫'&&row.ops_updated_at){ body+='<div style="font-size:11px;color:#9ca3af;margin-top:12px;">已聯繫 · '+_esc(_webDtStr(row.ops_updated_at))+(row.ops_updated_by?'　by '+_esc(String(row.ops_updated_by)):'')+'</div>'; }
+    body+=_recMetaHtml('web_partner_apps',row);
     footerPrimary='<div id="pa-action" style="display:flex;align-items:center;gap:10px;">'+_paActionHtml(row,idx)+'</div>';
   } else {
     var d=_webJson(row.data)||{};
+    body+=_formBanner(row);
     body+=_webFormGroups(d,row);
+    body+=_recMetaHtml('web_forms',row,'form-meta');
     if(row.pdf_url){
-      footerPrimary='<a class="btn btn-primary" href="'+_esc(row.pdf_url)+'" target="_blank" rel="noopener" style="padding:8px 16px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>下載 PDF</a>';
+      footerRight='<a class="btn btn-secondary" href="'+_esc(row.pdf_url)+'" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>下載 PDF</a>';
     }else{
       footerLeft='<span style="font-size:11.5px;color:#9ca3af;">PDF 產生中或未啟用（送出後約數秒回填）</span>';
     }
+    footerPrimary='<div id="form-action" style="display:flex;align-items:center;gap:8px;">'+_formActionHtml(row,idx)+'</div>';
   }
   _webModal(cfg.title+'．詳細內容',body,footerLeft,footerRight,footerPrimary);
 }
@@ -9261,7 +9388,7 @@ function _opsInit(row,idx){ _opsSel=row.ops_status||'待處理'; _opsRowIdx=idx;
 function _opsIdx(v){ for(var i=0;i<OPS_STATUS.length;i++){ if(OPS_STATUS[i].v===v) return i; } return 0; }
 // 收到時間 + 狀態進度條（唯讀）+ 推進按鈕
 function _opsProgressCard(row){
-  var recv=_webDtStr(row.created_at);
+  var recv=_webDtStr(row.created_time);
   return '<div style="padding:14px 16px;background:#f8fafc;border:1px solid var(--border);border-radius:12px;margin-bottom:16px;">'+
     '<div style="font-size:11.5px;color:#6b7280;margin-bottom:11px;">處理進度　·　收到時間 '+(recv?_esc(recv):'—')+'</div>'+
     '<div id="ops-stepper">'+_opsStepperHtml()+'</div>'+
@@ -9290,7 +9417,7 @@ function _opsActionHtml(){
     return '<span style="font-size:12.5px;color:#16a34a;font-weight:600;">✓ 已完成報價</span>';
   }
   var next=OPS_STATUS[ci+1].v;
-  return '<button id="ops-adv-btn" onclick="opsAdvance()" class="btn btn-primary" style="padding:8px 18px;font-size:13px;">標記為「'+_esc(next)+'」→</button>';
+  return '<button id="ops-adv-btn" onclick="opsAdvance()" class="btn btn-primary">標記為「'+_esc(next)+'」→</button>';
 }
 // 推進到下一階段：立即寫入資料庫（取代原本的「儲存變更」）
 async function opsAdvance(){
@@ -9325,9 +9452,9 @@ function opsSaveNote(){ webSaveOps(_opsRowIdx,'note'); }
 function _paActionHtml(row,idx){
   if(row.ops_status==='已聯繫'){
     return '<span style="font-size:12.5px;color:#2563eb;font-weight:600;">✓ 已聯繫</span>'+
-      '<button id="pa-act-btn" onclick="paSetContacted('+idx+',false)" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;">取消註記</button>';
+      '<button id="pa-act-btn" onclick="paSetContacted('+idx+',false)" class="btn btn-secondary">取消註記</button>';
   }
-  return '<button id="pa-act-btn" onclick="paSetContacted('+idx+',true)" class="btn btn-primary" style="padding:8px 18px;font-size:13px;">標記為已聯繫</button>';
+  return '<button id="pa-act-btn" onclick="paSetContacted('+idx+',true)" class="btn btn-primary">標記為已聯繫</button>';
 }
 async function paSetContacted(idx,on){
   var row=(WEB_DB.web_partner_apps||[])[idx]; if(!row) return;
@@ -9375,7 +9502,7 @@ function webExportInquiryXlsx(idx){
   var aoa=[];
   aoa.push(['詢價單']);
   aoa.push(['']);
-  aoa.push(['送出時間', _webDtStr(row.created_at)]);
+  aoa.push(['送出時間', _webDtStr(row.created_time)]);
   aoa.push(['公司名稱', row.company_name||'']);
   aoa.push(['聯絡人', row.contact_name||'']);
   aoa.push(['Email', row.email||'']);
@@ -9395,7 +9522,7 @@ function webExportInquiryXlsx(idx){
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '詢價單');
   var safe=String(row.company_name||'GC').replace(/[\\/:*?"<>|]/g,'').slice(0,20)||'GC';
-  var dstr=_webDtStr(row.created_at).slice(0,10).replace(/\//g,'')||new Date().toISOString().slice(0,10).replace(/-/g,'');
+  var dstr=_webDtStr(row.created_time).slice(0,10).replace(/\//g,'')||new Date().toISOString().slice(0,10).replace(/-/g,'');
   XLSX.writeFile(wb, '詢價單_'+safe+'_'+dstr+'.xlsx');
   if(typeof _toast==='function') _toast('已下載詢價單 Excel');
 }
@@ -9413,18 +9540,18 @@ function webExportCsv(){
   if(!rows.length){ _toast('目前沒有資料可匯出','err'); return; }
   var header,data;
   if(_webKey==='web_inquiries'){
-    header=['時間','公司名稱','聯絡人','Email','其他聯絡方式','品項數','備註','處理狀態','營運備註','營運更新時間','營運更新人','詢價商品'];
+    header=['序號','建立時間','公司名稱','聯絡人','Email','其他聯絡方式','品項數','備註','處理狀態','營運備註','更新時間','最後操作人','詢價商品'];
     data=rows.map(function(r){ var ps=_webJson(r.products)||[];
       var pstr=ps.map(function(p){ return (p.sku||'')+' '+(p.name||p.name_en||''); }).join('；');
-      return [_webDtStr(r.created_at),r.company_name,r.contact_name,r.email,r.other_contact,r.item_count,r.message,(r.ops_status||'待處理'),r.ops_note,_webDtStr(r.ops_updated_at),r.ops_updated_by,pstr]; });
+      return [_serial('web_inquiries',r.id),_webDtStr(r.created_time),r.company_name,r.contact_name,r.email,r.other_contact,r.item_count,r.message,(r.ops_status||'待處理'),r.ops_note,_webDtStr(r.ops_updated_at),r.ops_updated_by,pstr]; });
   } else if(_webKey==='web_partner_apps'){
-    header=['時間','公司名稱','聯絡人','負責人','電話','Email','其他聯絡方式','可提供服務','說明','狀態','狀態更新時間','狀態更新人'];
-    data=rows.map(function(r){ return [_webDtStr(r.created_at),r.company_name,r.contact_name,r.owner_name,r.phone,r.email,r.other_contact,r.services_provided,r.description,(r.ops_status||'待處理'),_webDtStr(r.ops_updated_at),r.ops_updated_by]; });
+    header=['序號','建立時間','公司名稱','聯絡人','負責人','電話','Email','其他聯絡方式','可提供服務','說明','狀態','更新時間','最後操作人'];
+    data=rows.map(function(r){ return [_serial('web_partner_apps',r.id),_webDtStr(r.created_time),r.company_name,r.contact_name,r.owner_name,r.phone,r.email,r.other_contact,r.services_provided,r.description,(r.ops_status||'待處理'),_webDtStr(r.ops_updated_at),r.ops_updated_by]; });
   } else {
-    header=['時間','公司名稱','品牌名稱','聯絡人','Email','完整填答'];
+    header=['序號','建立時間','公司名稱','品牌名稱','聯絡人','Email','狀態','更新時間','最後操作人','完整填答'];
     data=rows.map(function(r){ var d=_webJson(r.data);
       var s=d?Object.keys(d).map(function(k){ var v=d[k]; if(Array.isArray(v)) v=v.join('、'); return k+'：'+(v==null?'':v); }).join('\n'):'';
-      return [_webDtStr(r.created_at),r.company_name,r.brand_name,r.contact_name,r.email,s]; });
+      return [_serial('web_forms',r.id),_webDtStr(r.created_time),r.company_name,r.brand_name,r.contact_name,r.email,(r.ops_status||'待處理'),_webDtStr(r.ops_updated_at),r.ops_updated_by,s]; });
   }
   _downloadCsv(cfg.title,header,data);
 }
