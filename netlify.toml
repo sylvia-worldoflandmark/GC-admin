@@ -1,0 +1,5 @@
+# GC 後台｜Netlify 設定
+# 若你的 repo 已有 netlify.toml，只要把 [functions] 這段合併進去即可。
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
