@@ -3118,7 +3118,7 @@ function updateProjTable(){
   var head='<thead><tr><th style="width:60px;">ID</th><th style="min-width:120px;">案號</th><th style="min-width:150px;">專案名稱</th><th style="min-width:150px;">客戶</th><th style="min-width:130px;">帶單商務</th><th style="width:100px;">狀態</th><th style="width:130px;text-align:right;">報價含稅</th><th style="width:70px;">已結算</th><th style="width:150px;">建立時間</th><th style="width:110px;">最後操作人</th><th style="width:70px;text-align:right;">操作</th></tr></thead>';
   var body=slice.length? slice.map(function(p,i){
     return '<tr style="cursor:pointer;" onclick="openProjectWizard('+p.id+')"><td class="id-cell">'+(rows.length-(projPage-1)*PAGE_SIZE-i)+'</td><td style="white-space:nowrap;"><span class="cell-name">'+_esc(p.project_no||('專案 #'+p.id))+'</span></td><td style="white-space:nowrap;"'+(_projName(p)?' title="'+_esc(_projName(p))+'"':'')+'>'+(_projName(p)?_esc(_ellip(_projName(p),20)):'<span style="color:var(--text-dim);">—</span>')+'</td><td style="white-space:nowrap;" title="'+_esc(_custName(p.customer_id))+'">'+_esc(_ellip(_custName(p.customer_id),20))+'</td><td style="white-space:nowrap;" title="'+_esc(p.business_partner_id?_bpName(p.business_partner_id):'直客')+'">'+_esc(_ellip(p.business_partner_id?_bpName(p.business_partner_id):'直客',20))+'</td>'+
-      '<td>'+((p.status==='signed'&&p.cooperation_mode!=='intermediary'&&!p.provider_signed_time)?_badge('客戶已回簽','amber'):_statusBadge(p.status))+'</td><td style="text-align:right;font-variant-numeric:tabular-nums;">'+_money(p.total_amount)+'</td><td>'+(p.is_settled?_badge('已結算','green'):_badge('未結','gray'))+'</td><td style="white-space:nowrap;">'+_dt(p.created_time)+'</td>'+
+      '<td>'+((p.status==='signed'&&p.cooperation_mode!=='intermediary'&&!p.provider_signed_time)?_badge('客戶已回簽','amber'):_statusBadge(p.status))+'</td><td style="text-align:right;font-variant-numeric:tabular-nums;">'+_projTotalDisplay(p)+'</td><td>'+(p.is_settled?_badge('已結算','green'):_badge('未結','gray'))+'</td><td style="white-space:nowrap;">'+_dt(p.created_time)+'</td>'+
       '<td style="white-space:nowrap;color:var(--text-mid);">'+_esc(p.updated_by||'—')+'</td>'+
       '<td style="text-align:right;"><div class="row-actions"><button class="action-btn" title="開啟"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4l8 6-8 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></td></tr>';
   }).join(''):renderEmptyState(11);
@@ -4427,6 +4427,19 @@ function _twdToCurByCfg(twd,cur,cfg){
   if(!cur||cur==='TWD') return Math.ceil(Number(twd||0));
   var r=_cfgRate(cur,cfg)||1;
   return cur==='JPY'?Math.ceil(Number(twd||0)/r):Math.round(Number(twd||0)/r*100)/100;
+}
+// 專案列表「報價含稅」顯示：以該專案的報價幣別呈現（quote_settings 幣別＋匯率；缺則主理人取客戶幣別；再缺則 TWD）
+function _projTotalDisplay(p){
+  var amt=Number((p&&p.total_amount)||0);
+  var qs=p&&p.quote_settings;
+  if(typeof qs==='string'){ try{ qs=JSON.parse(qs); }catch(e){ qs=null; } }
+  var cur=(qs&&qs.currency)||'';
+  if(!cur && p && p.cooperation_mode!=='intermediary' && p.customer_id){
+    var c=_find(DB.customers,p.customer_id); if(c&&c.payment_currency) cur=c.payment_currency;
+  }
+  if(!cur) cur='TWD';
+  if(cur==='TWD') return 'TWD '+_money(amt);
+  return _fxFmt(_twdToCurByCfg(amt,cur,qs||{currency:cur}), {currency:cur});
 }
 // 將 amt（fromCur 計價）換算成 TWD。cfg 省略時，於建案精靈內自動採用該專案的報價設定（含鎖定匯率）；其他頁面則用台銀即時。
 function _itemToTwd(amt,fromCur,cfg){
