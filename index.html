@@ -9537,9 +9537,9 @@ var WEB_TABLES={
       {k:'email', l:'Email'},
       {k:'other_contact', l:'其他聯絡方式'},
       {k:'item_count', l:'品項數', align:'right'},
-      {k:'message', l:'備註', trunc:24},
+      {k:'message', l:'備註', trunc:60},
       {k:'ops_status', l:'處理狀態', fmt:'opsstatus', w:'96px'},
-      {k:'ops_note', l:'營運備註', trunc:18},
+      {k:'ops_note', l:'營運備註', trunc:60},
       {k:'created_time', l:'建立時間', fmt:'dt', w:'130px'},
       {k:'ops_updated_by', l:'最後操作者', w:'104px'}
     ]},
@@ -9551,7 +9551,7 @@ var WEB_TABLES={
       {k:'owner_name', l:'負責人'},
       {k:'phone', l:'電話'},
       {k:'email', l:'Email'},
-      {k:'services_provided', l:'可提供服務', trunc:24},
+      {k:'services_provided', l:'可提供服務', trunc:60},
       {k:'ops_status', l:'狀態', fmt:'opsstatus', w:'90px'},
       {k:'created_time', l:'建立時間', fmt:'dt', w:'130px'},
       {k:'ops_updated_by', l:'最後操作者', w:'104px'}
@@ -9650,7 +9650,8 @@ function _webRenderBody(){
   var tb=document.getElementById('web-tbody');
   if(tb) tb.innerHTML=pageRows.length? pageRows.map(function(row){
     var idx=all.indexOf(row);
-    return '<tr>'+cfg.cols.map(function(c){ return '<td style="'+(c.align?'text-align:'+c.align+';':'')+(c.trunc?'':'white-space:nowrap;')+'">'+_webFmt(row[c.k],c)+'</td>'; }).join('')+
+    // 所有欄位一律不換行；表格寬度由 min-width:max-content 撐開，超出時由 .table-wrap 橫向捲動
+    return '<tr>'+cfg.cols.map(function(c){ return '<td style="'+(c.align?'text-align:'+c.align+';':'')+'white-space:nowrap;">'+_webFmt(row[c.k],c)+'</td>'; }).join('')+
       '<td style="text-align:right;white-space:nowrap;">'+
         '<button class="btn btn-secondary" style="padding:3px 9px;font-size:12px;" onclick="webDetail('+idx+')">檢視</button> '+
         '<button class="btn btn-secondary" style="padding:3px 9px;font-size:12px;color:#dc2626;" onclick="webDelete('+idx+')">刪除</button>'+
@@ -9672,9 +9673,9 @@ function renderWebTable(){
     '</div><div class="toolbar-right" style="gap:8px;">'+
       _exportBtn('webExportCsv')+
     '</div></div>'+
-    '<div class="table-card"><div class="table-wrap"><table><thead><tr>'+
-      cfg.cols.map(function(c){ return '<th style="'+(c.w?'width:'+c.w+';':'')+(c.align?'text-align:'+c.align+';':'')+'">'+c.l+'</th>'; }).join('')+
-      '<th style="text-align:right;">操作</th>'+
+    '<div class="table-card"><div class="table-wrap" style="overflow-x:auto;"><table style="min-width:max-content;width:100%;"><thead><tr>'+
+      cfg.cols.map(function(c){ return '<th style="'+(c.w?'width:'+c.w+';':'')+(c.align?'text-align:'+c.align+';':'')+'white-space:nowrap;">'+c.l+'</th>'; }).join('')+
+      '<th style="text-align:right;white-space:nowrap;">操作</th>'+
     '</tr></thead><tbody id="web-tbody"></tbody></table></div>'+
     '<div class="pagination"><span id="web-count"></span><span id="web-pager"></span></div></div>';
   _webRenderBody();
