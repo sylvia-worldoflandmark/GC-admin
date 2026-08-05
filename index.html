@@ -925,6 +925,10 @@ select.cm-input {
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="12" height="15" rx="2"/><path d="M8 2h4v3H8z"/><path d="M7 9h6M7 12h6M7 15h3" stroke-linecap="round"/></svg>
         需求診斷表
       </div>
+      <div class="nav-item" onclick="navigate(this, 'blog_posts')">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h9l3 3v11a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M12 3v4h4M6 11h8M6 14h5" stroke-linecap="round"/></svg>
+        部落格文章
+      </div>
     </div>
 
     <div class="nav-divider"></div>
@@ -1200,6 +1204,12 @@ const PAGES = {
     group: '貨盤管理',
     table: 'shelf_life_rules',
     comment: '各類別進貨效期標準對照'
+  },
+  blog_posts: {
+    title: '部落格文章',
+    group: '官網管理',
+    table: 'blog_posts',
+    comment: '官網「洞察文章」的文章管理與發佈'
   }
 };
 
@@ -1243,7 +1253,8 @@ var VIEW_STATE = {
   suppliers:                 { vars:['hpSupPage','hpSupSearch'], ms:[] },
   export_logs:               { vars:['hpExpLogPage'], ms:[] },
   shelf_life:                { vars:['slPage','slSearch'], ms:['sl-cat'] },
-  admin_users:               { vars:['adminPage','adminSearch'], ms:[] }
+  admin_users:               { vars:['adminPage','adminSearch'], ms:[] },
+  blog_posts:                { vars:['blogPage','blogSearch','blogTab'], ms:['blog-cat','blog-op'] }
 };
 function _persistView(page){
   var cfg=VIEW_STATE[page]; if(!cfg) return;
@@ -1301,6 +1312,16 @@ function renderPage(pageKey) {
   if (pageKey === 'web_inquiries')              { loadWebTable('web_inquiries');    return; }
   if (pageKey === 'web_partner_apps')           { loadWebTable('web_partner_apps'); return; }
   if (pageKey === 'web_forms')                  { loadWebTable('web_forms');        return; }
+  if (pageKey === 'blog_posts')                 {
+    // blog-admin.js 是外部檔案，重整後自動還原頁面時可能還沒下載完，先擋一下
+    if (typeof loadBlogPosts === 'function') { loadBlogPosts(); }
+    else {
+      var _bm = document.getElementById('main-content');
+      if (_bm) _bm.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-dim);font-size:13px;">部落格模組載入中…</div>';
+      setTimeout(function(){ if (typeof loadBlogPosts === 'function') loadBlogPosts(); }, 300);
+    }
+    return;
+  }
 
   var page = PAGES[pageKey];
   var main = document.getElementById('main-content');
@@ -10682,5 +10703,8 @@ async function hpSupImpRun(){
   await loadSuppliers();
 }
 </script>
+
+<!-- 部落格模組：必須放在上面所有 inline script 之後，才讀得到 sb / currentUser / _esc / _toast -->
+<script src="blog-admin.js"></script>
 </body>
 </html>

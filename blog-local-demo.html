@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-TW"><head><meta charset="UTF-8">
+<title>GC 部落格編輯器｜離線試玩（不連資料庫）</title>
+<style>
+:root{--bg:#f4f5f7;--card-bg:#fff;--border:rgba(0,0,0,.08);--accent:#2563eb;--accent-2:#1d4ed8;
+ --text:#111827;--text-dim:rgba(17,24,39,.45);--text-mid:rgba(17,24,39,.68);
+ --success:#16a34a;--warning:#d97706;--danger:#dc2626}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:sans-serif;font-size:14px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.main{flex:1;overflow-y:auto;padding:26px 30px 60px}
+.page-header h1{font-size:1.5rem;font-weight:700}
+.breadcrumb{font-size:12px;color:var(--text-dim)}
+.toolbar{display:flex;justify-content:space-between;margin-bottom:15px;gap:11px;flex-wrap:wrap}
+.toolbar-left,.toolbar-right{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.search-box{display:flex;align-items:center;gap:8px;background:#f4f5f7;border:1px solid var(--border);border-radius:8px;padding:8px 13px;width:230px}
+.search-box input{background:transparent;border:0;outline:0;font-size:13px;width:100%}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:0;font-family:inherit}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-secondary{background:#fff;color:var(--text-mid);border:1px solid var(--border)}
+.btn-ghost{background:transparent;color:var(--text-dim)}
+.table-card{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse}
+thead tr{background:#f8f9fb;border-bottom:1px solid var(--border)}
+thead th{padding:11px 15px;text-align:left;font-size:11px;color:var(--text-dim)}
+tbody td{padding:12px 15px;font-size:13px;color:var(--text-mid);white-space:nowrap}
+tbody tr{border-bottom:1px solid rgba(0,0,0,.04)}
+.pagination{display:flex;justify-content:space-between;padding:13px 16px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text-dim)}
+.page-btn{width:29px;height:29px;border-radius:7px;border:1px solid var(--border);background:#fff;cursor:pointer}
+.page-btn.active{background:var(--accent);color:#fff}
+.sep{color:#ccc}
+</style></head>
+<body>
+<div style="background:#fffbeb;border-bottom:1px solid #fde68a;padding:10px 20px;font-size:12.5px;color:#b45309;line-height:1.8;flex:none">
+  <b>離線試玩模式</b>　·　這一頁<b>完全不連 Supabase</b>，所有資料只存在瀏覽器記憶體裡，重新整理就清空。
+  可以放心亂按：新增、發佈、下架、刪除都不會影響正式資料。　·　測完可以刪掉這個檔案，上傳了也無妨（沒有金鑰、不連資料庫、也不會被任何頁面連到）。
+</div>
+<main class="main"><div id="main-content"></div></main>
+
+<script>
+/* ══ 模擬 index.html 主程式的全域環境 ══ */
+var TOASTS = [], DBX = { blog_posts:[], blog_categories:[{id:1,slug:'hot',name:'熱門',sort_order:1,active:true}], blog_post_revisions:[], blog_tag_cloud:[] };
+var SEQ = { blog_posts:0, blog_post_revisions:0 };
+var RPC_CALLS = [], UPLOADS = [];
+
+var currentUser = { id:1, full_name:'陳思穎', role:'0', active:'1', auth_uid:'u1' };
+function _esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];}); }
+function _toast(m,k){ TOASTS.push({m:m,k:k}); var d=document.createElement('div'); d.className='t-toast'; d.textContent=m;
+  d.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:'+(k==='err'?'#dc2626':'#374151')+';color:#fff;padding:10px 18px;border-radius:8px;z-index:99999;font-size:13px';
+  document.body.appendChild(d); setTimeout(function(){d.remove();}, 2500); }
+function _dt(v){ if(!v) return '—'; var d=new Date(v); var p=function(n){return(n<10?'0':'')+n;};
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
+function buildPageBtns(cur,total,fn){ var h=''; for(var i=1;i<=total;i++) h+='<button class="page-btn'+(i===cur?' active':'')+'" onclick="'+fn+'('+i+')">'+i+'</button>'; return h; }
+function renderEmptyState(cols){ return '<tr><td colspan="'+cols+'" style="padding:40px;text-align:center;color:#9ca3af">沒有資料</td></tr>'; }
+var PAGE_SIZE = 25;
+
+/* ── 以下直接取自 index.html，讓離線試玩頁的篩選器外觀與正式後台完全一致 ── */
+var MS={}; var _msMeta={};
+
+function msSel(id){ return MS[id]||(MS[id]=[]); }
+function msReset(){ for(var i=0;i<arguments.length;i++) MS[arguments[i]]=[]; }
+function _msLabelOf(id,v){ var o=(_msMeta[id]&&_msMeta[id].opts)||[]; for(var i=0;i<o.length;i++) if(String(o[i].v)===String(v)) return o[i].l; return v; }
+function _msText(id){ var a=msSel(id); var meta=_msMeta[id]||{}; return a.length===0?(meta.allLabel||'全部'):(a.length===1?_msLabelOf(id,a[0]):a.length+' 項'); }
+// 渲染一個多選下拉。opts:[{v,l}]；updateFn：選取變動後呼叫的全域函式名
+function msDropdown(id, allLabel, opts, updateFn, searchable){
+  _msMeta[id]={allLabel:allLabel, opts:opts};
+  var a=msSel(id);
+  var items=opts.length? opts.map(function(o,i){
+    var checked=a.indexOf(String(o.v))>=0;
+    return '<label class="ms-item" data-l="'+_esc(String(o.l).toLowerCase())+'" style="display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;font-size:12.5px;white-space:nowrap;" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">'+
+      '<input type="checkbox" '+(checked?'checked':'')+' onchange="msToggleIdx(\''+id+'\','+i+',\''+(updateFn||'')+'\')" style="width:14px;height:14px;cursor:pointer;flex-shrink:0;">'+_esc(o.l)+'</label>';
+  }).join('') : '<div style="padding:10px 14px;font-size:12px;color:var(--text-dim);">無資料</div>';
+  var _msClearBtn='<button class="btn btn-secondary" onclick="msClear(\''+id+'\',\''+(updateFn||'')+'\')" style="font-size:11.5px;padding:3px 10px;flex-shrink:0;">清除</button>';
+  var searchBox=searchable?'<div style="padding:6px 8px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;z-index:1;display:flex;gap:6px;align-items:center;"><input type="text" id="ms-search-'+id+'" oninput="msFilter(\''+id+'\',this.value)" onclick="event.stopPropagation();" placeholder="輸入品牌關鍵字…" style="flex:1;min-width:0;box-sizing:border-box;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;outline:none;">'+_msClearBtn+'</div>':'';
+  var active=a.length;
+  return '<div style="position:relative;display:inline-block;" id="ms-wrap-'+id+'">'+
+    '<button id="ms-btn-'+id+'" class="cm-input" onclick="event.stopPropagation();msOpen(\''+id+'\')" style="width:auto;font-size:12.5px;padding:5px 10px;cursor:pointer;display:flex;align-items:center;gap:6px;'+(active?'background:#eff6ff;border-color:#93c5fd;':'')+'">'+
+      '<span id="ms-label-'+id+'">'+_esc(_msText(id))+'</span>'+
+      '<svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><path d="M5 8l5 5 5-5" stroke-linecap="round"/></svg>'+
+    '</button>'+
+    '<div id="ms-panel-'+id+'" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:#fff;border:1px solid var(--border);border-radius:9px;box-shadow:0 4px 16px rgba(0,0,0,.1);min-width:170px;max-height:280px;overflow-y:auto;">'+
+      searchBox+
+      '<div id="ms-items-'+id+'" style="padding:4px 0;">'+items+'</div>'+
+      (searchable?'':'<div style="border-top:1px solid var(--border);padding:6px 12px;"><button class="btn btn-secondary" onclick="msClear(\''+id+'\',\''+(updateFn||'')+'\')" style="font-size:11.5px;padding:3px 10px;">清除</button></div>')+
+    '</div>'+
+  '</div>';
+}
+// 面板內即時過濾選項（依標籤關鍵字）
+function msFilter(id,q){
+  q=(q||'').trim().toLowerCase();
+  var box=document.getElementById('ms-items-'+id); if(!box) return;
+  var any=false;
+  box.querySelectorAll('.ms-item').forEach(function(el){
+    var l=el.getAttribute('data-l')||''; var show=(!q||l.indexOf(q)>=0);
+    el.style.display=show?'':'none'; if(show) any=true;
+  });
+  var none=document.getElementById('ms-none-'+id);
+  if(!any){ if(!none){ none=document.createElement('div'); none.id='ms-none-'+id; none.style.cssText='padding:10px 14px;font-size:12px;color:var(--text-dim);'; none.textContent='無符合品牌'; box.appendChild(none); } none.style.display=''; }
+  else if(none){ none.style.display='none'; }
+}
+function msOpen(id){
+  var panel=document.getElementById('ms-panel-'+id); if(!panel) return;
+  var open=panel.style.display==='block';
+  document.querySelectorAll('[id^="ms-panel-"]').forEach(function(p){ p.style.display='none'; });
+  if(!open){ panel.style.display='block'; setTimeout(function(){ document.addEventListener('click',_msOutside); var s=document.getElementById('ms-search-'+id); if(s) s.focus(); },0); }
+  else { document.removeEventListener('click',_msOutside); }
+}
+function _msOutside(e){
+  var inside=false;
+  document.querySelectorAll('[id^="ms-wrap-"]').forEach(function(w){ if(w.contains(e.target)) inside=true; });
+  if(!inside){ document.querySelectorAll('[id^="ms-panel-"]').forEach(function(p){ p.style.display='none'; }); document.removeEventListener('click',_msOutside); }
+}
+function msToggleIdx(id,idx,updateFn){
+  var meta=_msMeta[id]; if(!meta) return;
+  var o=meta.opts[idx]; if(!o) return;
+  var v=String(o.v); var a=msSel(id); var i=a.indexOf(v);
+  if(i<0) a.push(v); else a.splice(i,1);
+  _msSync(id); if(updateFn&&window[updateFn]) window[updateFn]();
+}
+function msClear(id,updateFn){
+  MS[id]=[];
+  var panel=document.getElementById('ms-panel-'+id);
+  if(panel) panel.querySelectorAll('input[type=checkbox]').forEach(function(cb){ cb.checked=false; });
+  _msSync(id); if(updateFn&&window[updateFn]) window[updateFn]();
+}
+function _msSync(id){
+  var a=msSel(id);
+  var el=document.getElementById('ms-label-'+id); if(el) el.textContent=_msText(id);
+  var btn=document.getElementById('ms-btn-'+id); if(btn){ btn.style.background=a.length?'#eff6ff':''; btn.style.borderColor=a.length?'#93c5fd':''; }
+}
+// 共用選項清單
+var MS_TYPE_OPTS=[{v:'公司',l:'公司'},{v:'工作室',l:'工作室'},{v:'個人',l:'個人'}];
+var MS_CUR_OPTS=[{v:'TWD',l:'TWD'},{v:'USD',l:'USD'},{v:'JPY',l:'JPY'},{v:'CNY',l:'CNY'}];
+var MS_INV_OPTS=[{v:'發票',l:'發票'},{v:'收據',l:'收據'},{v:'勞務報酬單',l:'勞務報酬單'}];
+function _toLocalInput(v){ if(!v) return ''; var d=new Date(v); if(isNaN(d)) return ''; var p=function(n){return String(n).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes()); }
+function _csvCell(v){ if(v==null) v=''; v=String(v); return /[",\n]/.test(v)?('"'+v.replace(/"/g,'""')+'"'):v; }
+function _downloadCsv(filename,header,rows){
+  var lines=[header.map(_csvCell).join(',')];
+  rows.forEach(function(r){ lines.push(r.map(_csvCell).join(',')); });
+  var blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url; a.download=filename+'_'+_tpeDate(new Date())+'.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },100);
+  _toast('已匯出 '+rows.length+' 筆');
+}
+// 共用「匯出 CSV」按鈕 HTML
+function _exportBtn(fnName){
+  return '<button class="btn btn-secondary" onclick="'+fnName+'()" style="display:inline-flex;align-items:center;gap:6px;">'+
+    '<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>匯出 CSV</button>';
+}
+function _tpeDate(d){var p=n=>(n<10?'0':'')+n;d=new Date(d);return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
+
+
+/* ══ 假的 Supabase client ══ */
+function mkQuery(table){
+  var q = { _t:table, _filters:[], _order:null, _single:false, _op:'select', _payload:null };
+  q.select = function(){ return q; };
+  q.order  = function(c,o){ q._order={c:c,asc:!o||o.ascending!==false}; return q; };
+  q.eq     = function(c,v){ q._filters.push([c,v]); return q; };
+  q.single = function(){ q._single=true; return q; };
+  q.insert = function(p){ q._op='insert'; q._payload=p; return q; };
+  q.update = function(p){ q._op='update'; q._payload=p; return q; };
+  q.delete = function(){ q._op='delete'; return q; };
+  q.then   = function(res,rej){ return Promise.resolve(run(q)).then(res,rej); };
+  return q;
+}
+function run(q){
+  var rows = DBX[q._t] || [];
+  function match(r){ return q._filters.every(function(f){ return r[f[0]] === f[1]; }); }
+  if (q._op === 'insert'){
+    var o = Object.assign({}, q._payload);
+    o.id = ++SEQ[q._t];
+    o.created_time = o.created_time || new Date().toISOString();
+    o.updated_time = new Date().toISOString();
+    o.status = o.status || 'draft';
+    o.tags = o.tags || []; o.gallery = o.gallery || []; o.gallery_ratio = o.gallery_ratio || '16:9';
+    o.content = o.content || {v:1,blocks:[]};
+    o.is_pinned = !!o.is_pinned;
+    DBX[q._t].push(o);
+    return { data:o, error:null };
+  }
+  if (q._op === 'update'){
+    var n = 0;
+    rows.forEach(function(r){ if (match(r)){ Object.assign(r, q._payload); r.updated_time = new Date().toISOString(); n++; } });
+    return { data:null, error:null, count:n };
+  }
+  if (q._op === 'delete'){
+    DBX[q._t] = rows.filter(function(r){ return !match(r); });
+    DBX.blog_post_revisions = DBX.blog_post_revisions.filter(function(r){ return DBX.blog_posts.some(function(p){ return p.id===r.post_id; }); });
+    return { data:null, error:null };
+  }
+  var out = rows.filter(match);
+  if (q._order){ var c=q._order.c, a=q._order.asc; out = out.slice().sort(function(x,y){ return (x[c]>y[c]?1:x[c]<y[c]?-1:0)*(a?1:-1); }); }
+  if (q._t === 'blog_tag_cloud'){
+    var m = {}; DBX.blog_posts.forEach(function(p){ (p.tags||[]).forEach(function(t){ m[t]=(m[t]||0)+1; }); });
+    out = Object.keys(m).map(function(t){ return {tag:t, uses:m[t]}; });
+  }
+  return { data: q._single ? (out[0]||null) : out, error:null };
+}
+var sb = {
+  from: mkQuery,
+  rpc: function(name, args){ RPC_CALLS.push({name:name, args:args});
+    if (name==='blog_log_revision'){
+      var p = DBX.blog_posts.filter(function(x){return x.id===args.p_post_id;})[0];
+      DBX.blog_post_revisions.push({ id:++SEQ.blog_post_revisions, post_id:args.p_post_id,
+        revision_no: DBX.blog_post_revisions.filter(function(r){return r.post_id===args.p_post_id;}).length+1,
+        action:args.p_action, note:args.p_note, operator:args.p_operator,
+        snapshot: p ? JSON.parse(JSON.stringify(p)) : {}, created_time:new Date().toISOString() });
+    }
+    return Promise.resolve({ data:null, error:null }); },
+  storage: { from: function(b){ return {
+      upload: function(path, blob){ UPLOADS.push({path:path, size:(blob&&blob.size)||0}); return Promise.resolve({ data:{path:path}, error:null }); },
+      getPublicUrl: function(path){ return { data:{ publicUrl:'https://cdn.test/'+path } }; },
+      list: function(p){ return Promise.resolve({ data:UPLOADS.filter(function(u){return u.path.indexOf(p)===0;}).map(function(u){return {name:u.path.split('/').pop()};}), error:null }); },
+      remove: function(paths){ UPLOADS = UPLOADS.filter(function(u){ return paths.indexOf(u.path)<0; }); return Promise.resolve({ error:null }); }
+  }; } }
+};
+/* 種一筆已發佈文章，用來測鎖定與狀態流轉 */
+DBX.blog_posts.push({ id:++SEQ.blog_posts, slug:'2026-cross-border-tariff', title:'2026 跨境電商新關稅上路，品牌方最該先做的三件事',
+  summary:'七月正式生效的新制把低價包裹免稅門檻整個拉掉了。', cover_url:'https://cdn.test/cover.jpg', cover_source:'GC 團隊自行製圖',
+  category:'hot', tags:['關稅新制','成本結構'], gallery:[{kind:'image',url:'https://cdn.test/a.jpg',caption:'圖說一',source:'來源一'}],
+  gallery_ratio:'16:9', content:{v:1,blocks:[{type:'paragraph',html:'七月一日起，新制正式把低價包裹的免稅門檻取消。'},{type:'heading',level:2,text:'一、先確認級距'}]},
+  status:'published', is_pinned:true, published_at:'2026-07-28T01:15:00Z', last_published_at:'2026-07-28T01:15:00Z',
+  created_time:'2026-07-26T02:00:00Z', updated_time:'2026-07-28T01:15:00Z', created_by:'王承翰', updated_by:'王承翰', published_by:'王承翰' });
+</script>
+<script src="blog-admin.js"></script>
+<script>loadBlogPosts();</script>
+</body></html>
