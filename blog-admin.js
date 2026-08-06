@@ -746,9 +746,68 @@ async function blogDelRun(id){
 }
 
 /* ═══ 預覽 ═══════════════════════════════════════════════════════════ */
+/* 預覽要開在哪個官網
+   正式環境當然是 worldoflandmark.com。但在本機測試時，正式站上可能還沒有
+   blog-post.html，開過去只會看到 404。所以偵測到後台自己跑在本機時，
+   會問一次你本機官網的網址（netlify dev 通常是 http://localhost:8888），
+   記起來之後就不再問。要改的話在主控台執行：
+     localStorage.removeItem('gc_blog_preview_base')
+   然後再按一次預覽即可。 */
+function blogPreviewBase(){
+  var h = location.hostname;
+  var isLocal = location.protocol === 'file:' || !h || h === 'localhost' || h === '127.0.0.1' || /^192\.168\./.test(h);
+  if (!isLocal) return BLOG_SITE;
+  var saved = '';
+  try { saved = localStorage.getItem('gc_blog_preview_base') || ''; } catch(e){}
+  if (saved) return saved.replace(/\/+$/, '');
+  var v = prompt(
+    '你正在本機執行後台。\n\n請輸入本機官網的網址，預覽才開得起來。\n' +
+    '用 netlify dev 跑官網的話，通常就是下面這一個。\n\n' +
+    '（之後不會再問。要改的話在主控台執行 localStorage.removeItem(\'gc_blog_preview_base\') 再按一次預覽。）',
+    'http://localhost:8888');
+  if (v === null) return BLOG_SITE;
+  v = String(v).trim().replace(/\/+$/, '');
+  if (!v) return BLOG_SITE;
+  try { localStorage.setItem('gc_blog_preview_base', v); } catch(e){}
+  return v;
+}
+
+/* 預覽
+   後台與官網是兩個不同網域，登入狀態不共用，所以官網那邊沒辦法用你的身分
+   去讀一篇還沒發佈的草稿。做法改成：把文章內容編碼放進網址的 # 之後
+   （# 不會送到伺服器、也不會留在伺服器紀錄裡），官網讀到就直接渲染。
+   這樣草稿、已下架、甚至還沒存檔的即時內容都能預覽。 */
 function blogPreview(id){
-  var p = blogFind(id); if (!p) return;
-  window.open(BLOG_SITE + '/blog-post.html?preview=' + encodeURIComponent(p.id), '_blank');
+  var p = blogFind(id);
+  // 編輯器正開著這一篇，就用畫面上的最新狀態 —— 還沒按儲存也能先看效果
+  if (BLOG_EDIT && (id == null || BLOG_EDIT.id === id)){
+    p = JSON.parse(JSON.stringify(BLOG_EDIT));
+    try { p.content = { v:1, blocks: blogReadDoc() }; } catch(e){}
+  }
+  if (!p) return;
+
+  var cat = BLOG_CATS.filter(function(c){ return c.slug === p.category; })[0];
+  var payload = {
+    slug: p.slug || '', title: p.title || '', summary: p.summary || '',
+    cover_url: p.cover_url || null, cover_source: p.cover_source || null,
+    category: p.category || null, category_name: (cat && cat.name) || '',
+    tags: p.tags || [], gallery: p.gallery || [], gallery_ratio: p.gallery_ratio || '16:9',
+    content: p.content || { v:1, blocks:[] },
+    published_at: p.published_at || null, last_published_at: p.last_published_at || null,
+    meta_title: p.meta_title || null, meta_description: p.meta_description || null
+  };
+
+  var enc;
+  try { enc = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(payload))))); }
+  catch(e){ bgToast('預覽資料轉換失敗，請先儲存草稿再試一次。', 'err'); return; }
+
+  var base = blogPreviewBase();
+  var url = base + '/blog-post.html#gcpreview=' + enc;
+  if (url.length > 200000){          // 極長的文章：退回用正式網址（僅限已發佈）
+    if (p.status === 'published' && p.slug) url = base + '/blog/' + encodeURIComponent(p.slug) + '/';
+    else { bgToast('這篇文章太長，預覽網址塞不下。請先儲存草稿並發佈後再從官網檢視。', 'err'); return; }
+  }
+  window.open(url, '_blank');
 }
 
 /* ═══ 異動紀錄抽屜 ═══════════════════════════════════════════════════ */
