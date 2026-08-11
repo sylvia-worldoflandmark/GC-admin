@@ -1,0 +1,3 @@
+# GC 後台：全站不開放檢索
+User-agent: *
+Disallow: /

@@ -1,0 +1,5 @@
+# 後台不應該被搜尋引擎收錄，也不應該被別的網站嵌成 iframe
+/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
