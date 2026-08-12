@@ -794,6 +794,8 @@ select.cm-input {
 .a4 .idbox{height:118px;background:repeating-linear-gradient(45deg,#fafafa,#fafafa 8px,#f2f2f2 8px,#f2f2f2 16px);text-align:center;color:#94a3b8;font-size:10px;padding-top:48px;}
 .a4 .idbox img{max-width:100%;max-height:108px;object-fit:contain;}
 .a4 .idcell{padding:0;text-align:center;height:118px;vertical-align:middle;}
+/* 沒有這行，證件影本會以原始尺寸撐破表格（實測發現）*/
+.a4 .idcell img{max-width:96%;max-height:112px;object-fit:contain;}
 /* 出 PDF 時把互動用的陰影拿掉，避免糊邊 */
 .a4-stage{background:#e9ebef;padding:22px 0;overflow:auto;}
 .a4-stage .a4{box-shadow:0 6px 34px rgba(0,0,0,.14);}
@@ -4379,6 +4381,14 @@ async function _wizRestore(){
 }
 async function _wizVoid(){
   var by=currentUser?currentUser.full_name:'admin'; var now=new Date().toISOString();
+  // ── 已被憑證引用的分潤不能作廢重結 ───────────────────────────────
+  // 分潤一旦 is_void，憑證明細會指向作廢的紀錄；重結產生的新分潤又沒有憑證，
+  // 同一筆錢就能被開第二張勞報單。這裡必須擋死，先作廢憑證才能重結。
+  var _blk = await _docsBlockingVoid(WIZ.id);
+  if (_blk.length) {
+    _toast('無法作廢重結：本案的分潤已被憑證引用（' + _blk.map(function(d){ return (d.doc_no||d.doc_type) + '・' + _statusLabelLf(d.status); }).join('、') + '）。請先到商務分潤紀錄把該憑證作廢。', 'err');
+    return;
+  }
   // 有「已付款」的有效帳務 → 先擋下、要明確確認（避免抹掉真的發生過的收付款狀態）
   var paidChk=await sb.from('financial_records').select('id').eq('project_id',WIZ.id).eq('is_void',false).eq('status','paid').limit(1);
   var hasPaid=!(paidChk.error)&&paidChk.data&&paidChk.data.length>0;
@@ -7469,7 +7479,7 @@ function _ppDoneDetail(){
 function _wizFinHtml(){
   var fr=WIZ.financials||[];
   if(!fr.length) return '';
-  var typeLabel={receivable:'應收（客戶）',receivable_provider:'應收（服務商退傭）',payable_provider:'應付服務商',payable_partner:'應付商務'};
+  var typeLabel={receivable:'應收（客戶）',receivable_provider:'應收（服務商退傭）',payable_provider:'應付服務商',payable_partner:'應付商務',withholding:'應付代扣稅款'};
   function _finBadgeColor(f){
     if(_finIsIncome(f)) return 'green';
     if(f.record_type==='payable_partner') return 'blue';
@@ -7620,7 +7630,7 @@ async function _wizSettlePrincipal(settledAt){
     var pct=bpId?(rule?Number(rule.partner_percent||0):0):0;
     var partnerUntax=Math.round(profit*pct/100);
     // 業務分潤依 BP 開立憑證方式計稅（發票含稅／收據＝未稅／勞報單扣繳後）；partner_amount_taxed 存「實付」
-    var partnerTax=bpId?Math.round(_partyPayable(_bpInvoiceType(bpId),[partnerUntax],true).payable):Math.round(partnerUntax);
+    var partnerTax=_bpSettleNet(bpId,partnerUntax);
     var gcUntax=profit-partnerUntax;
 
     // business_partner_id NOT NULL → 無 BP 的 match 不寫 commission_records
@@ -7727,7 +7737,7 @@ async function _wizSettleIntermediary(settledAt){
     var rebateTaxed=rebate+rebateTax;
     var partnerUntax=Math.round(rebate*partnerPct/100);
     // 業務分潤依 BP 開立憑證方式計稅（發票含稅／收據＝未稅／勞報單扣繳後）
-    var partnerTax=hasBp?Math.round(_partyPayable(_bpInvoiceType(p.business_partner_id),[partnerUntax],true).payable):Math.round(partnerUntax);
+    var partnerTax=_bpSettleNet(hasBp?p.business_partner_id:null,partnerUntax);
     var gcUntax=rebate-partnerUntax;
 
     totalRebateUntax+=rebate;
@@ -8608,6 +8618,9 @@ async function crecMarkAll(pid,status){
   var r=await sb.from('commission_records').update({partner_payment_status:status,partner_paid_at:paidAt,updated_by:by}).eq('project_id',pid).not('business_partner_id','is',null);
   if(r.error){ _toast('更新失敗：'+r.error.message,'err'); return; }
   DB.commission_records.filter(function(c){ return c.project_id===pid&&c.business_partner_id; }).forEach(function(c){ c.partner_payment_status=status; c.partner_paid_at=paidAt; });
+  // 同步憑證：還原付款時，涵蓋這些分潤的憑證要一起退回付款前的狀態
+  var _cs=DB.commission_records.filter(function(c){ return c.project_id===pid&&c.business_partner_id; });
+  for (var _i=0;_i<_cs.length;_i++) await _docSyncOnRevert(_cs[_i].id, status);
   // 同步 financial_records 的 payable_partner 狀態
   await sb.from('financial_records').update({status:status,updated_time:now,updated_by:by}).eq('project_id',pid).eq('record_type','payable_partner');
   renderCommissionRecords();
@@ -8622,6 +8635,7 @@ async function crecMarkOne(id,status){
   var r=await sb.from('commission_records').update({partner_payment_status:status,partner_paid_at:paidAt,updated_by:by}).eq('id',id);
   if(r.error){ _toast('更新失敗：'+r.error.message,'err'); return; }
   c.partner_payment_status=status; c.partner_paid_at=paidAt;
+  await _docSyncOnRevert(c.id, status);
   // 同步 financial_records：該 BP 在此專案的所有 commission_records 都 paid → financial paid
   var bpId=c.business_partner_id;
   if(bpId){
@@ -8752,9 +8766,11 @@ function _crDocActions(c){
     } else if (doc.status === 'issued') {
       out.push(B('btn-primary', doc.sign_token ? '重寄簽署邀請' : '發送簽署邀請', '_lfOpenInvite('+doc.id+')'));
       out.push(B('btn-secondary','看勞報單','_lfViewDoc('+doc.id+')'));
+      out.push(B('btn-secondary','作廢','_docVoid('+doc.id+')'));
     } else if (doc.status === 'signed') {
       out.push(B('btn-primary','標記已付','_docMarkPaid('+doc.id+')'));
       out.push(B('btn-secondary','看勞報單','_lfViewDoc('+doc.id+')'));
+      out.push(B('btn-secondary','作廢','_docVoid('+doc.id+')'));
     }
     if (!doc || doc.status !== 'signed') {
       out.push(B('btn-secondary','已付','',true,'勞報單須先收到簽回'));
@@ -9182,9 +9198,66 @@ async function _docMarkPaid(docId){
     await sb.from('financial_records').update({ status: allPaid ? 'paid' : 'pending', updated_time:now, updated_by:by })
       .eq('project_id', projIds[j]).eq('record_type','payable_partner').eq('counterparty_id', bpId);
   }
+  await _docWriteWithholding(doc, lines, bpId, now, by);
   await _ensurePayoutDocs(true);
   renderCommissionRecords();
   _toast('已標記已付款');
+}
+
+// ── 代扣稅款的帳務落點 ────────────────────────────────────────
+// 結算時只記毛額（代扣還不知道會怎麼合併），付款時才知道真正扣了多少。
+// 這裡把應付商務改寫成「實際匯出去的錢」，另立一筆對國稅局的代扣負債，
+// 兩者相加＝原本的毛額，帳才對得起來。
+async function _docWriteWithholding(doc, lines, bpId, now, by){
+  var withheld = Math.round(Number(doc.wht_income||0)) + Math.round(Number(doc.wht_nhi||0));
+  if (withheld <= 0) return;                       // 沒代扣就不用動
+
+  // 依各專案的分潤金額按比例分攤代扣，用「最大餘數法」讓分攤結果加總剛好等於代扣總額
+  var per = {}, total = 0;
+  lines.forEach(function(l){
+    if (!l.project_id) return;
+    var amt = Math.round(Number(l.amount_untaxed||0));
+    per[l.project_id] = (per[l.project_id]||0) + amt; total += amt;
+  });
+  var pids = Object.keys(per);
+  if (!pids.length || total <= 0) return;
+  var alloc = {}, used = 0, rema = [];
+  pids.forEach(function(pid){
+    var exact = withheld * per[pid] / total;
+    alloc[pid] = Math.floor(exact); used += alloc[pid];
+    rema.push({ pid: pid, r: exact - Math.floor(exact) });
+  });
+  rema.sort(function(a,b){ return b.r - a.r; });
+  for (var k = 0; used < withheld && k < rema.length; k++) { alloc[rema[k].pid] += 1; used += 1; }
+
+  // 應付商務：金額改寫成實付，tax 記負數（代扣）
+  for (var i = 0; i < pids.length; i++) {
+    var pid = pids[i], cut = alloc[pid];
+    var fr = await sb.from('financial_records').select('id,amount_untaxed')
+               .eq('project_id', pid).eq('record_type','payable_partner').eq('counterparty_id', bpId).eq('is_void', false);
+    var rows = (fr && fr.data) || [];
+    for (var m = 0; m < rows.length; m++) {
+      var gross = Math.round(Number(rows[m].amount_untaxed||0));
+      await sb.from('financial_records').update({
+        tax: -cut, amount: gross - cut, updated_time: now, updated_by: by
+      }).eq('id', rows[m].id);
+    }
+  }
+
+  // 代扣負債：對象是國稅局，次月 10 日前要繳，所以狀態留 pending
+  var ex = await sb.from('financial_records').select('id')
+             .eq('project_id', pids[0]).eq('record_type','withholding').eq('note', doc.doc_no || ('doc#'+doc.id)).limit(1);
+  if (ex && ex.data && ex.data.length) return;    // 重複標記已付時不要重複產生
+  var ins = await sb.from('financial_records').insert([{
+    project_id: Number(pids[0]), record_type: 'withholding',
+    counterparty_type: 'tax_authority', counterparty_id: null,
+    amount_untaxed: withheld, tax: 0, amount: withheld,
+    status: 'pending', note: doc.doc_no || ('doc#'+doc.id),
+    created_time: now, updated_time: now, updated_by: by
+  }]);
+  if (ins.error) {
+    _toast('代扣稅款的帳務未產生：' + ins.error.message + '（應付商務已改寫為實付）', 'err');
+  }
 }
 
 // ── 寄信（P3b）─────────────────────────────────────────────────────
@@ -9683,9 +9756,11 @@ function _lfStep2(){
           ? sel('業別代號','profession_code',f.profession_code, [{v:'',l:'（不填）'}].concat(profOpts), diff('profession_code','default_profession_code'))
           : '<div class="cm-field" style="margin-bottom:11px;"><label>業別代號</label><input class="cm-input" value="此申報類別不需要業別代號" disabled style="background:#f3f4f6;color:var(--text-dim);"></div>') +
       '</div>' +
-      '<div style="display:flex;gap:20px;margin:2px 0 6px;font-size:12.5px;">' +
-        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="lf-payee_has_nhi"' + (f.payee_has_nhi?' checked':'') + ' onchange="_lfFieldChanged()"> 有投保健保</label>' +
-        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="lf-payee_in_union"' + (f.payee_in_union?' checked':'') + ' onchange="_lfFieldChanged()"> 已加入職業工會（免扣二代健保）</label>' +
+      '<div style="display:flex;gap:20px;margin:2px 0 6px;font-size:12.5px;flex-wrap:wrap;">' +
+        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="lf-payee_has_nhi"' + (f.payee_has_nhi?' checked':'') + ' onchange="_lfFieldChanged()"> 有投保健保' +
+          (!!f.payee_has_nhi !== !(bp.has_nhi === false) ? '<span style="font-size:10.5px;color:#b45309;">已改</span>' : '') + '</label>' +
+        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="lf-payee_in_union"' + (f.payee_in_union?' checked':'') + ' onchange="_lfFieldChanged()"> 已加入職業工會（免扣二代健保）' +
+          (!!f.payee_in_union !== !!bp.in_labor_union ? '<span style="font-size:10.5px;color:#b45309;">已改，與建檔不同</span>' : '') + '</label>' +
       '</div>' +
 
       '<div style="font-size:12px;font-weight:700;color:var(--text-mid);margin:16px 0 9px;">勞務內容</div>' +
@@ -9933,6 +10008,113 @@ async function _lfIssue(){
   }
 }
 
+// 還原付款時，把涵蓋這筆分潤的憑證一起退回付款前的狀態。
+// 沒有這段，畫面會出現「憑證：已完成／支付：未支付」這種自相矛盾的列。
+async function _docSyncOnRevert(crId, status){
+  if (status === 'paid') return;                 // 只處理「還原成未支付」
+  var doc = _docForCr(crId);
+  if (!doc || doc.status !== 'paid') return;
+  var back = doc.doc_type === '勞務報酬單'
+    ? (doc.signed_at ? 'signed' : 'issued')      // 勞報單退回簽回狀態
+    : (doc.doc_file_path ? 'doc_ready' : 'pending_doc');
+  var now = new Date().toISOString();
+  var r = await sb.from('partner_payout_docs').update({
+    status: back, paid_at: null, paid_by: null,
+    updated_time: now, updated_by: currentUser ? currentUser.full_name : 'admin'
+  }).eq('id', doc.id);
+  if (!r.error) { doc.status = back; doc.paid_at = null; doc.paid_by = null; }
+}
+
+// 結算階段的商務應付淨額。
+// 勞務報酬單「不」在這裡預扣 —— 扣繳門檻按「每次給付」判定，結算當下還不知道
+// 之後會不會合併開單，先扣一定會跟勞報單算出來的不一致。代扣一律由開勞報單決定。
+// 發票／收據維持原本的營業稅處理不變。
+function _bpSettleNet(bpId, untax){
+  if (!bpId) return Math.round(untax);
+  if (_bpInvoiceType(bpId) === '勞務報酬單') return Math.round(untax);
+  return Math.round(_partyPayable(_bpInvoiceType(bpId), [untax], true).payable);
+}
+
+// 查這個專案的有效分潤有沒有被「已開立以上」的憑證引用（作廢重結的守門員）
+async function _docsBlockingVoid(projectId){
+  var cr = await sb.from('commission_records').select('id').eq('project_id', projectId).eq('is_void', false);
+  var ids = ((cr && cr.data) || []).map(function(r){ return r.id; });
+  if (!ids.length) return [];
+  var ln = await sb.from('partner_payout_doc_lines').select('payout_doc_id').in('commission_record_id', ids).eq('is_void', false);
+  var seen = {}, docIds = [];
+  ((ln && ln.data) || []).forEach(function(r){ if (r.payout_doc_id && !seen[r.payout_doc_id]) { seen[r.payout_doc_id] = 1; docIds.push(r.payout_doc_id); } });
+  if (!docIds.length) return [];
+  var dc = await sb.from('partner_payout_docs').select('id,doc_no,doc_type,status')
+             .in('id', docIds).eq('is_void', false).in('status', ['issued','signed','paid']);
+  return (dc && dc.data) || [];
+}
+
+// ── 作廢憑證 ──────────────────────────────────────────────────
+// 作廢＝把明細也標記 is_void，來源分潤就被釋放、可以重新開立。
+// 已付款的不給直接作廢：錢已經出去了，要先還原付款狀態，避免帳務憑空少一筆。
+async function _docVoid(docId){
+  var doc = (DB.payout_docs||[]).find(function(d){ return String(d.id) === String(docId); });
+  if (!doc) return;
+  if (doc.status === 'paid') { _toast('已付款的憑證不能直接作廢。請先在支付欄按「還原」，再作廢。', 'err'); return; }
+
+  var old = document.getElementById('doc-void'); if (old) old.remove();
+  var lines = _docLines(docId) || [];
+  var ov = document.createElement('div');
+  ov.id = 'doc-void';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.42);z-index:340;display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:14px;width:520px;max-width:96vw;box-shadow:0 8px 40px rgba(0,0,0,0.18);">' +
+      '<div style="padding:16px 20px 13px;border-bottom:1px solid var(--border);">' +
+        '<div style="font-family:Syne,sans-serif;font-weight:700;font-size:14px;">作廢憑證</div>' +
+        '<div style="font-size:12px;color:var(--text-dim);margin-top:2px;">' + _esc(doc.doc_no || doc.doc_type) + '　' + _esc(doc.payee_name || _bpName(doc.business_partner_id)) + '　' + _statusLabelLf(doc.status) + '</div>' +
+      '</div>' +
+      '<div style="padding:18px 20px;">' +
+        '<div style="padding:11px 13px;border-radius:9px;background:#fffbeb;border:1px solid #fde68a;font-size:12px;color:#92400e;line-height:1.75;margin-bottom:14px;">' +
+          '作廢後這 <b>' + lines.length + '</b> 筆分潤會被釋放，可以重新開立新的憑證。<br>' +
+          '原紀錄會保留（標記為作廢），不會真的刪除。' +
+          (doc.signed_at ? '<br><b>這張已經簽回了</b> —— 作廢代表那份簽署失效，通常需要重新請對方簽一次。' : '') +
+        '</div>' +
+        '<div class="cm-field"><label>作廢原因<span class="cm-key">必填，會留在紀錄上</span></label>' +
+          '<textarea class="cm-input" id="void-reason" rows="3" style="height:auto;padding:9px 12px;line-height:1.6;" placeholder="例：金額計算錯誤，需重新開立"></textarea></div>' +
+      '</div>' +
+      '<div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">' +
+        '<button class="btn btn-secondary dv-btn" onclick="document.getElementById(\'doc-void\').remove()">取消</button>' +
+        '<button class="btn btn-primary dv-btn" onclick="_docVoidConfirm(' + doc.id + ')">確認作廢</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+}
+
+async function _docVoidConfirm(docId){
+  var reason = ((document.getElementById('void-reason')||{}).value || '').trim();
+  if (!reason) { _toast('請填寫作廢原因', 'err'); return; }
+  var b = document.querySelectorAll('#doc-void .dv-btn');
+  for (var i=0;i<b.length;i++) b[i].disabled = true;
+  var now = new Date().toISOString();
+  var by = currentUser ? currentUser.full_name : 'admin';
+
+  var r = await sb.from('partner_payout_docs').update({
+    is_void:true, voided_at:now, voided_by:by, void_reason:reason,
+    sign_token:null,                    // 連結一併失效，避免對方還簽得下去
+    updated_time:now, updated_by:by
+  }).eq('id', docId);
+  if (r.error) { _toast('作廢失敗：' + r.error.message, 'err'); for (var j=0;j<b.length;j++) b[j].disabled=false; return; }
+
+  var l = await sb.from('partner_payout_doc_lines').update({ is_void:true }).eq('payout_doc_id', docId);
+  if (l.error) { _toast('憑證已作廢，但明細釋放失敗：' + l.error.message, 'err'); }
+
+  document.getElementById('doc-void').remove();
+  await _ensurePayoutDocs(true);
+  renderCommissionRecords();
+  _toast('已作廢，來源分潤已釋放，可重新開立');
+}
+
+// 經辦人：簽署頁回寫時會把 updated_by 蓋成 'sign-page'，那不是人名，寧可留白
+function _lfIssuer(doc){
+  var by = doc && doc.updated_by;
+  return (!by || by === 'sign-page') ? '' : by;
+}
+
 // 已開立的勞報單 → 用同一套 A4 版型重現
 async function _lfViewDoc(docId){
   var doc = (DB.payout_docs||[]).find(function(d){ return String(d.id) === String(docId); });
@@ -9968,7 +10150,8 @@ async function _lfViewDoc(docId){
       '<div style="padding:14px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;">' +
         '<div style="font-family:Syne,sans-serif;font-weight:700;font-size:14px;">' + _esc(doc.doc_no||'勞務報酬單') + '</div>' +
         '<div style="font-size:12px;color:var(--text-dim);">' + _esc(doc.payee_name||'') + '　' + _esc(_statusLabelLf(doc.status)) + '</div></div>' +
-      '<div class="a4-stage" style="overflow-y:auto;flex:1;">' + _lfA4Html(doc, calc, imgs, { docNo:doc.doc_no, accountant:doc.updated_by }) + '</div>' +
+      // 經辦人取「開立時」的操作人；updated_by 會被簽署頁覆寫成 sign-page，不能拿來當經辦人
+      '<div class="a4-stage" style="overflow-y:auto;flex:1;">' + _lfA4Html(doc, calc, imgs, { docNo:doc.doc_no, accountant:_lfIssuer(doc) }) + '</div>' +
       '<div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">' +
         '<button class="btn btn-secondary lf-btn" onclick="document.getElementById(\'lf-view\').remove();_lf=null;">關閉</button>' +
         '<button class="btn btn-primary lf-btn" onclick="_lfDownloadPdf()">下載 PDF</button></div>' +
@@ -10312,6 +10495,7 @@ function _finTypeOpts(){
   if(showI) opts.push({v:'receivable_provider',l:'應收（服務商退傭）'});
   if(showP) opts.push({v:'payable_provider',l:'應付服務商'});
   opts.push({v:'payable_partner',l:'應付商務'});
+  opts.push({v:'withholding',l:'應付代扣稅款'});
   return opts;
 }
 function _finApply(){ finPage=1; updateFinTable(); }
@@ -10453,7 +10637,7 @@ function renderFinancialRecords(){
   updateFinTable();
 }
 function exportFinancialRecords(){
-  var tl={receivable:'應收（客戶）',receivable_provider:'應收（服務商退傭）',payable_provider:'應付服務商',payable_partner:'應付商務'};
+  var tl={receivable:'應收（客戶）',receivable_provider:'應收（服務商退傭）',payable_provider:'應付服務商',payable_partner:'應付商務',withholding:'應付代扣稅款'};
   var stl={paid:'已付/收',pending:'待處理',cancelled:'已流案',void:'作廢'};
   var recs=DB.financial_records.filter(_finApplyFilter);
   var header=['專案編號','專案類型','類別','對象','未稅金額','稅金','含稅金額','狀態','建立時間','最後操作人'];
@@ -10496,7 +10680,7 @@ function updateFinTable(){
   var total=Math.max(1,Math.ceil(rows.length/PAGE_SIZE)); if(finPage>total)finPage=total;
   _persistView('financial_records');
   var slice=rows.slice((finPage-1)*PAGE_SIZE,finPage*PAGE_SIZE);
-  var tl={receivable:'應收（客戶）',receivable_provider:'應收（服務商退傭）',payable_provider:'應付服務商',payable_partner:'應付商務'};
+  var tl={receivable:'應收（客戶）',receivable_provider:'應收（服務商退傭）',payable_provider:'應付服務商',payable_partner:'應付商務',withholding:'應付代扣稅款'};
   function _finTypeBadge(f){
     if(_finIsIncome(f)){
       // 舊格式相容：record_type='receivable' 但 counterparty 其實是服務商
