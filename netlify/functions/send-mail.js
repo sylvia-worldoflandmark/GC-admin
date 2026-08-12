@@ -43,6 +43,26 @@ exports.handler = async function (event) {
     return reply(500, { ok: false, error: '伺服器未設定寄信參數（GAS_MAIL_URL / GAS_MAIL_TOKEN）' });
   }
 
+  // ── 必須是已登入的後台使用者 ──
+  // 沒有這一段，任何人知道這個網址就能用 support@ 的名義寄信給任何人。
+  const SB_URL = process.env.SUPABASE_URL;
+  const SB_KEY = process.env.SUPABASE_ANON_KEY;
+  if (!SB_URL || !SB_KEY) {
+    return reply(500, { ok: false, error: '伺服器未設定 SUPABASE_URL / SUPABASE_ANON_KEY' });
+  }
+  const auth = String((event.headers || {}).authorization || (event.headers || {}).Authorization || '');
+  const jwt = auth.replace(/^Bearer\s+/i, '').trim();
+  if (!jwt) return reply(401, { ok: false, error: '未登入或登入已過期，請重新整理後台後再試' });
+  try {
+    const who = await fetch(SB_URL.replace(/\/$/, '') + '/auth/v1/user', {
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + jwt },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!who.ok) return reply(401, { ok: false, error: '登入已過期，請重新整理後台後再試' });
+  } catch (e) {
+    return reply(502, { ok: false, error: '無法驗證登入狀態：' + String((e && e.message) || e) });
+  }
+
   let req;
   try {
     req = JSON.parse(event.body || '{}');

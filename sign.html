@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>勞務報酬單線上簽署</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2306080e'/%3E%3Ctext x='16' y='23' font-family='Arial Black,sans-serif' font-weight='900' font-size='18' fill='%23ffffff' text-anchor='middle'%3EG%3Ctspan fill='%23BFC3C9'%3EC%3C/tspan%3E%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{margin:0;background:#eef0f3;font-family:'Noto Sans TC',-apple-system,'Segoe UI',sans-serif;color:#1f2328;}
+.wrap{max-width:860px;margin:0 auto;padding:20px 14px 60px;}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 2px 16px;}
+.brand .m{width:30px;height:30px;border-radius:7px;background:#06080e;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;letter-spacing:-.04em;}
+.brand .t{font-size:13.5px;font-weight:700;}
+.brand .s{font-size:12px;color:#7b818b;margin-left:auto;}
+.card{background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(15,20,30,.07);padding:22px 22px 24px;margin-bottom:16px;}
+h1{font-size:17px;margin:0 0 4px;}
+.sub{font-size:12.5px;color:#7b818b;margin-bottom:18px;}
+.msg{text-align:center;padding:44px 20px;}
+.msg .ic{font-size:38px;line-height:1;margin-bottom:14px;}
+.msg h2{font-size:16px;margin:0 0 8px;}
+.msg p{font-size:13px;color:#6b7280;line-height:1.85;margin:0;}
+.kv{display:grid;grid-template-columns:96px 1fr;gap:9px 14px;font-size:13.5px;line-height:1.7;}
+.kv .k{color:#7b818b;}
+.amt{margin-top:18px;border:1px solid #e6e8ec;border-radius:11px;overflow:hidden;}
+.amt .r{display:flex;justify-content:space-between;padding:10px 15px;font-size:13.5px;border-bottom:1px solid #f0f1f4;}
+.amt .r:last-child{border-bottom:none;background:#f7f9fc;font-weight:700;}
+.amt .r b{font-variant-numeric:tabular-nums;}
+.amt .neg{color:#b45309;}
+.note{margin-top:14px;font-size:12px;color:#7b818b;line-height:1.8;background:#f7f9fc;border-radius:10px;padding:12px 14px;}
+.padwrap{margin-top:6px;border:1.5px dashed #c9cfd8;border-radius:12px;background:#fcfcfd;position:relative;touch-action:none;}
+canvas{display:block;width:100%;height:190px;border-radius:12px;cursor:crosshair;}
+.ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#b5bcc6;font-size:13px;pointer-events:none;}
+.row{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;}
+.btn{border:none;border-radius:9px;padding:11px 20px;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+.p{background:#2563eb;color:#fff;}
+.p:not(:disabled):hover{background:#1d4ed8;}
+.s{background:#fff;color:#374151;border:1px solid #d9dde3;}
+.agree{display:flex;gap:9px;align-items:flex-start;margin-top:18px;font-size:13px;line-height:1.7;cursor:pointer;}
+.agree input{width:17px;height:17px;margin-top:2px;flex-shrink:0;}
+.err{margin-top:12px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:9px;padding:10px 13px;font-size:12.5px;display:none;}
+.foot{text-align:center;font-size:11.5px;color:#9aa0aa;line-height:1.9;padding-top:8px;}
+/* A4 版面（與後台同一套樣式，供螢幕檢視與 PDF 輸出）*/
+.a4{background:#fff;width:794px;padding:38px 42px;font-size:11px;color:#000;line-height:1.5;}
+.a4 h2{text-align:center;font-size:17px;font-weight:700;letter-spacing:.12em;margin:0 0 9px;}
+.a4 .fd{text-align:center;font-size:11px;margin-bottom:11px;}
+.a4 table{border-collapse:collapse;width:100%;border:1.6px solid #000;}
+.a4 td{border:.8px solid #000;padding:5px 7px;vertical-align:top;font-size:10.5px;}
+.a4 .lbl{font-weight:700;text-align:center;vertical-align:middle;width:66px;}
+.a4 .fill{color:#1d4ed8;font-weight:700;}
+.a4 .on{font-weight:700;}
+#a4holder{position:fixed;left:-99999px;top:0;}
+@media(max-width:600px){.wrap{padding:14px 10px 48px;}.card{padding:18px 16px 20px;border-radius:12px;}.kv{grid-template-columns:82px 1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><div class="m">GC</div><div class="t">世界之地標有限公司</div><div class="s">線上簽署</div></div>
+  <div id="app"><div class="card"><div class="msg"><div class="ic">⏳</div><h2>載入中…</h2><p>正在確認簽署連結</p></div></div></div>
+  <div class="foot">此連結為個人專用，請勿轉發。<br>如有疑問請來信 support@worldoflandmark.com</div>
+</div>
+<div id="a4holder"></div>
+
+<script>
+var API = '/.netlify/functions/sign';
+var TOKEN = (function(){ try { return new URLSearchParams(location.search).get('t') || ''; } catch(e){ return ''; } })();
+var DOC = null, PAD = null;
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function money(n){ return Math.round(Number(n||0)).toLocaleString('en-US'); }
+function roc(d){
+  if(!d) return '—';
+  var x = new Date(d); if(isNaN(x.getTime())) return '—';
+  return (x.getFullYear()-1911) + ' 年 ' + (x.getMonth()+1) + ' 月 ' + x.getDate() + ' 日';
+}
+function screenMsg(icon, title, body){
+  document.getElementById('app').innerHTML =
+    '<div class="card"><div class="msg"><div class="ic">'+icon+'</div><h2>'+title+'</h2><p>'+body+'</p></div></div>';
+}
+
+var INCOME_LABEL = { '50':'50 薪資所得', '9A':'9A 執行業務所得', '9B':'9B 稿費', '92':'92 其他所得' };
+
+// ── 載入 ──
+(async function(){
+  if (!TOKEN) { screenMsg('🔗','連結無效','網址缺少簽署代碼。<br>請直接點擊我們寄給您的信件裡的連結。'); return; }
+  try {
+    var r = await fetch(API + '?t=' + encodeURIComponent(TOKEN));
+    var d = await r.json();
+    if (!d.ok) {
+      screenMsg('🔗','連結無效','這個簽署連結不存在或已被取消。<br>請與我們聯繫取得新的連結。');
+      return;
+    }
+    DOC = d.doc;
+    if (d.signed) { renderDone(true); return; }
+    if (d.expired) {
+      screenMsg('⏰','連結已過期',
+        '這份文件的簽署連結已於 ' + roc(DOC.sign_expires_at) + ' 到期。<br>' +
+        '請來信 support@worldoflandmark.com，我們會重新發送一份給您。');
+      return;
+    }
+    renderForm();
+  } catch(e){
+    screenMsg('⚠️','載入失敗','請稍後重新整理頁面再試一次。<br>若持續發生，請來信 support@worldoflandmark.com');
+  }
+})();
+
+// ── 簽署畫面 ──
+function renderForm(){
+  var d = DOC;
+  document.getElementById('app').innerHTML =
+    '<div class="card">' +
+      '<h1>勞務報酬單　' + esc(d.doc_no||'') + '</h1>' +
+      '<div class="sub">請確認以下內容無誤後簽名。簽署後我們會寄一份 PDF 副本給您留存。</div>' +
+      '<div class="kv">' +
+        '<div class="k">給付單位</div><div>' + esc(d.payer_company||'世界之地標有限公司') + '</div>' +
+        '<div class="k">所得人</div><div>' + esc(d.payee_name||'') + '</div>' +
+        '<div class="k">所得類別</div><div>' + esc(INCOME_LABEL[d.income_type] || d.income_type || '') + '</div>' +
+        '<div class="k">勞務內容</div><div>' + esc(d.service_desc||'') + '</div>' +
+        '<div class="k">期間</div><div>' + roc(d.service_start) + ' ～ ' + roc(d.service_end) + '</div>' +
+        '<div class="k">匯款帳戶</div><div>' + esc(d.bank_name||'') + ' ' + esc(d.bank_branch||'') +
+          (d.bank_account_tail ? '　****' + esc(d.bank_account_tail) : '') +
+          (d.bank_account_name ? '（' + esc(d.bank_account_name) + '）' : '') + '</div>' +
+      '</div>' +
+      '<div class="amt">' +
+        '<div class="r"><span>支領金額</span><b>NT$ ' + money(d.amount_untaxed) + '</b></div>' +
+        '<div class="r"><span>代扣所得稅</span><b class="' + (Number(d.wht_income)?'neg':'') + '">' + (Number(d.wht_income) ? '− NT$ ' + money(d.wht_income) : 'NT$ 0') + '</b></div>' +
+        '<div class="r"><span>二代健保補充保費' + (d.in_union ? '（已提供工會加保證明）' : '') + '</span><b class="' + (Number(d.wht_nhi)?'neg':'') + '">' + (Number(d.wht_nhi) ? '− NT$ ' + money(d.wht_nhi) : 'NT$ 0') + '</b></div>' +
+        '<div class="r"><span>實際支付金額</span><b>NT$ ' + money(d.amount_payable) + '</b></div>' +
+      '</div>' +
+      '<div class="note">代扣的所得稅與補充保費是<b>預先繳納</b>給國稅局與健保署，不是給付單位收取。' +
+        '我們會依法開立扣繳憑單，您在年度綜合所得稅結算申報時可以扣抵。</div>' +
+    '</div>' +
+
+    '<div class="card">' +
+      '<h1>領款人簽名</h1>' +
+      '<div class="sub">請用滑鼠或手指在下方框內簽名</div>' +
+      '<div class="padwrap"><canvas id="pad"></canvas><div class="ph" id="ph">在此簽名</div></div>' +
+      '<div class="row"><button class="btn s" onclick="padClear()">重新簽名</button>' +
+        '<span style="font-size:12px;color:#9aa0aa;">簽名將連同您的簽署時間與 IP 一併存證</span></div>' +
+      '<label class="agree"><input type="checkbox" id="agree" onchange="syncBtn()">' +
+        '<span>我已確認上述金額與匯款帳戶正確，並同意以此電子簽名作為本次領款之憑證。</span></label>' +
+      '<div class="err" id="err"></div>' +
+      '<div class="row" style="margin-top:16px;"><button class="btn p" id="submit" disabled onclick="submitSign()" style="flex:1;">確認簽署</button></div>' +
+      '<div style="margin-top:10px;font-size:11.5px;color:#9aa0aa;text-align:center;">連結有效至 ' + roc(DOC.sign_expires_at) + '</div>' +
+    '</div>';
+  padInit();
+}
+
+// ── 簽名板 ──
+function padInit(){
+  var c = document.getElementById('pad'), ph = document.getElementById('ph');
+  var dpr = window.devicePixelRatio || 1;
+  function size(){
+    var w = c.clientWidth, h = c.clientHeight;
+    var img = PAD && PAD.dirty ? c.toDataURL() : null;
+    c.width = Math.round(w*dpr); c.height = Math.round(h*dpr);
+    var x = c.getContext('2d');
+    x.scale(dpr,dpr); x.lineWidth = 2.2; x.lineCap='round'; x.lineJoin='round'; x.strokeStyle='#111827';
+    PAD.ctx = x;
+    if (img){ var i=new Image(); i.onload=function(){ x.drawImage(i,0,0,w,h); }; i.src=img; }
+  }
+  PAD = { ctx:null, drawing:false, dirty:false, canvas:c };
+  size();
+  window.addEventListener('resize', size);
+
+  function pos(e){
+    var r = c.getBoundingClientRect();
+    var p = (e.touches && e.touches[0]) || e;
+    return { x: p.clientX - r.left, y: p.clientY - r.top };
+  }
+  function start(e){ e.preventDefault(); PAD.drawing=true; var p=pos(e); PAD.ctx.beginPath(); PAD.ctx.moveTo(p.x,p.y); }
+  function move(e){ if(!PAD.drawing) return; e.preventDefault(); var p=pos(e); PAD.ctx.lineTo(p.x,p.y); PAD.ctx.stroke(); if(!PAD.dirty){ PAD.dirty=true; ph.style.display='none'; syncBtn(); } }
+  function end(){ PAD.drawing=false; }
+
+  c.addEventListener('mousedown',start); c.addEventListener('mousemove',move);
+  window.addEventListener('mouseup',end);
+  c.addEventListener('touchstart',start,{passive:false});
+  c.addEventListener('touchmove',move,{passive:false});
+  c.addEventListener('touchend',end);
+}
+function padClear(){
+  if(!PAD) return;
+  PAD.ctx.clearRect(0,0,PAD.canvas.width,PAD.canvas.height);
+  PAD.dirty=false; document.getElementById('ph').style.display='flex'; syncBtn();
+}
+function syncBtn(){
+  var b = document.getElementById('submit'); if(!b) return;
+  var a = document.getElementById('agree');
+  b.disabled = !(PAD && PAD.dirty && a && a.checked);
+}
+function showErr(m){
+  var e = document.getElementById('err');
+  if(e){ e.textContent = m; e.style.display='block'; }
+}
+
+// ── 送出 ──
+async function submitSign(){
+  var b = document.getElementById('submit');
+  if (!PAD || !PAD.dirty) { showErr('請先簽名'); return; }
+  b.disabled = true; b.textContent = '簽署中…';
+  try {
+    var sig = PAD.canvas.toDataURL('image/png');
+    var r = await fetch(API, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ t: TOKEN, signature: sig })
+    });
+    var d = await r.json();
+    if (!d.ok) {
+      var map = { already_signed:'這份文件已經簽署過了，不需要再簽一次。',
+                  expired:'簽署連結已過期，請與我們聯繫重新發送。',
+                  empty_signature:'簽名內容不完整，請重新簽一次。',
+                  not_found:'找不到這份文件，連結可能已失效。' };
+      showErr(map[d.error] || ('簽署失敗：' + (d.error||'未知錯誤')));
+      b.disabled = false; b.textContent = '確認簽署';
+      return;
+    }
+    DOC.signed_at = new Date().toISOString();
+    DOC.signature = sig;
+    renderDone(false);
+    mailCopy();      // 副本在背景寄，不擋畫面
+  } catch(e){
+    showErr('連線失敗，請確認網路後再試一次。');
+    b.disabled = false; b.textContent = '確認簽署';
+  }
+}
+
+// ── 完成畫面 ──
+function renderDone(already){
+  document.getElementById('app').innerHTML =
+    '<div class="card"><div class="msg">' +
+      '<div class="ic">' + (already ? '📄' : '✅') + '</div>' +
+      '<h2>' + (already ? '這份文件已完成簽署' : '簽署完成，謝謝您') + '</h2>' +
+      '<p>' + esc(DOC.doc_no||'') + '　' + esc(DOC.payee_name||'') + '<br>' +
+        '實際支付金額 NT$ ' + money(DOC.amount_payable) + '<br><br>' +
+        (already ? '簽署時間：' + roc(DOC.signed_at) + '<br><br>' : '') +
+        '<span id="mailmsg">' + (already ? 'PDF 副本已於簽署當下寄至您的信箱，如需重新索取請來信 support@worldoflandmark.com。' : '正在寄送 PDF 副本到您的信箱…') + '</span></p>' +
+      '<div class="row" style="justify-content:center;margin-top:20px;">' +
+        (DOC.signature ? '<button class="btn s" onclick="downloadPdf()">下載 PDF 副本</button>' : '') +
+      '</div>' +
+    '</div></div>';
+}
+
+// ── A4 版面（供 PDF 輸出；身分證影本由後台保管，不放進這份副本）──
+function a4Html(){
+  var d = DOC;
+  var rp = function(x){ var t=x?new Date(x):null; if(!t||isNaN(t.getTime())) return {y:'',m:'',d:''};
+    return {y:String(t.getFullYear()-1911), m:String(t.getMonth()+1).padStart(2,'0'), d:String(t.getDate()).padStart(2,'0')}; };
+  var fd=rp(d.form_date), ss=rp(d.service_start), se=rp(d.service_end);
+  var ck=function(on){ return on?'☑':'☐'; };
+  var short = String(d.nationality_type||'').indexOf('未滿')>=0;
+  return '<div class="a4" id="a4">' +
+    '<h2>' + esc(d.payer_company||'世界之地標有限公司') + ' 勞務報酬單</h2>' +
+    '<div class="fd">填表日期：<span class="fill">'+fd.y+'</span> 年 <span class="fill">'+fd.m+'</span> 月 <span class="fill">'+fd.d+'</span> 日　　單號：<span class="fill">'+esc(d.doc_no||'')+'</span></div>' +
+    '<table>' +
+      '<tr><td class="lbl" rowspan="2">所得人<br>資料</td>' +
+        '<td style="width:150px;">'+ck(!short)+' 本國籍／滿 183 天<br>'+ck(short)+' 未滿 183 天</td>' +
+        '<td>姓名：<span class="fill">'+esc(d.payee_name||'')+'</span></td>' +
+        '<td>所得類別：<span class="fill">'+esc(INCOME_LABEL[d.income_type]||d.income_type||'')+'</span></td></tr>' +
+      '<tr><td colspan="3">勞務內容：<span class="fill">'+esc(d.service_desc||'')+'</span>　　' +
+        '期間：自 <span class="fill">'+ss.y+'</span> 年 <span class="fill">'+ss.m+'</span> 月 <span class="fill">'+ss.d+'</span> 日 ' +
+        '至 <span class="fill">'+se.y+'</span> 年 <span class="fill">'+se.m+'</span> 月 <span class="fill">'+se.d+'</span> 日</td></tr>' +
+    '</table>' +
+    '<table style="border-top:none;"><tr>' +
+      '<td class="lbl" style="vertical-align:top;padding-top:9px;">領款<br>金額</td>' +
+      '<td style="width:55%;"><div style="line-height:2;">' +
+        '支領金額：新台幣 <span class="fill">'+money(d.amount_untaxed)+'</span> 元<br>' +
+        '代扣所得稅：新台幣 <span class="fill">'+money(d.wht_income)+'</span> 元<br>' +
+        '二代健保：新台幣 <span class="fill">'+money(d.wht_nhi)+'</span> 元' +
+        (d.in_union?'<span style="font-size:9px;color:#16a34a;margin-left:6px;">（已提供工會加保證明）</span>':'') + '<br>' +
+        '支領淨額：新台幣 <span class="fill" style="font-size:12px;">'+money(d.amount_payable)+'</span> 元</div>' +
+        '<div style="margin-top:12px;line-height:2;">銀行名稱：<span class="fill">'+esc(d.bank_name||'')+'</span><br>' +
+        '銀行分行：<span class="fill">'+esc(d.bank_branch||'')+'</span><br>' +
+        '所得人帳號：<span class="fill">****'+esc(d.bank_account_tail||'')+'</span><br>' +
+        '所得人戶名：<span class="fill">'+esc(d.bank_account_name||'')+'</span><br>付款方式：<b>■ 匯款</b></div></td>' +
+      '<td style="padding:0;"><div style="padding:6px 8px;height:150px;position:relative;">領款人：' +
+        (d.signature ? '<img src="'+d.signature+'" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-height:98px;max-width:88%;">' : '') +
+        '<div style="position:absolute;right:8px;bottom:20px;font-size:9.5px;">（線上簽署）</div>' +
+        '<div style="position:absolute;left:8px;bottom:5px;font-size:9px;color:#666;">簽署時間：'+roc(d.signed_at)+'</div></div></td>' +
+    '</tr></table>' +
+    '<div style="margin-top:9px;font-size:9.5px;color:#666;line-height:1.7;">' +
+      '· 本副本為線上簽署系統產生，身分證影本由給付單位存檔保管，不列印於本副本。<br>' +
+      '· 代扣之所得稅與補充保費係依法預先繳納，給付單位將開立扣繳憑單供年度申報扣抵。</div>' +
+    '</div>';
+}
+function a4Mount(){
+  var h = document.getElementById('a4holder');
+  h.innerHTML = a4Html();
+  return document.getElementById('a4');
+}
+function pdfWorker(el){
+  return html2pdf().set({
+    margin: 0,
+    filename: '勞務報酬單_' + (DOC.doc_no||'') + '.pdf',
+    image: { type:'jpeg', quality:0.95 },
+    html2canvas: { scale:2, backgroundColor:'#ffffff' },
+    jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
+  }).from(el);
+}
+async function downloadPdf(){
+  try { await pdfWorker(a4Mount()).save(); }
+  catch(e){ alert('產生 PDF 失敗，請稍後再試。'); }
+}
+
+// 產 PDF → 交給 Function 寄出（收件人由資料庫決定，前端指定不了別人）
+async function mailCopy(){
+  var msg = document.getElementById('mailmsg');
+  try {
+    var b64 = '';
+    try {
+      var out = await pdfWorker(a4Mount()).outputPdf('datauristring');
+      b64 = String(out).split(',')[1] || '';
+    } catch(e){ /* 產不出 PDF 也要把通知寄出去 */ }
+    var r = await fetch(API, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ t: TOKEN, action:'mail', pdfBase64: b64 })
+    });
+    var d = await r.json();
+    if (msg) msg.innerHTML = (d && d.ok && d.mailed)
+      ? 'PDF 副本已寄出，請至信箱查收。'
+      : '副本寄送未成功，您可以按下方按鈕自行下載留存。';
+  } catch(e){
+    if (msg) msg.innerHTML = '副本寄送未成功，您可以按下方按鈕自行下載留存。';
+  }
+}
+</script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GC 後台管理系統 v1.5.11</title>
+<title>GC 後台管理系統 v1.6.0</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2306080e'/%3E%3Ctext x='16' y='23' font-family='Arial Black,sans-serif' font-weight='900' font-size='18' fill='%23ffffff' text-anchor='middle'%3EG%3Ctspan fill='%23BFC3C9'%3EC%3C/tspan%3E%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -781,6 +781,22 @@ select.cm-input {
   /* 可點擊元件關閉「連點兩下放大」與點擊延遲 */
   button, a, .btn, .nav-item, .nav-toggle, [onclick] { touch-action: manipulation; }
 }
+
+/* ─── 勞務報酬單 A4 版型（照紙本重刻，供螢幕預覽與 html2pdf 輸出）─── */
+.a4{background:#fff;width:794px;margin:0 auto;padding:40px 44px;font-size:11px;color:#000;line-height:1.5;}
+.a4 h2{text-align:center;font-size:17px;font-weight:700;letter-spacing:.12em;margin-bottom:9px;}
+.a4 .fd{text-align:center;font-size:11px;margin-bottom:11px;}
+.a4 table{border-collapse:collapse;width:100%;border:1.6px solid #000;}
+.a4 td{border:.8px solid #000;padding:5px 7px;vertical-align:top;font-size:10.5px;}
+.a4 .lbl{font-weight:700;text-align:center;vertical-align:middle;width:66px;}
+.a4 .on{font-weight:700;}
+.a4 .fill{color:#1d4ed8;font-weight:700;}
+.a4 .idbox{height:118px;background:repeating-linear-gradient(45deg,#fafafa,#fafafa 8px,#f2f2f2 8px,#f2f2f2 16px);text-align:center;color:#94a3b8;font-size:10px;padding-top:48px;}
+.a4 .idbox img{max-width:100%;max-height:108px;object-fit:contain;}
+.a4 .idcell{padding:0;text-align:center;height:118px;vertical-align:middle;}
+/* 出 PDF 時把互動用的陰影拿掉，避免糊邊 */
+.a4-stage{background:#e9ebef;padding:22px 0;overflow:auto;}
+.a4-stage .a4{box-shadow:0 6px 34px rgba(0,0,0,.14);}
 </style>
 <style>
 /* ─── 檢視者（role='1'）唯讀樣式 ────────────────────────────
@@ -887,7 +903,7 @@ body.gc-viewer #main-topbar::after {
 <div id="login-screen">
   <div class="login-card">
     <div class="login-logo"><img src="data:image/png;base64,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" alt="GC" style="height:48px;width:48px;border-radius:10px;display:block;"></div>
-    <div class="login-subtitle">後台管理系統 v1.5.11</div>
+    <div class="login-subtitle">後台管理系統 v1.6.0</div>
     <div class="form-group">
       <label>電子信箱</label>
       <input type="email" id="login-email" placeholder="請輸入 Email" autocomplete="email">
@@ -908,7 +924,7 @@ body.gc-viewer #main-topbar::after {
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
     </button>
     <div class="topbar-logo"><img src="data:image/png;base64,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" alt="GC"></div>
-    <div class="topbar-badge">後台 v1.5.11</div>
+    <div class="topbar-badge">後台 v1.6.0</div>
   </div>
   <div class="topbar-right">
     <div class="topbar-user" onclick="doLogout()">
@@ -8731,14 +8747,14 @@ function _crDocActions(c){
         out.push(B('btn-secondary','開立勞報單','',true,'建檔缺：' + rd.missing.join('、')));
         out.push(B('btn-primary','去補件','startEditBusinessPartner(\''+c.business_partner_id+'\')'));
       } else {
-        out.push(B('btn-primary','開立勞報單','_toast(\'開單精靈將於 P4 提供\')'));
+        out.push(B('btn-primary','開立勞報單','_lfOpen('+c.id+')'));
       }
     } else if (doc.status === 'issued') {
-      out.push(B('btn-primary','上傳簽回','_toast(\'簽署功能將於 P4 提供\')'));
-      out.push(B('btn-secondary','看勞報單','_docPreview('+doc.id+')'));
+      out.push(B('btn-primary', doc.sign_token ? '重寄簽署邀請' : '發送簽署邀請', '_lfOpenInvite('+doc.id+')'));
+      out.push(B('btn-secondary','看勞報單','_lfViewDoc('+doc.id+')'));
     } else if (doc.status === 'signed') {
       out.push(B('btn-primary','標記已付','_docMarkPaid('+doc.id+')'));
-      out.push(B('btn-secondary','看勞報單','_docPreview('+doc.id+')'));
+      out.push(B('btn-secondary','看勞報單','_lfViewDoc('+doc.id+')'));
     }
     if (!doc || doc.status !== 'signed') {
       out.push(B('btn-secondary','已付','',true,'勞報單須先收到簽回'));
@@ -9028,6 +9044,8 @@ async function _docSignedUrl(path){
 async function _docPreview(docId){
   var doc = (DB.payout_docs||[]).find(function(d){ return String(d.id) === String(docId); });
   if (!doc) return;
+  // 勞報單沒有「對方寄來的影本」，是我們自己產的版面 → 走 A4 渲染
+  if (doc.doc_type === '勞務報酬單') return _lfViewDoc(docId);
   if (!doc.doc_file_path) { _toast('此憑證尚未上傳影本'); return; }
   var u = await _docSignedUrl(doc.doc_file_path);
   if (u) _wizPreviewAttach(u, doc.doc_file_path.split('/').pop());
@@ -9189,9 +9207,14 @@ function _plainToHtml(s){
 // 一律不 throw，呼叫端只要看 ok 就好
 async function _gcSendMail(payload){
   try {
+    // 帶上登入者的 token —— 伺服器會驗，沒有就拒收。
+    // 這道關卡是必要的：沒有它，任何人知道端點網址就能用 support@ 的名義寄信。
+    var jwt = '';
+    try { var s = await sb.auth.getSession(); jwt = (s && s.data && s.data.session && s.data.session.access_token) || ''; } catch(e){}
+    if (!jwt) return { ok:false, error:'登入狀態已失效，請重新整理後台後再試' };
     var res = await fetch(GC_MAIL_ENDPOINT, {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','Authorization':'Bearer ' + jwt},
       body: JSON.stringify(payload)
     });
     var txt = await res.text();
@@ -9379,6 +9402,757 @@ async function _docNotify(channel){
   _toast(channel === 'copy' ? '已複製，並記錄一筆通知'
        : channel === 'email' ? ('已寄出至 ' + to)
        : '已記錄一筆通知');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// P4a：勞報單開單精靈（Step 1 選來源 → Step 2 帶入試算 → Step 3 預覽開立）
+// ══════════════════════════════════════════════════════════════════════
+var _lf = null;
+
+function _isoDate(d){
+  var x = (d instanceof Date) ? d : new Date(d);
+  if (isNaN(x.getTime())) return '';
+  return x.getFullYear() + '-' + String(x.getMonth()+1).padStart(2,'0') + '-' + String(x.getDate()).padStart(2,'0');
+}
+function _rocParts(d){
+  var x = d ? new Date(d) : null;
+  if (!x || isNaN(x.getTime())) return {y:'',m:'',d:''};
+  return { y: String(x.getFullYear()-1911), m: String(x.getMonth()+1).padStart(2,'0'), d: String(x.getDate()).padStart(2,'0') };
+}
+function _crDate(c){ return new Date(c.settled_time || c.created_time || Date.now()); }
+function _lfYm(c){ var d=_crDate(c); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+
+// 可開立的分潤：同一夥伴、未付款、且尚未被任何有效憑證引用
+function _lfCandidates(bpId){
+  return (DB.commission_records||[]).filter(function(c){
+    if (String(c.business_partner_id) !== String(bpId)) return false;
+    if ((c.partner_payment_status||'pending') === 'paid') return false;
+    if (_docForCr(c.id)) return false;
+    return Math.round(Number(c.partner_amount_untaxed||0)) > 0;
+  }).sort(function(a,b){ return _crDate(b) - _crDate(a); });
+}
+function _lfSelected(){ return _lf ? _lf.cands.filter(function(c){ return _lf.sel[c.id]; }) : []; }
+function _lfGross(){ return _lfSelected().reduce(function(a,c){ return a + Math.round(Number(c.partner_amount_untaxed||0)); }, 0); }
+function _lfCalc(){
+  var f = _lf.form;
+  return _laborTaxCalc(_lf.bp, _lfGross(), {
+    income_type: f.income_type, nationality_type: f.payee_nationality_type,
+    in_labor_union: f.payee_in_union, has_nhi: f.payee_has_nhi
+  });
+}
+
+// 勞務內容與期間自動組字；使用者動過就不再覆蓋
+function _lfAutoFill(force){
+  var f = _lf.form, sels = _lfSelected();
+  if (force || !f._descTouched) {
+    var nos = sels.map(function(c){ return _projOf(c.project_id); });
+    f.service_desc = 'GC 商務媒合服務費' + (nos.length ? '（專案 ' + nos.join('、') + '）' : '');
+  }
+  if (force || !f._periodTouched) {
+    var ds = sels.map(_crDate).filter(function(d){ return !isNaN(d.getTime()); }).sort(function(a,b){ return a-b; });
+    f.service_start = ds.length ? _isoDate(ds[0]) : '';
+    f.service_end   = ds.length ? _isoDate(ds[ds.length-1]) : '';
+  }
+}
+
+async function _lfOpen(crId){
+  var c = _find(DB.commission_records, crId); if (!c) return;
+  var bp = _find(DB.business_partners, c.business_partner_id);
+  if (!bp) { _toast('找不到商務夥伴資料','err'); return; }
+  var rd = _bpReadiness(bp);
+  if (!rd.ok) { _toast('建檔尚缺：' + rd.missing.join('、'), 'err'); return; }
+
+  await _ensureTaxRefData();
+  await _ensurePayoutDocs(true);
+  var cands = _lfCandidates(bp.id);
+  if (!cands.length) { _toast('這位夥伴目前沒有可開立的分潤紀錄','err'); return; }
+
+  var sel = {}; sel[crId] = true;   // 預設只勾進入的那一筆 —— 合併會改變扣繳，交給營運自己決定
+  _lf = {
+    bpId: bp.id, bp: bp, entryCr: crId, step: 1, cands: cands, sel: sel, imgs: {}, saving: false,
+    form: {
+      payee_name: bp.company_name || bp.owner_name || '',
+      payee_id_no: bp.tax_id || '',
+      payee_nationality_type: bp.nationality_type || '本國籍',
+      payee_address: bp.household_address || '',
+      payee_phone: bp.personal_phone || '',
+      payee_email: bp.contact_email || '',
+      income_type: bp.default_income_type || '9A',
+      profession_code: bp.default_profession_code || '',
+      payee_has_nhi: !(bp.has_nhi === false),
+      payee_in_union: !!bp.in_labor_union,
+      service_desc: '', service_start: '', service_end: '',
+      form_date: _isoDate(new Date()),
+      bank_name: bp.bank_name || '', bank_branch: bp.bank_branch || '',
+      bank_account_name: bp.bank_account_name || bp.company_name || '', bank_account_no: bp.bank_account_no || ''
+    }
+  };
+  _lfAutoFill(true);
+  _lfRender();
+  _lfLoadImgs();
+}
+
+// 身分證正反面轉短效網址，供 A4 版面嵌圖
+async function _lfLoadImgs(){
+  if (!_lf) return;
+  var bp = _lf.bp, want = [['front','id_front_path'],['back','id_back_path']];
+  for (var i=0;i<want.length;i++){
+    var k = want[i][0], p = bp[want[i][1]];
+    if (!p) continue;
+    try { var u = await _docSignedUrl(p); if (u && _lf) _lf.imgs[k] = u; } catch(e){}
+  }
+  if (_lf && _lf.step === 3) _lfRender();
+}
+
+// ── 精靈外殼 ──
+function _lfRender(){
+  if (!_lf) return;
+  var old = document.getElementById('lf-modal'); if (old) old.remove();
+  var steps = ['選擇給付來源','確認資料與試算','預覽並開立'];
+  var head = steps.map(function(t,i){
+    var n = i+1, on = _lf.step === n, done = _lf.step > n;
+    return '<div style="display:flex;align-items:center;gap:7px;' + (i?'margin-left:16px;':'') + '">' +
+      '<span style="width:21px;height:21px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;' +
+      (on ? 'background:var(--accent);color:#fff;' : done ? 'background:#dbeafe;color:var(--accent);' : 'background:#e9ebef;color:#9aa0aa;') + '">' + (done ? '✓' : n) + '</span>' +
+      '<span style="font-size:12.5px;' + (on ? 'font-weight:700;color:var(--text);' : 'color:var(--text-dim);') + '">' + t + '</span></div>';
+  }).join('<span style="color:#d5d8dd;margin-left:16px;">›</span>');
+
+  var body = _lf.step === 1 ? _lfStep1() : _lf.step === 2 ? _lfStep2() : _lfStep3();
+  var wide = _lf.step === 3;
+
+  var ov = document.createElement('div');
+  ov.id = 'lf-modal';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:320;display:flex;align-items:center;justify-content:center;padding:18px;';
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:14px;width:' + (wide?'900px':'760px') + ';max-width:97vw;max-height:94vh;display:flex;flex-direction:column;box-shadow:0 8px 44px rgba(0,0,0,0.2);">' +
+      '<div style="padding:15px 20px 12px;border-bottom:1px solid var(--border);">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">' +
+          '<div style="font-family:Syne,sans-serif;font-weight:700;font-size:14px;">開立勞務報酬單</div>' +
+          '<div style="font-size:12px;color:var(--text-dim);">' + _esc(_bpName(_lf.bpId)) + '</div></div>' +
+        '<div style="display:flex;align-items:center;margin-top:11px;">' + head + '</div>' +
+      '</div>' +
+      '<div id="lf-body" style="padding:18px 20px;overflow-y:auto;flex:1;' + (wide?'background:#e9ebef;padding:0;':'') + '">' + body + '</div>' +
+      '<div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;">' +
+        '<span id="lf-status" style="margin-right:auto;font-size:11.5px;color:var(--text-dim);"></span>' +
+        '<button class="btn btn-secondary lf-btn" onclick="_lfClose()">取消</button>' +
+        (_lf.step > 1 ? '<button class="btn btn-secondary lf-btn" onclick="_lfGo(' + (_lf.step-1) + ')">上一步</button>' : '') +
+        (_lf.step === 3 ? '<button class="btn btn-secondary lf-btn" onclick="_lfDownloadPdf()">下載 PDF</button>' : '') +
+        (_lf.step < 3
+          ? '<button class="btn btn-primary lf-btn" onclick="_lfGo(' + (_lf.step+1) + ')">下一步</button>'
+          : '<button class="btn btn-primary lf-btn" id="lf-issue-btn" onclick="_lfIssue()">確認開立</button>') +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+}
+function _lfClose(){ var m=document.getElementById('lf-modal'); if(m) m.remove(); _lf=null; }
+function _lfBusy(on, text){
+  var b = document.querySelectorAll('#lf-modal .lf-btn, #lf-view .lf-btn');
+  for (var i=0;i<b.length;i++) b[i].disabled = !!on;
+  var s = document.getElementById('lf-status'); if (s) s.textContent = text || '';
+}
+function _lfGo(n){
+  if (n === 2 && !_lfSelected().length) { _toast('請至少勾選一筆分潤','err'); return; }
+  if (_lf.step === 2) _lfSyncForm();
+  _lf.step = n;
+  if (n === 2) _lfAutoFill(false);
+  _lfRender();
+}
+
+// ── Step 1：選擇給付來源 ──
+function _lfStep1(){
+  var byYm = {}, order = [];
+  _lf.cands.forEach(function(c){
+    var k = _lfYm(c);
+    if (!byYm[k]) { byYm[k] = []; order.push(k); }
+    byYm[k].push(c);
+  });
+  var rows = order.map(function(ym){
+    var list = byYm[ym];
+    var allOn = list.every(function(c){ return _lf.sel[c.id]; });
+    return '<div style="margin-bottom:14px;">' +
+      '<div style="display:flex;align-items:center;gap:9px;margin-bottom:6px;">' +
+        '<span style="font-size:12px;font-weight:700;color:var(--text-mid);">' + _esc(ym.replace('-','年') + '月') + '</span>' +
+        '<span style="font-size:11px;color:var(--text-dim);">' + list.length + ' 筆</span>' +
+        '<button class="btn btn-secondary" style="padding:1px 8px;font-size:11px;margin-left:auto;" onclick="_lfSelMonth(\'' + ym + '\',' + (allOn?'false':'true') + ')">' + (allOn?'取消整月':'選整月') + '</button>' +
+      '</div>' +
+      list.map(function(c){
+        var on = !!_lf.sel[c.id];
+        var isEntry = String(c.id) === String(_lf.entryCr);
+        return '<label style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid ' + (on?'#bfdbfe':'var(--border)') + ';border-radius:9px;background:' + (on?'#eff6ff':'#fff') + ';margin-bottom:6px;cursor:pointer;">' +
+          '<input type="checkbox" ' + (on?'checked':'') + ' onchange="_lfToggle(' + c.id + ')" style="width:15px;height:15px;">' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-size:12.5px;font-weight:600;">' + _esc(_projOf(c.project_id)) + (isEntry ? '<span style="font-size:10.5px;font-weight:400;color:var(--accent);margin-left:6px;">從這筆進來</span>' : '') + '</div>' +
+            '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">結算 ' + _rocDate(c.settled_time) + '　' + _esc(c.customer_name || '') + '</div>' +
+          '</div>' +
+          '<div style="font-family:Syne,sans-serif;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums;">NT$ ' + _money(c.partner_amount_untaxed) + '</div>' +
+        '</label>';
+      }).join('') + '</div>';
+  }).join('');
+
+  var allOn = _lf.cands.every(function(c){ return _lf.sel[c.id]; });
+  return '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">' +
+      '<div style="font-size:12px;color:var(--text-dim);">共 ' + _lf.cands.length + ' 筆尚未開立的分潤，已勾 <b style="color:var(--text);">' + _lfSelected().length + '</b> 筆</div>' +
+      '<button class="btn btn-secondary" style="padding:2px 10px;font-size:11.5px;" onclick="_lfSelAll(' + (allOn?'false':'true') + ')">' + (allOn?'全部取消':'全選') + '</button>' +
+    '</div>' + rows + '<div id="lf-sum">' + _lfSummaryHtml() + '</div>';
+}
+function _lfToggle(id){ _lf.sel[id] = !_lf.sel[id]; _lfAutoFill(false); _lfRender(); }
+function _lfSelAll(on){ _lf.cands.forEach(function(c){ _lf.sel[c.id] = on; }); _lfAutoFill(false); _lfRender(); }
+function _lfSelMonth(ym, on){
+  _lf.cands.forEach(function(c){ if (_lfYm(c) === ym) _lf.sel[c.id] = on; });
+  _lfAutoFill(false); _lfRender();
+}
+
+// 合併 vs 分開的扣繳差異提示（只提示，不阻擋）
+function _lfThresholdHint(){
+  var sels = _lfSelected(); if (sels.length < 2) return '';
+  var f = _lf.form;
+  var opt = { income_type:f.income_type, nationality_type:f.payee_nationality_type, in_labor_union:f.payee_in_union, has_nhi:f.payee_has_nhi };
+  var merged = _laborTaxCalc(_lf.bp, _lfGross(), opt);
+  var sepDeduct = sels.reduce(function(a,c){
+    return a + _laborTaxCalc(_lf.bp, Math.round(Number(c.partner_amount_untaxed||0)), opt).deduct;
+  }, 0);
+  if (merged.deduct === sepDeduct) return '';
+  var diff = merged.deduct - sepDeduct;
+  return '<div style="margin-top:11px;padding:11px 13px;border-radius:9px;background:#fffbeb;border:1px solid #fde68a;font-size:11.5px;line-height:1.75;color:#92400e;">' +
+    '⚠️ 這 ' + sels.length + ' 筆<b>合併開一張</b>會代扣 <b>NT$ ' + _money(merged.deduct) + '</b>；<b>分開各開一張</b>合計代扣 <b>NT$ ' + _money(sepDeduct) + '</b>，相差 NT$ ' + _money(Math.abs(diff)) + '。' +
+    '<div style="margin-top:5px;color:#a16207;">扣繳門檻是按「每次給付」判定，所以合併與否會改變實付金額。系統只提示、不阻擋 —— 但請依實際勞務性質決定，<b>不要為了規避扣繳而拆單</b>（代扣只是預繳，年度申報一樣要合計）。</div></div>';
+}
+
+function _lfSummaryHtml(){
+  var calc = _lfCalc(), n = _lfSelected().length;
+  if (!n) return '<div style="padding:14px;text-align:center;color:var(--text-dim);font-size:12px;border:1px dashed var(--border);border-radius:10px;">尚未勾選任何分潤</div>';
+  var row = function(l, v, c, note){
+    return '<div style="display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;font-size:12.5px;' + (c?'color:'+c+';':'') + '">' +
+      '<span>' + l + (note ? '<span style="font-size:10.5px;color:var(--text-dim);margin-left:6px;">' + note + '</span>' : '') + '</span>' +
+      '<span style="font-variant-numeric:tabular-nums;font-weight:600;">' + v + '</span></div>';
+  };
+  return '<div style="border:1px solid var(--border);border-radius:11px;padding:14px 16px;background:#fcfcfd;">' +
+    '<div style="font-size:11.5px;font-weight:700;color:var(--text-mid);margin-bottom:7px;">試算（' + _esc(calc.incomeTypeLabel) + '・' + _esc(calc.nationality) + '）</div>' +
+    row('支領金額', 'NT$ ' + _money(calc.gross)) +
+    row('代扣所得稅', calc.whtIncome ? '− ' + _money(calc.whtIncome) : '0', calc.whtIncome ? '#b45309' : 'var(--text-dim)') +
+    row('二代健保', calc.whtNhi ? '− ' + _money(calc.whtNhi) : '0', calc.whtNhi ? '#b45309' : 'var(--text-dim)', calc.inUnion ? '已提供工會加保證明' : (!calc.hasNhi ? '未投保健保' : '')) +
+    '<div style="border-top:1px solid #e9ebef;margin:6px 0 3px;"></div>' +
+    row('<b>實際支付</b>', '<b style="font-size:14px;">NT$ ' + _money(calc.net) + '</b>') +
+    '<div style="margin-top:9px;padding-top:8px;border-top:1px dashed #e9ebef;font-size:10.5px;color:var(--text-dim);line-height:1.7;">' +
+      calc.rules.map(function(r){ return '· ' + _esc(r); }).join('<br>') + '</div>' +
+    '</div>' + _lfThresholdHint();
+}
+
+// ── Step 2：確認資料與試算 ──
+function _lfStep2(){
+  var f = _lf.form, bp = _lf.bp;
+  var diff = function(key, bpKey){
+    var a = String(f[key]==null?'':f[key]), b = String(bp[bpKey]==null?'':bp[bpKey]);
+    return (a !== b) ? '<span style="font-size:10.5px;color:#b45309;margin-left:6px;">已改，與建檔不同</span>' : '';
+  };
+  var fld = function(label, id, val, extra, hint){
+    return '<div class="cm-field" style="margin-bottom:11px;"><label>' + label + (hint||'') + '</label>' +
+      '<input class="cm-input" id="lf-' + id + '" value="' + _esc(val||'') + '"' + (extra||'') + '></div>';
+  };
+  var sel = function(label, id, val, opts, hint){
+    return '<div class="cm-field" style="margin-bottom:11px;"><label>' + label + (hint||'') + '</label>' +
+      '<select class="cm-input" id="lf-' + id + '" onchange="_lfFieldChanged()">' +
+      opts.map(function(o){ return '<option value="' + _esc(o.v) + '"' + (String(o.v)===String(val)?' selected':'') + '>' + _esc(o.l) + '</option>'; }).join('') +
+      '</select></div>';
+  };
+  var profOpts = _professionOptions(f.income_type === '9A' || f.income_type === '9B' ? f.income_type : null);
+  var needProf = (f.income_type === '9A' || f.income_type === '9B');
+
+  return '<div style="display:grid;grid-template-columns:1fr 290px;gap:20px;align-items:start;">' +
+    '<div>' +
+      '<div style="font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:9px;">所得人資料<span style="font-weight:400;color:var(--text-dim);margin-left:8px;">開立當下會凍結快照，之後改建檔不影響這張單</span></div>' +
+      fld('姓名','payee_name',f.payee_name,'',diff('payee_name','company_name')) +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+        fld('身分證字號','payee_id_no',f.payee_id_no,'',diff('payee_id_no','tax_id')) +
+        sel('國籍別','payee_nationality_type',f.payee_nationality_type,[
+          {v:'本國籍',l:'本國籍'},{v:'外國籍・在台滿183天',l:'外國籍・在台滿 183 天'},{v:'外國籍・在台未滿183天',l:'外國籍・在台未滿 183 天'}],
+          diff('payee_nationality_type','nationality_type')) +
+      '</div>' +
+      fld('戶籍地址','payee_address',f.payee_address,'',diff('payee_address','household_address')) +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+        fld('聯絡電話','payee_phone',f.payee_phone,'',diff('payee_phone','personal_phone')) +
+        fld('Email','payee_email',f.payee_email,'',diff('payee_email','contact_email')) +
+      '</div>' +
+
+      '<div style="font-size:12px;font-weight:700;color:var(--text-mid);margin:16px 0 9px;">所得類別</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+        sel('申報類別','income_type',f.income_type,[
+          {v:'9A',l:'9A 執行業務所得'},{v:'9B',l:'9B 稿費'},{v:'50',l:'50 薪資所得'},{v:'92',l:'92 其他所得'}],
+          diff('income_type','default_income_type')) +
+        (needProf
+          ? sel('業別代號','profession_code',f.profession_code, [{v:'',l:'（不填）'}].concat(profOpts), diff('profession_code','default_profession_code'))
+          : '<div class="cm-field" style="margin-bottom:11px;"><label>業別代號</label><input class="cm-input" value="此申報類別不需要業別代號" disabled style="background:#f3f4f6;color:var(--text-dim);"></div>') +
+      '</div>' +
+      '<div style="display:flex;gap:20px;margin:2px 0 6px;font-size:12.5px;">' +
+        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="lf-payee_has_nhi"' + (f.payee_has_nhi?' checked':'') + ' onchange="_lfFieldChanged()"> 有投保健保</label>' +
+        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="lf-payee_in_union"' + (f.payee_in_union?' checked':'') + ' onchange="_lfFieldChanged()"> 已加入職業工會（免扣二代健保）</label>' +
+      '</div>' +
+
+      '<div style="font-size:12px;font-weight:700;color:var(--text-mid);margin:16px 0 9px;">勞務內容</div>' +
+      '<div class="cm-field" style="margin-bottom:11px;"><label>勞務內容<span class="cm-key">自動組字，可改</span></label>' +
+        '<textarea class="cm-input" id="lf-service_desc" rows="2" style="height:auto;padding:9px 12px;line-height:1.6;" oninput="_lf.form._descTouched=true">' + _esc(f.service_desc) + '</textarea></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">' +
+        fld('期間起','service_start',f.service_start,' type="date" oninput="_lf.form._periodTouched=true"') +
+        fld('期間迄','service_end',f.service_end,' type="date" oninput="_lf.form._periodTouched=true"') +
+        fld('填表日期','form_date',f.form_date,' type="date"') +
+      '</div>' +
+
+      '<div style="font-size:12px;font-weight:700;color:var(--text-mid);margin:16px 0 9px;">匯款資訊</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+        fld('銀行名稱','bank_name',f.bank_name,'',diff('bank_name','bank_name')) +
+        fld('銀行分行','bank_branch',f.bank_branch,'',diff('bank_branch','bank_branch')) +
+        fld('所得人戶名','bank_account_name',f.bank_account_name,'',diff('bank_account_name','bank_account_name')) +
+        fld('所得人帳號','bank_account_no',f.bank_account_no,'',diff('bank_account_no','bank_account_no')) +
+      '</div>' +
+    '</div>' +
+    '<div style="position:sticky;top:0;"><div id="lf-sum">' + _lfSummaryHtml() + '</div>' +
+      '<div style="margin-top:10px;font-size:11px;color:var(--text-dim);line-height:1.7;">改了上面的欄位<b>只影響這張單</b>，不會回寫商務夥伴建檔。若是長期性的更正，請另外去建檔改一次。</div></div>' +
+  '</div>';
+}
+
+// 從 DOM 讀回可編輯欄位
+function _lfSyncForm(){
+  if (!_lf) return;
+  var keys = ['payee_name','payee_id_no','payee_nationality_type','payee_address','payee_phone','payee_email',
+              'income_type','profession_code','service_desc','service_start','service_end','form_date',
+              'bank_name','bank_branch','bank_account_name','bank_account_no'];
+  keys.forEach(function(k){
+    var el = document.getElementById('lf-' + k);
+    if (el) _lf.form[k] = el.value;
+  });
+  var n = document.getElementById('lf-payee_has_nhi'); if (n) _lf.form.payee_has_nhi = n.checked;
+  var u = document.getElementById('lf-payee_in_union'); if (u) _lf.form.payee_in_union = u.checked;
+}
+// 影響試算的欄位變動 → 重畫（申報類別會連動業別代號選項，所以整步重繪）
+function _lfFieldChanged(){ _lfSyncForm(); _lfRender(); }
+
+// ── Step 3：A4 預覽 ──
+function _lfStep3(){
+  _lfSyncForm();
+  return '<div class="a4-stage" id="lf-stage">' + _lfA4Html(_lf.form, _lfCalc(), _lf.imgs, { docNo:'（存檔後產生）' }) + '</div>';
+}
+
+// A4 版型 —— 吃一個 form-like 物件，精靈與已開立的憑證共用
+function _lfA4Html(f, calc, imgs, meta){
+  meta = meta || {}; imgs = imgs || {};
+  var cfg = calc.cfg, roc = _rocYear(f.form_date);
+  var fd = _rocParts(f.form_date), ss = _rocParts(f.service_start), se = _rocParts(f.service_end);
+  var short = _isForeignShortStay(f.payee_nationality_type);
+  var ck = function(on){ return on ? '☑' : '☐'; };
+  var natCk = function(v){ return ck(f.payee_nationality_type === v); };
+  // 只有國籍別對應的那一區可以勾
+  var domCk = function(t){ return ck(!short && f.income_type === t); };
+  var forCk = function(t){ return ck(short && f.income_type === t); };
+  var hl = function(on){ return on ? ' class="on"' : ''; };
+  var money = function(n){ return '<span class="fill">' + _money(n) + '</span>'; };
+  var img = function(u, alt){
+    return u ? '<img src="' + _esc(u) + '" alt="' + alt + '">'
+             : '<div style="color:#94a3b8;font-size:10px;padding-top:48px;">建檔未上傳' + alt + '</div>';
+  };
+
+  return '<div class="a4" id="lf-a4">' +
+  '<h2>' + _esc(GC_COMPANY_NAME) + ' 勞務報酬單</h2>' +
+  '<div class="fd">填表日期：<span class="fill">' + fd.y + '</span> 年 <span class="fill">' + fd.m + '</span> 月 <span class="fill">' + fd.d + '</span> 日' +
+    (meta.docNo ? '　　單號：<span class="fill">' + _esc(meta.docNo) + '</span>' : '') + '</div>' +
+  '<table>' +
+    '<tr><td class="lbl" rowspan="3">所得人<br>資料</td>' +
+      '<td rowspan="3" style="width:150px;">' +
+        '<div' + hl(f.payee_nationality_type==='本國籍') + '>' + natCk('本國籍') + ' 本國籍</div>' +
+        '<div style="margin-top:7px;"' + hl(f.payee_nationality_type==='外國籍・在台滿183天') + '>' + natCk('外國籍・在台滿183天') + ' 外國籍在台滿 183 天</div>' +
+        '<div style="margin-top:7px;"' + hl(short) + '>' + natCk('外國籍・在台未滿183天') + ' 外國籍在台未滿 183 天</div></td>' +
+      '<td style="width:210px;">姓名：<span class="fill">' + _esc(f.payee_name) + '</span></td>' +
+      '<td>身分證字號：<span class="fill">' + _esc(f.payee_id_no) + '</span><br><span style="font-size:9.5px;">（居留證/護照號碼）</span></td></tr>' +
+    '<tr><td colspan="2">戶籍地址：<span class="fill">' + _esc(f.payee_address) + '</span></td></tr>' +
+    '<tr><td colspan="2">連絡電話：<span class="fill">' + _esc(f.payee_phone) + '</span></td></tr>' +
+  '</table>' +
+  '<table style="border-top:none;"><tr>' +
+    '<td style="width:52%;">勞務內容：<span class="fill">' + _esc(f.service_desc) + '</span></td>' +
+    '<td>期間：自 <span class="fill">' + ss.y + '</span> 年 <span class="fill">' + ss.m + '</span> 月 <span class="fill">' + ss.d + '</span> 日 ' +
+      '至 <span class="fill">' + se.y + '</span> 年 <span class="fill">' + se.m + '</span> 月 <span class="fill">' + se.d + '</span> 日</td></tr></table>' +
+
+  '<table style="border-top:none;">' +
+    '<tr><td class="lbl" rowspan="5">所得類別<br><span style="font-weight:400;font-size:9.5px;">(本國籍、在台滿 183 天)</span></td>' +
+      '<td style="text-align:center;font-weight:700;width:210px;">類別</td>' +
+      '<td style="text-align:center;font-weight:700;">注意事項：單次給付(同日、同筆費用)</td></tr>' +
+    '<tr' + (!short && f.income_type==='50' ? ' style="background:#eff6ff;"' : '') + '><td' + hl(!short&&f.income_type==='50') + '>' + domCk('50') + ' 50 薪資所得<div style="font-size:9.5px;margin-top:3px;font-weight:400;">兼職人員薪資。</div></td>' +
+      '<td style="font-size:9.5px;line-height:1.65;">全數計入所得，但可扣除薪資特別扣除額(<span class="fill">' + roc + '</span> 年為 <span class="fill">' + (cfg.salary_special_deduction/10000) + '</span> 萬元)。<br>' +
+        '達 ' + _money(cfg.salary_wht_threshold) + ' 元，須代扣所得稅 ' + cfg.salary_wht_rate + '%。<br>' +
+        '金額達基本工資(<span class="fill">' + roc + '</span> 年為 <span class="fill">' + _money(cfg.min_wage) + '</span> 元)，須負擔 ' + cfg.nhi_rate + '%補充保費。<br>' +
+        '提供職業工會的健保加保證明，不須扣 ' + cfg.nhi_rate + '%補充保費。</td></tr>' +
+    '<tr' + (!short && f.income_type==='9A' ? ' style="background:#eff6ff;"' : '') + '><td' + hl(!short&&f.income_type==='9A') + '>' + domCk('9A') + ' 9A 執行業務所得<div style="font-size:9.5px;margin-top:3px;font-weight:400;">以專業能力取得之酬勞。包含律師、工程師、節目製作人等。</div></td>' +
+      '<td style="font-size:9.5px;line-height:1.65;">無免稅額，扣除所屬類別費用率後計入個人所得。<br>' +
+        '達 ' + _money(cfg.prof_wht_threshold) + ' 元，需代扣所得稅 ' + cfg.prof_wht_rate + '%。<br>' +
+        '達 ' + _money(cfg.nhi_threshold_general) + ' 元，需扣繳 ' + cfg.nhi_rate + '%補充保費。<br>' +
+        '提供職業工會的健保加保證明，不須扣 ' + cfg.nhi_rate + '%補充保費。</td></tr>' +
+    '<tr' + (!short && f.income_type==='9B' ? ' style="background:#eff6ff;"' : '') + '><td' + hl(!short&&f.income_type==='9B') + '>' + domCk('9B') + ' 9B 稿費<div style="font-size:9.5px;margin-top:3px;font-weight:400;">包含顧問費、演講費、出席費、稿費。</div></td>' +
+      '<td style="font-size:9.5px;line-height:1.65;">可先扣 18 萬免稅額，再扣除 30%費用後計入個人所得。<br>' +
+        '達 ' + _money(cfg.prof_wht_threshold) + ' 元，需代扣所得稅 ' + cfg.prof_wht_rate + '%。<br>' +
+        '達 ' + _money(cfg.nhi_threshold_general) + ' 元，需扣繳 ' + cfg.nhi_rate + '%補充保費。<br>' +
+        '提供職業工會的健保加保證明，不須扣 ' + cfg.nhi_rate + '%補充保費。</td></tr>' +
+    '<tr' + (!short && f.income_type==='92' ? ' style="background:#eff6ff;"' : '') + '><td' + hl(!short&&f.income_type==='92') + '>' + domCk('92') + ' 92 其他所得</td>' +
+      '<td style="font-size:9.5px;">不須扣繳、不須 ' + cfg.nhi_rate + '%補充保費。</td></tr>' +
+  '</table>' +
+
+  '<table style="border-top:none;">' +
+    '<tr><td class="lbl" rowspan="5">所得類別<br><span style="font-weight:400;font-size:9.5px;">(在台未滿 183 天)</span></td>' +
+      '<td style="text-align:center;font-weight:700;width:210px;">類別</td>' +
+      '<td style="text-align:center;font-weight:700;">注意事項：須於 10 日內申報。</td></tr>' +
+    '<tr' + (short && f.income_type==='50' ? ' style="background:#eff6ff;"' : '') + '><td' + hl(short&&f.income_type==='50') + '>' + forCk('50') + ' 50 薪資所得</td>' +
+      '<td style="font-size:9.5px;"><span class="fill">' + roc + '</span> 年薪資 <span class="fill">' + _money(cfg.foreign_salary_tier) + '</span> 元以下扣繳 ' + cfg.foreign_salary_rate_low + '%、逾 <span class="fill">' + _money(cfg.foreign_salary_tier) + '</span> 元扣繳 ' + cfg.foreign_salary_rate_high + '%。</td></tr>' +
+    '<tr' + (short && f.income_type==='9A' ? ' style="background:#eff6ff;"' : '') + '><td' + hl(short&&f.income_type==='9A') + '>' + forCk('9A') + ' 9A 執行業務所得</td>' +
+      '<td style="font-size:9.5px;">均須扣繳 ' + cfg.foreign_flat_rate + '%。</td></tr>' +
+    '<tr' + (short && f.income_type==='9B' ? ' style="background:#eff6ff;"' : '') + '><td' + hl(short&&f.income_type==='9B') + '>' + forCk('9B') + ' 9B 稿費</td>' +
+      '<td style="font-size:9.5px;">領款金額不超過 ' + _money(cfg.foreign_9b_threshold) + ' 元不須扣繳，逾 ' + _money(cfg.foreign_9b_threshold) + ' 元須扣繳 ' + cfg.foreign_flat_rate + '%。</td></tr>' +
+    '<tr' + (short && f.income_type==='92' ? ' style="background:#eff6ff;"' : '') + '><td' + hl(short&&f.income_type==='92') + '>' + forCk('92') + ' 92 其他所得</td>' +
+      '<td style="font-size:9.5px;">均須扣繳 ' + cfg.foreign_flat_rate + '%。</td></tr>' +
+  '</table>' +
+
+  '<table style="border-top:none;"><tr>' +
+    '<td class="lbl" style="vertical-align:top;padding-top:9px;">領款<br>金額</td>' +
+    '<td style="width:55%;">' +
+      '<div style="line-height:2;">支領金額：新台幣 ' + money(calc.gross) + ' 元<br>' +
+        '代扣所得稅：新台幣 ' + money(calc.whtIncome) + ' 元<br>' +
+        '二代健保：新台幣 ' + money(calc.whtNhi) + ' 元' +
+        (calc.inUnion ? '<span style="font-size:9px;color:#16a34a;margin-left:6px;">（已提供工會加保證明）</span>' : '') + '<br>' +
+        '支領淨額：新台幣 <span class="fill" style="font-size:12px;">' + _money(calc.net) + '</span> 元</div>' +
+      '<div style="margin-top:14px;line-height:2;">銀行名稱：<span class="fill">' + _esc(f.bank_name) + '</span><br>' +
+        '銀行分行：<span class="fill">' + _esc(f.bank_branch) + '</span><br>' +
+        '所得人帳號：<span class="fill">' + _esc(f.bank_account_no) + '</span><br>' +
+        '所得人戶名：<span class="fill">' + _esc(f.bank_account_name) + '</span><br>付款方式：<b>■ 匯款</b></div></td>' +
+    '<td style="padding:0;">' +
+      '<div style="border-bottom:.8px solid #000;padding:6px 8px;height:112px;position:relative;">領款人：' +
+        (imgs.sign
+          ? '<img src="' + _esc(imgs.sign) + '" style="position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);max-height:74px;max-width:88%;">'
+          : '<div style="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);color:#94a3b8;font-size:9.5px;border:1px dashed #cbd5e1;border-radius:5px;padding:11px 20px;background:#fafbfc;">此時空白<br>對方簽署後填入</div>') +
+        '<div style="position:absolute;right:8px;bottom:6px;font-size:9.5px;">（簽名或蓋章）</div></div>' +
+      '<div style="padding:6px 8px;height:82px;">會計/經辦人：<span class="fill">' + _esc(meta.accountant || (currentUser ? currentUser.full_name : '')) + '</span></div></td>' +
+  '</tr></table>' +
+
+  '<table style="border-top:none;">' +
+    '<tr><td colspan="2" style="text-align:center;font-weight:700;">身分證(居留證/護照)影本黏貼處</td></tr>' +
+    '<tr><td style="text-align:center;font-weight:700;width:50%;">正面</td><td style="text-align:center;font-weight:700;">反面</td></tr>' +
+    '<tr><td class="idcell">' + img(imgs.front,'正面') + '</td><td class="idcell">' + img(imgs.back,'反面') + '</td></tr>' +
+  '</table></div>';
+}
+
+async function _lfDownloadPdf(){
+  var el = document.getElementById('lf-a4');
+  if (!el) { _toast('找不到版面','err'); return; }
+  if (typeof html2pdf === 'undefined') { _toast('PDF 元件尚未載入，請重新整理','err'); return; }
+  _lfBusy(true, '正在產生 PDF…');
+  try {
+    await html2pdf().set({
+      margin: 0,
+      filename: '勞務報酬單_' + (_lf ? _lf.form.payee_name : '') + '_' + _isoDate(new Date()) + '.pdf',
+      image: { type:'jpeg', quality:0.96 },
+      html2canvas: { scale:2, useCORS:true, backgroundColor:'#ffffff' },
+      jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
+    }).from(el).save();
+  } catch(e){ _toast('產生 PDF 失敗：' + ((e&&e.message)||e), 'err'); }
+  _lfBusy(false, '');
+}
+
+// 單號 LF-YYYYMM-NNN（含已作廢的一起算，避免號碼重複）
+async function _lfNextDocNo(d){
+  var pre = 'LF-' + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + '-';
+  var r = await sb.from('partner_payout_docs').select('doc_no')
+            .eq('doc_type','勞務報酬單').like('doc_no', pre + '%')
+            .order('doc_no', {ascending:false}).limit(1);
+  var n = 1;
+  if (r && r.data && r.data.length){
+    var m = String(r.data[0].doc_no||'').match(/(\d+)$/);
+    if (m) n = parseInt(m[1],10) + 1;
+  }
+  return pre + String(n).padStart(3,'0');
+}
+
+async function _lfIssue(){
+  if (!_lf || _lf.saving) return;
+  _lfSyncForm();
+  var f = _lf.form, sels = _lfSelected();
+  if (!sels.length) { _toast('請至少勾選一筆分潤','err'); return; }
+  var miss = [];
+  if (!f.payee_name) miss.push('姓名');
+  if (!f.payee_id_no) miss.push('身分證字號');
+  if (!f.payee_address) miss.push('戶籍地址');
+  if (!f.service_desc) miss.push('勞務內容');
+  if (!f.service_start || !f.service_end) miss.push('勞務期間');
+  if (!f.bank_account_no) miss.push('所得人帳號');
+  if (miss.length) { _toast('請先補上：' + miss.join('、'), 'err'); _lf.step = 2; _lfRender(); return; }
+
+  _lf.saving = true; _lfBusy(true, '正在開立…');
+  var calc = _lfCalc();
+  var now = new Date().toISOString();
+  var by = currentUser ? currentUser.full_name : 'admin';
+  var fd = new Date(f.form_date || Date.now());
+
+  try {
+    var docNo = await _lfNextDocNo(fd);
+    var payload = {
+      doc_no: docNo,
+      payee_type: 'business_partner', payee_id: _lf.bpId, business_partner_id: _lf.bpId,
+      doc_type: '勞務報酬單', direction: 'outbound', status: 'issued',
+      amount_untaxed: calc.gross, vat: 0,
+      wht_income: calc.whtIncome, wht_nhi: calc.whtNhi, amount_payable: calc.net,
+      income_type: f.income_type, profession_code: f.profession_code || null,
+      payee_name: f.payee_name, payee_id_no: f.payee_id_no,
+      payee_nationality_type: f.payee_nationality_type, payee_address: f.payee_address,
+      payee_phone: f.payee_phone || null, payee_email: f.payee_email || null,
+      payee_has_nhi: !!f.payee_has_nhi, payee_in_union: !!f.payee_in_union,
+      service_desc: f.service_desc, service_start: f.service_start || null, service_end: f.service_end || null,
+      form_date: f.form_date || null, payer_company: GC_COMPANY_NAME,
+      bank_name: f.bank_name || null, bank_branch: f.bank_branch || null,
+      bank_account_name: f.bank_account_name || null, bank_account_no: f.bank_account_no || null,
+      period_year: fd.getFullYear(), period_month: fd.getMonth()+1,
+      issued_at: now, created_time: now, updated_time: now, updated_by: by
+    };
+    var ins = await sb.from('partner_payout_docs').insert([payload]).select().single();
+    if (ins.error) {
+      // 極少數情況：同時開兩張撞號 → 重取一次號再試
+      if (String(ins.error.message||'').indexOf('uq_ppd_docno') >= 0) {
+        payload.doc_no = await _lfNextDocNo(fd);
+        ins = await sb.from('partner_payout_docs').insert([payload]).select().single();
+      }
+      if (ins.error) throw new Error(ins.error.message);
+    }
+    var doc = ins.data;
+    var lines = sels.map(function(c){
+      return { payout_doc_id: doc.id, commission_record_id: c.id, project_id: c.project_id,
+               amount_untaxed: Math.round(Number(c.partner_amount_untaxed||0)) };
+    });
+    var lr = await sb.from('partner_payout_doc_lines').insert(lines);
+    if (lr.error) throw new Error('憑證已建立但明細寫入失敗：' + lr.error.message);
+
+    _lfClose();
+    await _ensurePayoutDocs(true);
+    renderCommissionRecords();
+    _toast('已開立 ' + docNo + '（共 ' + sels.length + ' 筆分潤）');
+  } catch(e){
+    _toast('開立失敗：' + ((e&&e.message)||e), 'err');
+    if (_lf) { _lf.saving = false; _lfBusy(false, ''); }
+  }
+}
+
+// 已開立的勞報單 → 用同一套 A4 版型重現
+async function _lfViewDoc(docId){
+  var doc = (DB.payout_docs||[]).find(function(d){ return String(d.id) === String(docId); });
+  if (!doc) return;
+  var calc = _laborTaxCalc({}, doc.amount_untaxed, {
+    income_type: doc.income_type, nationality_type: doc.payee_nationality_type,
+    in_labor_union: doc.payee_in_union, has_nhi: doc.payee_has_nhi, year: doc.period_year ? doc.period_year - 1911 : null
+  });
+  // 版面用當初凍結的金額，不用重算結果，避免日後參數調整改變已開立的單
+  calc.gross = Math.round(Number(doc.amount_untaxed||0));
+  calc.whtIncome = Math.round(Number(doc.wht_income||0));
+  calc.whtNhi = Math.round(Number(doc.wht_nhi||0));
+  calc.net = Math.round(Number(doc.amount_payable||0));
+  calc.inUnion = !!doc.payee_in_union;
+
+  var imgs = {};
+  var bp = _find(DB.business_partners, doc.business_partner_id);
+  if (bp) {
+    if (bp.id_front_path) imgs.front = await _docSignedUrl(bp.id_front_path);
+    if (bp.id_back_path)  imgs.back  = await _docSignedUrl(bp.id_back_path);
+  }
+  // 線上簽署的簽名直接存在欄位裡（data URL），不走 storage
+  if (doc.signature_data) imgs.sign = doc.signature_data;
+  else if (doc.signature_path) imgs.sign = await _docSignedUrl(doc.signature_path);
+
+  _lf = { form: doc, imgs: imgs };   // 讓下載 PDF 的檔名拿得到 payee_name
+  var old = document.getElementById('lf-view'); if (old) old.remove();
+  var ov = document.createElement('div');
+  ov.id = 'lf-view';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:320;display:flex;align-items:center;justify-content:center;padding:18px;';
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:14px;width:900px;max-width:97vw;max-height:94vh;display:flex;flex-direction:column;box-shadow:0 8px 44px rgba(0,0,0,0.2);">' +
+      '<div style="padding:14px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;">' +
+        '<div style="font-family:Syne,sans-serif;font-weight:700;font-size:14px;">' + _esc(doc.doc_no||'勞務報酬單') + '</div>' +
+        '<div style="font-size:12px;color:var(--text-dim);">' + _esc(doc.payee_name||'') + '　' + _esc(_statusLabelLf(doc.status)) + '</div></div>' +
+      '<div class="a4-stage" style="overflow-y:auto;flex:1;">' + _lfA4Html(doc, calc, imgs, { docNo:doc.doc_no, accountant:doc.updated_by }) + '</div>' +
+      '<div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">' +
+        '<button class="btn btn-secondary lf-btn" onclick="document.getElementById(\'lf-view\').remove();_lf=null;">關閉</button>' +
+        '<button class="btn btn-primary lf-btn" onclick="_lfDownloadPdf()">下載 PDF</button></div>' +
+    '</div>';
+  document.body.appendChild(ov);
+}
+function _statusLabelLf(s){
+  return { pending_doc:'待開立', issued:'已開立', signed:'已簽回', paid:'已付款', doc_ready:'已登錄' }[s] || (s||'');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// P4b：線上簽署邀請（產生連結 → 寄信 → 對方在 sign.html 簽 → 自動回寫 signed）
+// ══════════════════════════════════════════════════════════════════════
+var LF_SIGN_DAYS = 7;
+var _lfInv = null;
+
+function _lfSignUrl(token){ return location.origin + '/sign.html?t=' + encodeURIComponent(token); }
+function _lfNewToken(){
+  var uid = function(){
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID().replace(/-/g,'');
+    var s=''; for (var i=0;i<32;i++) s += Math.floor(Math.random()*16).toString(16); return s;
+  };
+  return uid() + uid();   // 64 字元，猜不到
+}
+function _lfLinkState(doc){
+  if (doc.signed_at) return { key:'signed', label:'已簽回', color:'green' };
+  if (!doc.sign_token) return { key:'none', label:'尚未發送', color:'amber' };
+  var left = doc.sign_expires_at ? Math.ceil((new Date(doc.sign_expires_at) - new Date()) / 86400000) : null;
+  if (left != null && left <= 0) return { key:'expired', label:'連結已過期', color:'red' };
+  return { key:'valid', label:'連結有效，剩 ' + left + ' 天', color:'blue', left:left };
+}
+
+async function _lfOpenInvite(docId){
+  var doc = (DB.payout_docs||[]).find(function(d){ return String(d.id) === String(docId); });
+  if (!doc) return;
+  if (doc.signed_at) { _toast('這張已經簽回了，不用再發'); return; }
+  var bp = _find(DB.business_partners, doc.business_partner_id) || {};
+  _lfInv = { doc: doc, defaultEmail: doc.payee_email || bp.contact_email || '' };
+  _lfInvRender();
+}
+
+function _lfInvRender(){
+  var d = _lfInv.doc, st = _lfLinkState(d);
+  var url = d.sign_token ? _lfSignUrl(d.sign_token) : '';
+  var msg = _lfInviteText(d, url);
+
+  var old = document.getElementById('lf-inv'); if (old) old.remove();
+  var ov = document.createElement('div');
+  ov.id = 'lf-inv';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.42);z-index:330;display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:14px;width:620px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.18);">' +
+      '<div style="padding:16px 20px 13px;border-bottom:1px solid var(--border);">' +
+        '<div style="font-family:Syne,sans-serif;font-weight:700;font-size:14px;">' + (st.key==='none' ? '發送簽署邀請' : '重新發送簽署邀請') + '</div>' +
+        '<div style="font-size:12px;color:var(--text-dim);margin-top:2px;">' + _esc(d.doc_no||'') + '　' + _esc(d.payee_name||'') + '　' + _badge(st.label, st.color) + '</div>' +
+      '</div>' +
+      '<div style="padding:18px 20px;overflow-y:auto;flex:1;">' +
+        (st.key === 'expired'
+          ? '<div style="margin-bottom:14px;padding:11px 13px;border-radius:9px;background:#fef2f2;border:1px solid #fecaca;font-size:12px;color:#b91c1c;line-height:1.7;">舊連結已過期，按下發送時會自動產生一組新的，<b>舊連結會立刻失效</b>。</div>'
+          : '') +
+        '<div class="cm-field" style="margin-bottom:14px;"><label>收件人<span class="cm-key">← 開單時的所得人 Email</span></label>' +
+          '<input class="cm-input" id="inv-to" value="' + _esc(_lfInv.defaultEmail) + '" placeholder="' + (_lfInv.defaultEmail?'':'建檔沒有 Email，請手動填') + '" style="background:#eff6ff;border-color:#bfdbfe;"></div>' +
+        (url
+          ? '<div class="cm-field" style="margin-bottom:14px;"><label>簽署連結<span class="cm-key">' + (st.left!=null ? '有效至 ' + _rocDate(d.sign_expires_at) : '') + '</span></label>' +
+            '<input class="cm-input" value="' + _esc(url) + '" readonly onclick="this.select()" style="font-size:11.5px;color:var(--text-mid);"></div>'
+          : '<div style="margin-bottom:14px;padding:11px 13px;border-radius:9px;background:#f7f9fc;font-size:12px;color:var(--text-dim);line-height:1.7;">尚未產生連結。按下方按鈕時會產生一組有效 ' + LF_SIGN_DAYS + ' 天的專屬連結。</div>') +
+        '<div class="cm-field"><label>信件內容<span class="cm-key">自動組字，可改</span></label>' +
+          '<textarea class="cm-input" id="inv-msg" rows="11" style="height:auto;padding:10px 12px;line-height:1.75;font-size:12.5px;">' + _esc(msg) + '</textarea>' +
+          '<div style="font-size:11px;color:var(--text-dim);margin-top:5px;">送出時會用實際連結取代文中的 {連結}</div></div>' +
+        '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #f0f1f4;font-size:11.5px;color:var(--text-dim);line-height:1.8;">' +
+          '對方在簽署頁只看得到<b>金額、勞務內容與帳號末四碼</b> —— 身分證字號、戶籍地址、完整帳號都不會出現在公開頁面。<br>' +
+          '簽完系統會自動把狀態轉為「已簽回」，並寄一份 PDF 副本給對方，<b>不需要你手動更新</b>。' +
+          (Number(d.resend_count||0) ? '<br>已重發 ' + d.resend_count + ' 次。' : '') +
+        '</div>' +
+      '</div>' +
+      '<div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
+        '<span id="inv-status" style="margin-right:auto;font-size:11.5px;color:var(--text-dim);"></span>' +
+        '<button class="btn btn-secondary inv-btn" onclick="document.getElementById(\'lf-inv\').remove()">取消</button>' +
+        (st.key === 'valid' ? '<button class="btn btn-secondary inv-btn" onclick="_lfInvSend(\'regen\')">重新產生連結</button>' : '') +
+        '<button class="btn btn-secondary inv-btn" onclick="_lfInvSend(\'copy\')">📋 複製連結</button>' +
+        '<button class="btn btn-primary inv-btn" onclick="_lfInvSend(\'email\')">📧 發送邀請</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+}
+
+function _lfInviteText(d, url){
+  return (d.payee_name||'') + ' 您好：\n\n' +
+    '感謝您與 ' + GC_COMPANY_NAME + ' 的合作。\n' +
+    '本次勞務報酬單（單號 ' + (d.doc_no||'') + '）已開立完成，請點以下連結線上簽署：\n\n' +
+    (url || '{連結}') + '\n\n' +
+    '支領金額：NT$ ' + _money(d.amount_untaxed) + '\n' +
+    (Number(d.wht_income) ? '代扣所得稅：NT$ ' + _money(d.wht_income) + '\n' : '') +
+    (Number(d.wht_nhi) ? '二代健保補充保費：NT$ ' + _money(d.wht_nhi) + '\n' : '') +
+    '實際支付金額：NT$ ' + _money(d.amount_payable) + '\n\n' +
+    '連結有效期限 ' + LF_SIGN_DAYS + ' 天，逾期可來信索取新連結。\n' +
+    '收到您的簽署後我們即會安排匯款。\n\n' +
+    GC_COMPANY_NAME + ' 敬上';
+}
+
+function _lfInvBusy(on, text){
+  var b = document.querySelectorAll('#lf-inv .inv-btn');
+  for (var i=0;i<b.length;i++) b[i].disabled = !!on;
+  var s = document.getElementById('inv-status'); if (s){ s.style.color='var(--text-dim)'; s.textContent = text||''; }
+}
+
+// 需要時才產新 token：連結還有效就沿用，避免對方手上那份突然失效
+async function _lfEnsureToken(force){
+  var d = _lfInv.doc, st = _lfLinkState(d);
+  if (!force && st.key === 'valid') return d.sign_token;
+  var hadToken = !!d.sign_token;              // 第一次發不算重發
+  var tok = _lfNewToken();
+  var now = new Date().toISOString();
+  var exp = new Date(Date.now() + LF_SIGN_DAYS*86400000).toISOString();
+  var nextCount = Number(d.resend_count||0) + (hadToken ? 1 : 0);
+  var r = await sb.from('partner_payout_docs').update({
+    sign_token: tok, sign_expires_at: exp, sign_sent_at: now, resend_count: nextCount,
+    updated_time: now, updated_by: currentUser ? currentUser.full_name : 'admin'
+  }).eq('id', d.id);
+  if (r.error) throw new Error(r.error.message);
+  d.sign_token = tok; d.sign_expires_at = exp; d.sign_sent_at = now; d.resend_count = nextCount;
+  return tok;
+}
+
+async function _lfInvSend(channel){
+  if (!_lfInv) return;
+  var d = _lfInv.doc;
+  var to = ((document.getElementById('inv-to')||{}).value || '').trim();
+  var msg = (document.getElementById('inv-msg')||{}).value || '';
+  if (channel === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) { _toast('請填寫有效的收件人 Email','err'); return; }
+
+  _lfInvBusy(true, channel === 'regen' ? '產生新連結…' : '處理中…');
+  var url;
+  try { url = _lfSignUrl(await _lfEnsureToken(channel === 'regen')); }
+  catch(e){ _lfInvBusy(false,''); _toast('產生連結失敗：' + ((e&&e.message)||e), 'err'); return; }
+
+  var body = msg.indexOf('{連結}') >= 0 ? msg.split('{連結}').join(url) : msg;
+  var now = new Date().toISOString();
+  var by = currentUser ? currentUser.full_name : 'admin';
+
+  if (channel === 'regen') {
+    _lfInvBusy(false, '');
+    await _ensurePayoutDocs(true); renderCommissionRecords();
+    _lfInv.doc = (DB.payout_docs||[]).find(function(x){ return String(x.id)===String(d.id); }) || d;
+    _lfInvRender();
+    _toast('已產生新連結，舊連結已失效');
+    return;
+  }
+
+  if (channel === 'copy') {
+    try { await navigator.clipboard.writeText(url); }
+    catch(e){ var ta=document.createElement('textarea'); ta.value=url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  }
+
+  var sendOk = true, sendErr = '';
+  if (channel === 'email') {
+    var mail = await _gcSendMail({
+      to: to,
+      subject: '【' + GC_COMPANY_NAME + '】勞務報酬單 ' + (d.doc_no||'') + ' 線上簽署',
+      text: body, html: _plainToHtml(body), replyTo: GC_MAIL_FROM, kind: '簽署邀請'
+    });
+    sendOk = !!(mail && mail.ok);
+    sendErr = (mail && mail.error) || '未知錯誤';
+  }
+
+  await sb.from('payout_doc_notices').insert([{
+    payout_doc_id: d.id, kind:'簽署邀請', channel: channel,
+    recipient: channel === 'email' ? to : null,
+    message_snapshot: body, sent_at: now, sent_by: by,
+    send_result: channel === 'copy' ? 'ok' : (sendOk ? 'ok' : 'failed: ' + sendErr)
+  }]);
+
+  _lfInvBusy(false, '');
+  await _ensurePayoutDocs(true);
+  renderCommissionRecords();
+
+  if (!sendOk) {
+    var s = document.getElementById('inv-status');
+    if (s){ s.style.color='var(--danger)'; s.textContent = '寄送失敗：' + sendErr; }
+    _toast('寄送失敗：' + sendErr, 'err');
+    return;
+  }
+  document.getElementById('lf-inv').remove();
+  _toast(channel === 'copy' ? '已複製簽署連結' : '簽署邀請已寄出至 ' + to);
 }
 
 function goCrecPage(p){ crecPage=p; updateCrecTable(); }
