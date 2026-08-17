@@ -51,7 +51,9 @@ async function sendMail(payload) {
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ token, fromName: COMPANY, replyTo: SUPPORT, ...payload }),
       redirect: 'follow',
-      signal: AbortSignal.timeout(25000),
+      // 帶 PDF 附件的請求光是上傳就要好幾秒，25 秒太緊 —— 逾時的話副本就永遠寄不出去，
+      // 而且對方那頁只會看到一行紅字，後台完全無感。
+      signal: AbortSignal.timeout(60000),
     });
     const raw = await res.text();
     try { return JSON.parse(raw); } catch (e) { return { ok: false, error: 'Apps Script 回應異常' }; }
@@ -120,6 +122,13 @@ exports.handler = async function (event) {
         ? [{ filename: '勞務報酬單_' + (doc.doc_no || '') + '.pdf', mimeType: 'application/pdf', base64: b64 }]
         : [];
 
+      // 寄送結果一定要留痕：失敗時後台才看得到，不然只有簽的人看到一行紅字。
+      // sign_log_notice 是 security definer 函式；若資料庫還沒建這支，靜默略過即可。
+      const logNotice = async (result, recipient) => {
+        try { await rpc('sign_log_notice', { p_token: t, p_result: result, p_recipient: recipient || null }); }
+        catch (e) { /* 沒建 RPC 或寫入失敗都不該影響簽署流程 */ }
+      };
+
       const results = [];
       if (okEmail) {
         results.push(await sendMail({
@@ -137,7 +146,12 @@ exports.handler = async function (event) {
           html, attachments, kind: '簽署完成副本',
         }));
       }
-      return reply(200, { ok: true, mailed: results[0] && results[0].ok === true, detail: results[0] });
+      const mailed = !!(results[0] && results[0].ok === true);
+      await logNotice(
+        mailed ? 'ok' : ('failed: ' + ((results[0] && results[0].error) || '未知錯誤')),
+        okEmail ? to : SUPPORT
+      );
+      return reply(200, { ok: true, mailed, detail: results[0] });
     }
 
     // ── 回簽 ──

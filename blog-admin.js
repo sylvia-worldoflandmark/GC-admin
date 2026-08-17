@@ -5,7 +5,7 @@
    依賴 index.html 主程式的全域變數與函式：
      sb / currentUser / _esc / _toast / _dt / buildPageBtns / renderEmptyState
 
-   ⚠️ 本檔必須放在 index.html 最後一個 </script> 之後、</body> 之前，
+   ⚠ 本檔必須放在 index.html 最後一個 </script> 之後、</body> 之前，
       否則上面那些全域變數都還沒宣告。
 
    命名規則：CSS class 一律 blog- 前綴、JS 全域一律 blog 開頭，
@@ -1339,7 +1339,7 @@ function blogSlugHint(){
   var bad = s && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(s);
   el.className = 'blog-hint' + (bad ? ' blog-warn' : '');
   el.innerHTML = bad
-    ? '⚠️ 網址代稱只能用小寫英文、數字與連字號（例如 <b>cross-border-tariff</b>），中文或大寫會存不進去。'
+    ? '⚠ 網址代稱只能用小寫英文、數字與連字號（例如 <b>cross-border-tariff</b>），中文或大寫會存不進去。'
     : '文章網址將是 <b>' + BLOG_SITE + '/blog/' + bgEsc(s || '…') + '/</b>　·　按「自動產生」會把中文標題翻成英文，翻不出來就退回日期加編號，隨時可以手動改。';
 }
 function blogTogglePin(el){
@@ -2019,7 +2019,7 @@ function blogFootAdd(type){
 }
 
 /* ── slash / 區段選單 ─────────────────────────────────────────────
-   ⚠️ 這兩個浮動選單一律掛在 document.body 上、用 position:fixed 定位。
+   ⚠ 這兩個浮動選單一律掛在 document.body 上、用 position:fixed 定位。
       早期版本掛在編輯器裡並用 position:absolute，會依賴祖先元素有沒有
       position:relative —— 後台主檔的 .main 沒有，導致座標算錯、選單被推到
       畫面外，看起來就像「點了沒反應」。用 fixed + viewport 座標就沒有這個
@@ -2052,7 +2052,7 @@ function blogEnsureMenus(){
     + '<div class="blog-bi" data-bm="down"><span>↓</span>下移一段</div>'
     + '<div class="blog-bi" data-bm="dup"><span>⧉</span>複製這一段</div>'
     + '<div class="blog-bsep"></div>'
-    + '<div class="blog-bi blog-dg" data-bm="del"><span>🗑</span>刪除這一段</div>';
+    + '<div class="blog-bi blog-dg" data-bm="del">刪除這一段</div>';
 
   if (_blogMenuBound) return;
   _blogMenuBound = true;

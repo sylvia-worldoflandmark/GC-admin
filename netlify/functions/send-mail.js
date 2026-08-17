@@ -117,7 +117,10 @@ exports.handler = async function (event) {
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload),
       redirect: 'follow', // Apps Script 會 302 轉到 script.googleusercontent.com
-      signal: AbortSignal.timeout(25000),
+      // Apps Script 冷啟動時單純轉發一封純文字信也可能超過 25 秒（2026-08-12 實測到）。
+      // 這裡刻意不做自動重試 —— 逾時不代表沒寄出，重試會變成寄兩封。
+      // 拉長等待時間，真的失敗就讓前端顯示並寫進 payout_doc_notices，由人決定要不要重寄。
+      signal: AbortSignal.timeout(60000),
     });
     raw = await res.text();
   } catch (err) {

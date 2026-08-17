@@ -88,12 +88,12 @@ var INCOME_LABEL = { '50':'50 薪資所得', '9A':'9A 執行業務所得', '9B':
 
 // ── 載入 ──
 (async function(){
-  if (!TOKEN) { screenMsg('🔗','連結無效','網址缺少簽署代碼。<br>請直接點擊我們寄給您的信件裡的連結。'); return; }
+  if (!TOKEN) { screenMsg('✕','連結無效','網址缺少簽署代碼。<br>請直接點擊我們寄給您的信件裡的連結。'); return; }
   try {
     var r = await fetch(API + '?t=' + encodeURIComponent(TOKEN));
     var d = await r.json();
     if (!d.ok) {
-      screenMsg('🔗','連結無效','這個簽署連結不存在或已被取消。<br>請與我們聯繫取得新的連結。');
+      screenMsg('✕','連結無效','這個簽署連結不存在或已被取消。<br>請與我們聯繫取得新的連結。');
       return;
     }
     DOC = d.doc;
@@ -106,7 +106,7 @@ var INCOME_LABEL = { '50':'50 薪資所得', '9A':'9A 執行業務所得', '9B':
     }
     renderForm();
   } catch(e){
-    screenMsg('⚠️','載入失敗','請稍後重新整理頁面再試一次。<br>若持續發生，請來信 support@worldoflandmark.com');
+    screenMsg('⚠','載入失敗','請稍後重新整理頁面再試一次。<br>若持續發生，請來信 support@worldoflandmark.com');
   }
 })();
 
@@ -234,7 +234,7 @@ async function submitSign(){
 function renderDone(already){
   document.getElementById('app').innerHTML =
     '<div class="card"><div class="msg">' +
-      '<div class="ic">' + (already ? '📄' : '✅') + '</div>' +
+      '<div class="ic">' + '✓' + '</div>' +
       '<h2>' + (already ? '這份文件已完成簽署' : '簽署完成，謝謝您') + '</h2>' +
       '<p>' + esc(DOC.doc_no||'') + '　' + esc(DOC.payee_name||'') + '<br>' +
         '實際支付金額 NT$ ' + money(DOC.amount_payable) + '<br><br>' +
@@ -297,8 +297,11 @@ function pdfWorker(el){
   return html2pdf().set({
     margin: 0,
     filename: '勞務報酬單_' + (DOC.doc_no||'') + '.pdf',
-    image: { type:'jpeg', quality:0.95 },
-    html2canvas: { scale:2, backgroundColor:'#ffffff' },
+    // 版面是純文字表格＋兩張證件影本。quality 0.95 / scale 2 產出的 PDF 動輒
+    // 400KB 以上，base64 之後會超過 Apps Script 在時限內吞得下的量（實測 600KB 必逾時），
+    // 副本就永遠寄不出去。降到這組畫質仍足以辨識，檔案約剩三分之一。
+    image: { type:'jpeg', quality:0.72 },
+    html2canvas: { scale:1.5, backgroundColor:'#ffffff' },
     jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
   }).from(el);
 }
