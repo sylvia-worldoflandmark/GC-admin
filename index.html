@@ -1437,7 +1437,7 @@ var VIEW_STATE = {
   commission_records:        { vars:['crecPage','crecSearch','crecFilterUnpaid'], ms:[] },
   financial_records:         { vars:['finPage'], ms:[], objs:['finFilter'] },
   payout_docs:               { vars:['lfdPage','lfdSearch','lfdYear','lfdStatus','lfdIncome','lfdSummary'], ms:[] },
-  products:                  { vars:['hpProdPage','hpFSearch','hpPubFilter'], ms:['hp-reg','hp-cat','hp-brand'] },
+  products:                  { vars:['hpProdPage','hpFSearch'], ms:['hp-reg','hp-cat','hp-brand','hp-win','hp-pub'] },
   suppliers:                 { vars:['hpSupPage','hpSupSearch'], ms:[] },
   export_logs:               { vars:['hpExpLogPage'], ms:[] },
   shelf_life:                { vars:['slPage','slSearch'], ms:['sl-cat'] },
@@ -3436,7 +3436,7 @@ function msDropdown(id, allLabel, opts, updateFn, searchable){
       '<input type="checkbox" '+(checked?'checked':'')+' onchange="msToggleIdx(\''+id+'\','+i+',\''+(updateFn||'')+'\')" style="width:14px;height:14px;cursor:pointer;flex-shrink:0;">'+_esc(o.l)+'</label>';
   }).join('') : '<div style="padding:10px 14px;font-size:12px;color:var(--text-dim);">無資料</div>';
   var _msClearBtn='<button class="btn btn-secondary" onclick="msClear(\''+id+'\',\''+(updateFn||'')+'\')" style="font-size:11.5px;padding:3px 10px;flex-shrink:0;">清除</button>';
-  var searchBox=searchable?'<div style="padding:6px 8px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;z-index:1;display:flex;gap:6px;align-items:center;"><input type="text" id="ms-search-'+id+'" oninput="msFilter(\''+id+'\',this.value)" onclick="event.stopPropagation();" placeholder="輸入品牌關鍵字…" style="flex:1;min-width:0;box-sizing:border-box;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;outline:none;">'+_msClearBtn+'</div>':'';
+  var searchBox=searchable?'<div style="padding:6px 8px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;z-index:1;display:flex;gap:6px;align-items:center;"><input type="text" id="ms-search-'+id+'" oninput="msFilter(\''+id+'\',this.value)" onclick="event.stopPropagation();" placeholder="輸入'+_esc(typeof searchable==='string'?searchable:'品牌')+'關鍵字…" style="flex:1;min-width:0;box-sizing:border-box;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;outline:none;">'+_msClearBtn+'</div>':'';
   var active=a.length;
   return '<div style="position:relative;display:inline-block;" id="ms-wrap-'+id+'">'+
     '<button id="ms-btn-'+id+'" class="cm-input" onclick="event.stopPropagation();msOpen(\''+id+'\')" style="width:auto;font-size:12.5px;padding:5px 10px;cursor:pointer;display:flex;align-items:center;gap:6px;'+(active?'background:#eff6ff;border-color:#93c5fd;':'')+'">'+
@@ -3460,7 +3460,7 @@ function msFilter(id,q){
     el.style.display=show?'':'none'; if(show) any=true;
   });
   var none=document.getElementById('ms-none-'+id);
-  if(!any){ if(!none){ none=document.createElement('div'); none.id='ms-none-'+id; none.style.cssText='padding:10px 14px;font-size:12px;color:var(--text-dim);'; none.textContent='無符合品牌'; box.appendChild(none); } none.style.display=''; }
+  if(!any){ if(!none){ none=document.createElement('div'); none.id='ms-none-'+id; none.style.cssText='padding:10px 14px;font-size:12px;color:var(--text-dim);'; none.textContent='無符合項目'; box.appendChild(none); } none.style.display=''; }
   else if(none){ none.style.display='none'; }
 }
 function msOpen(id){
@@ -12750,7 +12750,7 @@ function exportShelfLife(){
 
 /* ---------- 商品 products ---------- */
 var hpFSearch='', HP_PAGE=25, hpProdPage=1, hpSupPage=1, hpProdSize=25;
-var hpPubFilter='';   // 官網上架篩選：'' 全部 ／ '1' 已上架 ／ '0' 未上架
+// 官網上架篩選改用共用多選下拉 MS['hp-pub']：'1' 已上架 ／ '0' 未上架（兩個都不選＝全部）
 // ─── 商品清單勾選：勾選常駐，選取的 id 用 Set 記住，跨頁／跨篩選都保留（供「匯出勾選」「刪除勾選」共用）───
 var hpSelIds = new Set();
 function hpSelHas(id){ return hpSelIds.has(String(id)); }
@@ -12851,13 +12851,15 @@ function hpImgPreview(url){ if(!url) return;
 }
 function hpFilteredProducts(){
   var rows=(DB.products||[]).slice();
-  var fReg=msSel('hp-reg'), fCat=msSel('hp-cat'), fBrand=msSel('hp-brand');
+  var fReg=msSel('hp-reg'), fCat=msSel('hp-cat'), fBrand=msSel('hp-brand'), fWin=msSel('hp-win'), fPub=msSel('hp-pub');
   if(fReg.length) rows=rows.filter(function(p){ return (p.stock_regions||[]).some(function(r){return fReg.indexOf(r)>=0;}); });
   if(fCat.length) rows=rows.filter(function(p){ return fCat.indexOf(p.category)>=0; });
   if(fBrand.length) rows=rows.filter(function(p){ return fBrand.indexOf(p.brand)>=0; });
+  // 品牌窗口＝商品的 source_supplier；未填的用 '' 代表「未指定」
+  if(fWin.length) rows=rows.filter(function(p){ return fWin.indexOf(String(p.source_supplier||''))>=0; });
   // 官網上架狀態：is_public 為 NULL 的舊資料一律視為已上架（資料庫預設就是 true）
-  if(hpPubFilter==='1') rows=rows.filter(hpIsPub);
-  else if(hpPubFilter==='0') rows=rows.filter(function(p){ return !hpIsPub(p); });
+  // 兩個都選（或都不選）＝不過濾
+  if(fPub.length===1) rows=(fPub[0]==='1')? rows.filter(hpIsPub) : rows.filter(function(p){ return !hpIsPub(p); });
   var q=hpFSearch.trim().toLowerCase();
   if(q) rows=rows.filter(function(p){
     // 搜尋範圍：SKU、四語商品名稱、品牌、類別、以及各國當地商品編號（JANCODE / BARCODE 等）
@@ -12943,6 +12945,10 @@ function hpRenderProdBody(){
 function hpApplyFilter(){ hpProdPage=1; hpRenderProdBody(); }
 function renderProducts(){
   var brands=Array.from(new Set((DB.products||[]).map(function(p){return p.brand;}).filter(Boolean)));
+  // 品牌窗口選項＝商品 source_supplier 的相異值；有未填的就補一個「未指定」
+  var winVals=Array.from(new Set((DB.products||[]).map(function(p){return String(p.source_supplier||'');})));
+  var winOpts=winVals.filter(Boolean).sort(function(a,b){ return a.localeCompare(b,'zh-Hant'); }).map(function(w){ return {v:w,l:w}; });
+  if(winVals.indexOf('')>=0) winOpts.push({v:'',l:'（未指定窗口）'});
   hpMain().innerHTML=
     '<div class="page-header"><div class="breadcrumb"><span>貨盤管理</span><span class="sep">›</span><span>商品清單</span></div><h1>商品清單</h1>'+
       '<p>貨盤商品主檔　共 '+(DB.products||[]).length+' 筆</p></div>'+
@@ -12951,10 +12957,9 @@ function renderProducts(){
       '<input type="text" placeholder="搜尋名稱 / SKU / 品牌 / 當地編號(JAN/BARCODE)" value="'+hpEsc(hpFSearch)+'" oninput="hpFSearch=this.value;hpApplyFilter()"></div>'+
       msDropdown('hp-reg','全部存貨地區',HP_REGIONS.map(function(r){return {v:r,l:r};}),'hpApplyFilter')+
       msDropdown('hp-cat','全部類別',HP_CATS.map(function(c){return {v:c,l:c};}),'hpApplyFilter')+
-      msDropdown('hp-brand','全部品牌',brands.map(function(b){return {v:b,l:b};}),'hpApplyFilter',true)+
-      '<select id="hp-pub" onchange="hpPubFilter=this.value;hpApplyFilter()" style="padding:7px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;background:#fff;color:var(--text-mid);">'+
-        [['','全部上架狀態'],['1','已上架'],['0','未上架']].map(function(o){ return '<option value="'+o[0]+'"'+(hpPubFilter===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+
-      '</select>'+
+      msDropdown('hp-brand','全部品牌',brands.map(function(b){return {v:b,l:b};}),'hpApplyFilter','品牌')+
+      msDropdown('hp-win','全部品牌窗口',winOpts,'hpApplyFilter','窗口')+
+      msDropdown('hp-pub','全部上架狀態',[{v:'1',l:'已上架'},{v:'0',l:'未上架'}],'hpApplyFilter')+
     '</div><div class="toolbar-right" style="gap:8px;">'+
       '<button class="btn btn-secondary" onclick="openProductModal(null,true)">＋ 新增商品</button>'+
       '<button class="btn btn-secondary" onclick="openImportDialog()">⭳ 批量匯入</button>'+
