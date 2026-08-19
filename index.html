@@ -276,19 +276,21 @@ body {
   background: var(--accent);
   color: #fff;
 }
-.btn-primary:hover { background: #3a7dee; }
+.btn-primary:not(:disabled):hover { background: #3a7dee; }
 .btn-secondary {
   background: #ffffff;
   color: var(--text-mid);
   border: 1px solid var(--border);
 }
-.btn-secondary:hover { background: #f4f5f7; color: var(--text); }
+.btn-secondary:not(:disabled):hover { background: #f4f5f7; color: var(--text); }
 .btn-ghost {
   background: transparent;
   color: var(--text-dim);
   border: 1px solid transparent;
 }
-.btn-ghost:hover { background: rgba(0,0,0,0.04); color: var(--text-mid); }
+.btn-ghost:not(:disabled):hover { background: rgba(0,0,0,0.04); color: var(--text-mid); }
+/* 停用的按鈕要一眼看得出不能按 —— 沒有這段，使用者會以為「點了沒反應」是程式壞掉 */
+.btn:disabled, .btn[disabled] { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.4); }
 
 /* ─── TABLE CARD ─── */
 .table-card {
@@ -642,6 +644,11 @@ tbody tr:hover .row-actions { opacity: 1; }
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .cm-input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+/* number 輸入框右側的上下箭頭會吃掉約 16px；窄欄位（例如報價的「數量」）配上右對齊，
+   多打一位數就整個被蓋住看不見。這些欄位都是直接打字輸入，不需要箭頭。 */
+input[type=number].cm-input { -moz-appearance: textfield; appearance: textfield; }
+input[type=number].cm-input::-webkit-outer-spin-button,
+input[type=number].cm-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 /* 洽談項目報價的小計列（電腦版） */
 .wiz-sum {
   display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: baseline;
@@ -836,10 +843,11 @@ body.gc-viewer [onclick*="_wizNext("], body.gc-viewer [onchange*="_wizNext("],
 body.gc-viewer [onclick*="_wizReopenInvoice("], body.gc-viewer [onchange*="_wizReopenInvoice("],
 body.gc-viewer [onclick*="_wizResign("], body.gc-viewer [onchange*="_wizResign("],
 body.gc-viewer [onclick*="_wizRestore("], body.gc-viewer [onchange*="_wizRestore("],
-body.gc-viewer [onclick*="_wizSaveBrief("], body.gc-viewer [onchange*="_wizSaveBrief("],
 body.gc-viewer [onclick*="_wizSaveContactStep("], body.gc-viewer [onchange*="_wizSaveContactStep("],
 body.gc-viewer [onclick*="_wizSaveItem("], body.gc-viewer [onchange*="_wizSaveItem("],
 body.gc-viewer [onclick*="_wizSaveMeeting("], body.gc-viewer [onchange*="_wizSaveMeeting("],
+body.gc-viewer [onclick*="_wizSaveStep1("], body.gc-viewer [onchange*="_wizSaveStep1("],
+body.gc-viewer [onclick*="_wizSaveStep2("], body.gc-viewer [onchange*="_wizSaveStep2("],
 body.gc-viewer [onclick*="_wizSaveStep3("], body.gc-viewer [onchange*="_wizSaveStep3("],
 body.gc-viewer [onclick*="_wizSettle("], body.gc-viewer [onchange*="_wizSettle("],
 body.gc-viewer [onclick*="_wizUnlockRate("], body.gc-viewer [onchange*="_wizUnlockRate("],
@@ -2558,7 +2566,10 @@ function openBpModal(id, isNew) {
       if (String(DB.business_partners[i].id) === String(id)) { row = DB.business_partners[i]; break; }
     }
   }
-  _bpModalRow = row;
+  // ⚠️ 一定要複製一份：直接把 DB.business_partners 裡的物件拿來當表單狀態的話，
+  //    _bpTypeChanged() 會把畫面上的值寫進快照，存檔時比對就會誤判成「未變更」。
+  _bpModalRow = Object.assign({}, row);
+  _bpModalOrig = Object.assign({}, row);   // 存檔比對用的原始值，全程不被表單汙染
   _bpModalIsNew = !!isNew;
   _bpModalWasNew = false;
 
@@ -2590,6 +2601,7 @@ function openBpModal(id, isNew) {
 
 // 目前編輯中的資料列（附件上傳需要）
 var _bpModalRow = {};
+var _bpModalOrig = {};        // 開窗當下的原始值快照 —— 只有 saveBusinessPartner() 拿來比對變更
 var _bpModalIsNew = false;
 var _bpModalWasNew = false;   // 這次開窗是不是「新增」—— 決定關窗時 toast 該說「已建立」還是「未變更」
 
@@ -2813,6 +2825,7 @@ async function _bpUploadDoc(slotKey, inp){
   var old = _bpModalRow[slotKey];
   if (old && old !== path) { try { await sb.storage.from('partner-files').remove([old]); } catch(e){} }
   _bpModalRow[slotKey] = path;
+  if (_bpModalOrig) _bpModalOrig[slotKey] = path;   // 已直接寫進 DB，不該被算成「表單有變更」
   var mem = _find(DB.business_partners, id); if (mem) mem[slotKey] = path;
   _toast('已上傳');
   _bpRenderForm();
@@ -2829,6 +2842,7 @@ async function _bpDelDoc(slotKey){
   var r = await sb.from('business_partners').update(patch).eq('id', id);
   if (r.error) { _toast('移除失敗：' + r.error.message,'err'); return; }
   _bpModalRow[slotKey] = null;
+  if (_bpModalOrig) _bpModalOrig[slotKey] = null;
   var mem = _find(DB.business_partners, id); if (mem) mem[slotKey] = null;
   _toast('已移除');
   _bpRenderForm();
@@ -2909,13 +2923,15 @@ async function saveBusinessPartner(id) {
     payload.created_time = new Date().toISOString();
     result = await sb.from('business_partners').insert([payload]).select().single();
   } else {
-    var _cur = _find(DB.business_partners, id);
+    // 比對基準優先用開窗時的原始快照；DB.business_partners 裡那份可能已被表單重繪寫過
+    var _cur = (_bpModalOrig && _bpModalOrig.id != null && String(_bpModalOrig.id) === String(id))
+      ? _bpModalOrig : _find(DB.business_partners, id);
     if (_cur && !_recordChanged(_cur, payload)) {
       if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存變更'; }
       closeBpModal();
       // 表單欄位雖然沒動，但證件附件是另外上傳的，列表的「資料就緒」會不一樣 ——
       // 這裡一定要重載，否則剛新增的夥伴看起來像沒存進去。
-      await loadBusinessPartners();
+      await _bpAfterSaveRefresh();
       if (typeof _toast === 'function') _toast(_bpModalWasNew ? '已建立' : '未變更');
       return;
     }
@@ -2933,7 +2949,10 @@ async function saveBusinessPartner(id) {
   if (isNew && personal && result.data && result.data.id) {
     var newRow = result.data;
     DB.business_partners.unshift(newRow);
-    _bpModalRow = newRow;
+    // 同 patch33：表單狀態與比對基準都要是副本，不能指回 DB 陣列裡那個物件，
+    // 否則接著切換身份類型時又會把快照寫髒，第二次存檔就變成「未變更」
+    _bpModalRow = Object.assign({}, newRow);
+    _bpModalOrig = Object.assign({}, newRow);
     _bpModalIsNew = false;
     _bpModalWasNew = true;
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存變更'; saveBtn.setAttribute('onclick', "saveBusinessPartner('" + newRow.id + "')"); }
@@ -2944,7 +2963,22 @@ async function saveBusinessPartner(id) {
   }
 
   closeBpModal();
-  await loadBusinessPartners();
+  await _bpAfterSaveRefresh();
+}
+
+// 存檔後的重整。從「商務分潤紀錄 → 去補件」開窗時，直接呼叫 loadBusinessPartners()
+// 會把 main-content 換成商務夥伴列表，使用者等於被踢到別頁，看起來就像沒存成功。
+// → 只在本來就在商務夥伴頁時才重繪那一頁；其他頁只更新資料並重繪目前這頁。
+async function _bpAfterSaveRefresh(){
+  if (typeof currentPage !== 'undefined' && currentPage === 'business_partners') {
+    await loadBusinessPartners();
+    return;
+  }
+  var r = await sb.from('business_partners').select('*').order('created_time', { ascending: false });
+  if (!r.error) DB.business_partners = r.data || [];
+  if (typeof currentPage !== 'undefined' && currentPage === 'commission_records' && typeof updateCrecTable === 'function') {
+    updateCrecTable();   // 缺件徽章／「開立勞報單」按鈕狀態跟著更新
+  }
 }
 
 function closeBpModal() {
@@ -3396,6 +3430,14 @@ async function loadAdminUsers() {
 // ─── 共用小工具 ─────────────────────────────────────────
 function _esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function _money(n){ n=Number(n||0); return Math.round(n).toLocaleString('en-US'); }
+// ─── 幣別小數位：台幣與日圓沒有小數，其餘幣別兩位 ───
+// 全站顯示／取整外幣金額一律走這三支，避免出現 JPY 45,294.41 這種不存在的金額
+function _curDec(cur){ return (cur==='TWD'||cur==='JPY')?0:2; }
+function _curNum(v,cur){ var d=_curDec(cur); return Number(v||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function _fxRound(v,cur){ return _curDec(cur)?Math.round(Number(v||0)*100)/100:Math.round(Number(v||0)); }
+// 換匯回推常會得到 500000.00000000006 這種值，直接 Math.ceil 會整整多 1 元。
+// 先收斂到小數 6 位再進位：真正的 .4 還是會進位，只有浮點雜訊被吃掉。
+function _ceilFx(v){ v=Number(v||0); return Math.ceil(Math.round(v*1e6)/1e6); }
 function _find(arr,id){ for(var i=0;i<arr.length;i++){ if(String(arr[i].id)===String(id)) return arr[i]; } return null; }
 function _loading(){ return '<div style="padding:60px;text-align:center;color:var(--text-dim);font-size:13px;">載入中…</div>'; }
 function _errBox(m){ return '<div style="padding:60px;text-align:center;color:#dc2626;font-size:13px;">讀取失敗：'+_esc(m)+'</div>'; }
@@ -4119,7 +4161,8 @@ async function openProjectWizard(id){
     var fin=await sb.from('financial_records').select('*').eq('project_id',id).eq('is_void',false).order('id');
     var ppr=await sb.from('provider_payment_records').select('*').eq('project_id',id).order('installment_index');
     var spt=await sb.from('sp_payment_terms').select('*').eq('project_id',id).order('service_provider_id').order('installment_index');
-    WIZ={ id:id, project:pr.data, matches:matches, itemsByMatch:itemsByMatch, records:rec.data||[], attachments:att.data||[], financials:fin.data||[], providerPayments:ppr.data||[], spPaymentTerms:spt.data||[], matchOrderTypes:{}, step:1 };
+    // projectOrig：只跟資料庫同步、永遠不被畫面值寫髒的快照，_wizSaveProject() 用它判斷有沒有變更
+    WIZ={ id:id, project:pr.data, projectOrig:Object.assign({},pr.data), matches:matches, itemsByMatch:itemsByMatch, records:rec.data||[], attachments:att.data||[], financials:fin.data||[], providerPayments:ppr.data||[], spPaymentTerms:spt.data||[], matchOrderTypes:{}, step:1 };
     // DB 是匯率鎖定的唯一來源：有 quote_settings → 同步到 localStorage；無 → 清除本地鎖定旗標（保留 overrides）
     if(pr.data && pr.data.quote_settings){
       try{ localStorage.setItem('gc_quote_'+id, JSON.stringify(pr.data.quote_settings)); }catch(e){}
@@ -4130,7 +4173,7 @@ async function openProjectWizard(id){
       }catch(e){}
     }
   } else {
-    WIZ={ id:null, project:{ status:'draft', tax_rate:5, show_qty_on_quote:true }, matches:[], itemsByMatch:{}, records:[], attachments:[], financials:[], providerPayments:[], spPaymentTerms:[], matchOrderTypes:{}, step:1 };
+    WIZ={ id:null, project:{ status:'draft', tax_rate:5, show_qty_on_quote:true }, projectOrig:{ status:'draft', tax_rate:5, show_qty_on_quote:true }, matches:[], itemsByMatch:{}, records:[], attachments:[], financials:[], providerPayments:[], spPaymentTerms:[], matchOrderTypes:{}, step:1 };
   }
   await _wizLoadOrderTypes();
   _wizRenderShell();
@@ -4207,6 +4250,7 @@ function _payFlush(){
 }
 function _wizRender(){
   _payFlush();
+  _sptFlush();   // 付款協議（步驟 6）：重繪前把輸入框的值寫回記憶體，否則已輸入未儲存的金額會被舊值蓋掉
   var ac=document.getElementById('wiz-actions'); if(ac) ac.innerHTML=_wizActionBtns();
   document.getElementById('wiz-header').innerHTML=_wizHeaderHtml();
   document.getElementById('wiz-pipeline').innerHTML=_wizPipelineHtml();
@@ -4703,6 +4747,7 @@ function _projName(p){ if(!p) return ''; if(p.project_name) return p.project_nam
 async function _persistProjectName(id,nm){
   nm=(nm||'').trim();
   if(WIZ&&WIZ.project) WIZ.project.project_name=nm||null;
+  if(WIZ&&WIZ.projectOrig) WIZ.projectOrig.project_name=nm||null;   // 已直接寫進 DB，不該再被算成變更
   if(_projNameColOk){
     try{ var r=await sb.from('projects').update({ project_name:nm||null }).eq('id',id); if(r.error) throw r.error; _projNameLSset(id,null); return; }
     catch(e){ _projNameColOk=false; }   // 欄位不存在 → 改用本地暫存
@@ -4714,10 +4759,14 @@ async function _wizSaveProject(patch, forceStamp){
   // 只有實際變更專案資料時才更新「最後操作人／更新時間」；純瀏覽、切換步驟（值沒變）不動。
   // forceStamp=true：由 _wizSaveStep4 在偵測到報價項目／媒合有變更時強制蓋章。
   if(WIZ.id && WIZ.project && !forceStamp){
+    // ⚠️ 一定要跟 projectOrig（資料庫值）比，不能跟 WIZ.project 比 ——
+    //    WIZ.project 會被 _wizSyncItemsFromDOM / _wizCalcGrandTotal / _wizRecalcTax /
+    //    _payFlush 等等拿來暫存畫面值，拿它當基準會把使用者的修改判成「未變更」而靜靜不存檔。
+    var _base=WIZ.projectOrig||WIZ.project;
     var _changed=false;
     for(var _k in patch){ if(!patch.hasOwnProperty(_k)) continue;
       if(_k==='updated_time'||_k==='updated_by') continue;
-      var _cur=WIZ.project[_k];
+      var _cur=_base[_k];
       // 用 _valNorm 比對：物件（如 quote_settings）走 JSON.stringify，避免 String(物件) 恆為 "[object Object]" 而誤判「未變更」
       if(_valNorm(_cur)!==_valNorm(patch[_k])){ _changed=true; break; }
     }
@@ -4731,7 +4780,7 @@ async function _wizSaveProject(patch, forceStamp){
     patch.created_time=new Date().toISOString();
     r=await sb.from('projects').insert([patch]).select().single();
     if(r.error){ _toast('儲存失敗：'+r.error.message,'err'); return false; }
-    WIZ.id=r.data.id; WIZ.project=r.data;
+    WIZ.id=r.data.id; WIZ.project=r.data; WIZ.projectOrig=Object.assign({},r.data);
     // 專案首次建立：把暫存於 'gc_quote_new' 的報價設定搬到本專案的 key，
     // 避免（a）存檔後已設好的幣別／匯率「不見」（b）下一個新專案讀到上一個新專案的設定
     try{
@@ -4741,7 +4790,7 @@ async function _wizSaveProject(patch, forceStamp){
   } else {
     r=await sb.from('projects').update(patch).eq('id',WIZ.id).select().single();
     if(r.error){ _toast('儲存失敗：'+r.error.message,'err'); return false; }
-    WIZ.project=r.data;
+    WIZ.project=r.data; WIZ.projectOrig=Object.assign({},r.data);
   }
   return true;
 }
@@ -4806,15 +4855,18 @@ function _wizStep1(){
         '<textarea class="cm-input" id="wiz-brief" style="flex:1;min-height:280px;resize:none;line-height:1.7;background:#fff;" placeholder="客戶提供的需求、背景說明…">'+_esc(p.customer_brief||'')+'</textarea>'+
       '</div>'+
     '</div>'+
-    _wizFooter(!WIZ.id?'<button class="btn btn-primary" onclick="_wizNext()">建立專案</button>':'<button class="btn btn-secondary" onclick="_wizSaveBrief()">儲存說明</button>')+
+    _wizFooter(!WIZ.id?'<button class="btn btn-primary" onclick="_wizNext()">建立專案</button>':'<button class="btn btn-secondary" onclick="_wizSaveStep1()">儲存</button>')+
   '</div>';
 }
-async function _wizSaveBrief(){
-  if(!WIZ.id){ _toast('請先儲存專案','err'); return; }
-  var el=document.getElementById('wiz-brief');
-  if(!el) return;
-  var ok=await _wizSaveProject({ customer_brief:el.value });
-  if(ok){ WIZ.project.customer_brief=el.value; _toast('已儲存需求說明'); }
+// 步驟 1「儲存」：專案名稱／客戶／帶單商務／合作模式／需求說明一起寫入（等同按「下一步」的存檔），
+// 存完重繪整頁，讓 header、專案摘要、步驟列即時反映最新資料
+//（合作模式改了的話，步驟名稱與後續步驟內容也會跟著換）
+async function _wizSaveStep1(){
+  if(!WIZ||!WIZ.id){ _toast('請先建立專案','err'); return; }
+  var ok=await _wizPersist(true);
+  if(!ok) return;
+  _wizRender();
+  _toast('已儲存專案資料');
 }
 // 居間退傭即時試算（各項目 amount × 退傭% 加總）
 function _wizCalcRebate(){
@@ -4905,7 +4957,7 @@ function _wizStep3(){
       )+
       rebateCard+
     '</div>'+
-    _wizFooter('<button class="btn btn-secondary" onclick="_wizSaveContactStep().then(function(o){if(o)_toast(\'已儲存洽談內容\');})">儲存</button>');
+    _wizFooter('<button class="btn btn-secondary" onclick="_wizSaveStep2()">儲存</button>');
 }
 // 報價項目欄位（名稱／數量／單價／未稅小計／底價）變更即時存 DB，避免切頁未存而遺失
 async function _wizSaveItem(itid){
@@ -4958,6 +5010,38 @@ function _wizMeetRow(m){
     '<button class="action-btn" title="移除服務商" onclick="_wizDelMatch('+m.id+')"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h12M8 6V4h4v2M6 6l1 11h6l1-11" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'+
   '</div>';
 }
+// 依「原幣別」彙總某 match 的項目金額；fromDOM=true 時讀畫面輸入框（尚未存檔也即時反映）。
+// 回傳 TWD 彙總（sub／base／reb／profit）＋只有單一原幣別時的原幣彙總（oc／o）。
+function _wizMatchOrig(mid, fromDOM){
+  var m=_find(WIZ.matches||[],mid);
+  var inter=(WIZ&&WIZ.project&&WIZ.project.cooperation_mode==='intermediary');
+  var by={}, subTwd=0, baseTwd=0, rebTwd=0;
+  (WIZ.itemsByMatch[mid]||[]).forEach(function(it){
+    var amt=Number(it.amount_untaxed||0), b=Number(it.base_price||0);
+    if(fromDOM){
+      var ae=document.getElementById('it-amt-'+it.id); if(ae) amt=parseFloat(ae.value)||0;
+      var be=document.getElementById('it-base-'+it.id); if(be) b=parseFloat(be.value)||0;
+    }
+    var cur=_itemCurrency(it, m?m.service_provider_id:null);
+    var amtTwd=_itemToTwd(amt,cur);
+    var o=by[cur]||(by[cur]={sub:0,base:0,reb:0});
+    subTwd+=amtTwd; o.sub+=amt;
+    if(inter){ rebTwd+=Math.round(amtTwd*b/100*100)/100; o.reb+=Math.round(amt*b/100*100)/100; }
+    else { baseTwd+=_itemToTwd(b,cur); o.base+=b; }
+  });
+  var curs=Object.keys(by);
+  var oc=(curs.length===1)?curs[0]:null;   // 混幣別時不顯示原幣（無法用單一幣別表達）
+  return { sub:subTwd, base:baseTwd, reb:rebTwd, profit:subTwd-baseTwd, oc:oc, o:oc?by[oc]:null, mixed:curs.length>1 };
+}
+// 金額顯示：先原幣別，再附上依步驟 3 報價幣別換算的金額；原幣＝報價幣別時只顯示一組
+function _wizDualAmt(twd, oc, ov, cfg){
+  cfg=cfg||_quoteCfg();
+  // 原幣別就是報價幣別 → 直接顯示原值，不要「原幣→台幣→原幣」繞一圈（會有換匯誤差）
+  if(oc && oc===cfg.currency && ov!=null) return _fxFmt(_fxRound(ov,oc),{currency:oc});
+  var conv=_fxFmt(_fxConv(twd,cfg),cfg);
+  if(!oc||oc===cfg.currency||ov==null) return conv;
+  return _fxFmt(ov,{currency:oc})+'<span style="font-size:11px;color:var(--text-dim);font-weight:400;margin-left:5px;">≈ '+conv+'</span>';
+}
 function _wizItemsCard(m){
   var inter=(WIZ.project.cooperation_mode==='intermediary'); // 居間模式不需底價
   var cfg=_quoteCfg();  // 卡片小計/退傭金額依報價（收款）幣別顯示，與各列一致
@@ -4968,7 +5052,8 @@ function _wizItemsCard(m){
   var rows=items.map(function(it){
     var itCur=_itemCurrency(it,m.service_provider_id);
     var curBadge='<span class="badge badge-'+(itCur==='TWD'?'gray':itCur==='USD'?'green':itCur==='JPY'?'amber':'blue')+'" style="font-size:10px;padding:1px 5px;">'+itCur+'</span>';
-    var numSty='width:100%;min-width:0;text-align:right;font-variant-numeric:tabular-nums;';
+    // padding 由 .cm-input 預設的 0 12px 收成 0 8px，窄欄位可以多寫兩個字
+    var numSty='width:100%;min-width:0;padding:0 8px;text-align:right;font-variant-numeric:tabular-nums;';
     return '<tr>'+
       '<td><input class="cm-input" id="it-name-'+it.id+'" value="'+_esc(it.item_name||'')+'" style="width:100%;min-width:180px;" onchange="_wizSaveItem('+it.id+')"></td>'+
       '<td style="text-align:center;">'+curBadge+'</td>'+
@@ -4987,14 +5072,15 @@ function _wizItemsCard(m){
       '<div style="display:flex;gap:8px;align-items:center;"><select class="cm-input" id="cat-'+m.id+'" style="max-width:300px;"><option value="">＋ 從項目庫加入…</option>'+catOpts+'</select><button class="btn btn-secondary" onclick="_wizAddItem('+m.id+',false)">加入</button><button class="btn btn-secondary" onclick="_wizAddItem('+m.id+',true)">手動新增</button></div>'+
     '</div>'+
     (inter?'<div style="font-size:11px;color:var(--text-dim);margin:-2px 0 10px;">居間模式：各項目可個別設定退傭%；從項目庫加入時會自動帶入客戶單價與退傭%，可手動調整。</div>':'')+
-    '<div class="table-wrap"><table style="width:100%;"><thead><tr><th style="min-width:180px;">項目名稱</th><th style="width:52px;text-align:center;">幣別</th><th style="width:64px;text-align:right;">數量</th><th style="width:120px;text-align:right;">單價(未稅)</th><th style="width:130px;text-align:right;">未稅小計</th>'+(inter?'<th style="width:90px;text-align:right;">退傭%</th>':'<th style="width:120px;text-align:right;">底價(未稅)</th>')+'<th style="width:78px;text-align:center;">操作</th></tr></thead><tbody>'+(rows||'<tr><td colspan="7" style="color:var(--text-dim);padding:10px;">尚無項目，從項目庫加入或手動新增。</td></tr>')+'</tbody></table></div>'+
-    '<div class="wiz-sum">'+
-      '<span class="wiz-sum-item"><span class="wiz-sum-l">未稅小計</span><b id="m-sub-'+m.id+'" class="wiz-sum-v">'+_fxFmt(_fxConv(m.subtotal_untaxed,cfg),cfg)+'</b></span>'+
+    '<div class="table-wrap"><table style="width:100%;"><thead><tr><th style="min-width:180px;">項目名稱</th><th style="width:52px;text-align:center;">幣別</th><th style="width:88px;text-align:right;">數量</th><th style="width:120px;text-align:right;">單價(未稅)</th><th style="width:130px;text-align:right;">未稅小計</th>'+(inter?'<th style="width:90px;text-align:right;">退傭%</th>':'<th style="width:120px;text-align:right;">底價(未稅)</th>')+'<th style="width:78px;text-align:center;">操作</th></tr></thead><tbody>'+(rows||'<tr><td colspan="7" style="color:var(--text-dim);padding:10px;">尚無項目，從項目庫加入或手動新增。</td></tr>')+'</tbody></table></div>'+
+    (function(){ var S=_wizMatchOrig(m.id,false), oc=S.oc, o=S.o;
+      return '<div class="wiz-sum">'+
+      '<span class="wiz-sum-item"><span class="wiz-sum-l">未稅小計</span><b id="m-sub-'+m.id+'" class="wiz-sum-v">'+_wizDualAmt(S.sub,oc,o?o.sub:null,cfg)+'</b></span>'+
       (inter
-        ? '<span class="wiz-sum-item"><span class="wiz-sum-l">退傭金額</span><b id="m-rebate-'+m.id+'" class="wiz-sum-v" style="color:#b45309;">'+_fxFmt(_fxConv((function(){ var s=0; (WIZ.itemsByMatch[m.id]||[]).forEach(function(x){ var c=_itemCurrency(x,m.service_provider_id); s+=Math.round(_itemToTwd(Number(x.amount_untaxed||0),c)*Number(x.base_price||0)/100*100)/100; }); return s; })(),cfg),cfg)+'</b></span>'
-        : '<span class="wiz-sum-item"><span class="wiz-sum-l">底價</span><b id="m-base-'+m.id+'" class="wiz-sum-v">'+_fxFmt(_fxConv(m.base_total,cfg),cfg)+'</b></span>'+
-          '<span class="wiz-sum-item"><span class="wiz-sum-l">利潤</span><b id="m-profit-'+m.id+'" class="wiz-sum-v" style="color:#16a34a;">'+_fxFmt(_fxConv(m.profit_untaxed,cfg),cfg)+'</b></span>')+
-    '</div>'+
+        ? '<span class="wiz-sum-item"><span class="wiz-sum-l">退傭金額</span><b id="m-rebate-'+m.id+'" class="wiz-sum-v" style="color:#b45309;">'+_wizDualAmt(S.reb,oc,o?o.reb:null,cfg)+'</b></span>'
+        : '<span class="wiz-sum-item"><span class="wiz-sum-l">底價</span><b id="m-base-'+m.id+'" class="wiz-sum-v">'+_wizDualAmt(S.base,oc,o?o.base:null,cfg)+'</b></span>'+
+          '<span class="wiz-sum-item"><span class="wiz-sum-l">利潤</span><b id="m-profit-'+m.id+'" class="wiz-sum-v" style="color:#16a34a;">'+_wizDualAmt(S.profit,oc,o?(o.sub-o.base):null,cfg)+'</b></span>')+
+      '</div>'; })()+
   '</div>';
 }
 // 主理人模式：檢查報價項目是否填寫完整（名稱／單價／底價）。回傳錯誤訊息字串，完整則回傳 null。
@@ -5018,6 +5104,14 @@ function _wizCheckItemsComplete(){
   }
   if(!anyItem) return '主理人模式：請至少加入一個服務商項目並填寫完整後再進入下一步';
   return null;
+}
+// 步驟 2「儲存」：存完洽談紀錄與報價項目後重繪整頁，
+// 讓 header 的含稅報價／退傭收款、專案摘要、各卡片小計都同步成最新
+async function _wizSaveStep2(){
+  var ok=await _wizSaveContactStep();
+  if(!ok) return;
+  _wizRender();
+  _toast('已儲存洽談內容');
 }
 async function _wizSaveContactStep(){
   if(!WIZ.id) return true;
@@ -5052,27 +5146,16 @@ function _wizCalc(mid,itid,src){
   _wizCalcRebate();
 }
 function _wizCalcMatch(mid){
-  var items=WIZ.itemsByMatch[mid]||[];
   var inter=(WIZ&&WIZ.project&&WIZ.project.cooperation_mode==='intermediary');
-  var m=_find(WIZ.matches||[],mid);
-  var sub=0,base=0,rebateAmt=0;
-  items.forEach(function(it){
-    var amt=parseFloat((document.getElementById('it-amt-'+it.id)||{}).value)||0;
-    var b=parseFloat((document.getElementById('it-base-'+it.id)||{}).value)||0;
-    // 逐項換算成 TWD 再加總（與 _wizSaveStep4 存檔邏輯一致），避免外幣服務商的小計在原幣／TWD 間跳動
-    var itCur=_itemCurrency(it,m?m.service_provider_id:null);
-    var amtTwd=_itemToTwd(amt,itCur);
-    sub+=amtTwd;
-    if(inter) rebateAmt+=Math.round(amtTwd*b/100*100)/100;   // 居間：b 為退傭%
-    else base+=_itemToTwd(b,itCur);                          // 主理人：b 為底價（原幣）
-  });
-  var cfg=_quoteCfg();  // 依報價（收款）幣別顯示，與各列幣別一致
-  var el=document.getElementById('m-sub-'+mid); if(el) el.textContent=_fxFmt(_fxConv(sub,cfg),cfg);
+  // 逐項換算成 TWD 再加總（與 _wizSaveStep4 存檔邏輯一致），同時保留原幣別彙總供雙幣顯示
+  var S=_wizMatchOrig(mid,true), oc=S.oc, o=S.o;
+  var cfg=_quoteCfg();  // 換算後的金額依步驟 3 設定的報價（收款）幣別顯示
+  var el=document.getElementById('m-sub-'+mid); if(el) el.innerHTML=_wizDualAmt(S.sub,oc,o?o.sub:null,cfg);
   if(inter){
-    var er=document.getElementById('m-rebate-'+mid); if(er) er.textContent=_fxFmt(_fxConv(rebateAmt,cfg),cfg);
+    var er=document.getElementById('m-rebate-'+mid); if(er) er.innerHTML=_wizDualAmt(S.reb,oc,o?o.reb:null,cfg);
   } else {
-    var el2=document.getElementById('m-base-'+mid); if(el2) el2.textContent=_fxFmt(_fxConv(base,cfg),cfg);
-    var el3=document.getElementById('m-profit-'+mid); if(el3) el3.textContent=_fxFmt(_fxConv(sub-base,cfg),cfg);
+    var el2=document.getElementById('m-base-'+mid); if(el2) el2.innerHTML=_wizDualAmt(S.base,oc,o?o.base:null,cfg);
+    var el3=document.getElementById('m-profit-'+mid); if(el3) el3.innerHTML=_wizDualAmt(S.profit,oc,o?(o.sub-o.base):null,cfg);
   }
   _wizCalcGrandTotal(); // 每次 match 小計更新後，連動更新專案總計與收款排程
 }
@@ -5436,7 +5519,7 @@ async function _qToggleOrigCur(el){ var cfg=_quoteCfg(); cfg.show_orig_cur=!!el.
 // 套用匯率＝即期買入＋賣出之平均（TWD / 1 外幣）。買賣值缺漏時以台銀快照補上，避免換算失效。
 function _quoteRate(cfg){ cfg=cfg||_quoteCfg(); if(cfg.currency==='TWD') return 1; return _cfgRate(cfg.currency,cfg); }
 // 台幣金額換算為目前報價幣別
-function _fxConv(twd,cfg){ cfg=cfg||_quoteCfg(); if(cfg.currency==='TWD') return Math.ceil(Number(twd||0)); var r=_quoteRate(cfg); if(cfg.currency==='JPY') return Math.ceil(Number(twd||0)/r); return Math.round(Number(twd||0)/r*100)/100; }
+function _fxConv(twd,cfg){ cfg=cfg||_quoteCfg(); if(cfg.currency==='TWD') return _ceilFx(twd); var r=_quoteRate(cfg); if(cfg.currency==='JPY') return _ceilFx(Number(twd||0)/r); return Math.round(Number(twd||0)/r*100)/100; }
 // 取得某來源外幣對台幣的匯率（TWD/1 單位）：優先採用 cfg 的鎖定/設定值（srcRates → 顯示幣別 buy/sell），否則台銀即時快照
 function _cfgRate(cur,cfg){
   if(!cur||cur==='TWD') return 1;
@@ -5448,9 +5531,9 @@ function _cfgRate(cur,cfg){
 // 避免用 {currency:x} 這種無匯率的 cfg 導致回落台銀即時匯率、與內部 TWD 金額不一致。
 function _twdToCurByCfg(twd,cur,cfg){
   cfg=cfg||_quoteCfg();
-  if(!cur||cur==='TWD') return Math.ceil(Number(twd||0));
+  if(!cur||cur==='TWD') return _ceilFx(twd);
   var r=_cfgRate(cur,cfg)||1;
-  return cur==='JPY'?Math.ceil(Number(twd||0)/r):Math.round(Number(twd||0)/r*100)/100;
+  return cur==='JPY'?_ceilFx(Number(twd||0)/r):Math.round(Number(twd||0)/r*100)/100;
 }
 // 專案列表「報價含稅」顯示：以該專案的報價幣別呈現（quote_settings 幣別＋匯率；缺則主理人取客戶幣別；再缺則 TWD）
 function _projTotalDisplay(p){
@@ -5478,7 +5561,7 @@ function _fxNote(twd,cur,customRate){
   if(!cur||cur==='TWD'||!twd) return '';
   var avg=customRate||(BOT_RATES[cur]?(BOT_RATES[cur].buy+BOT_RATES[cur].sell)/2:0);
   if(!avg) return '';
-  var val=(cur==='JPY')?Math.ceil(twd/avg):Math.round(twd/avg*100)/100;
+  var val=(cur==='JPY')?_ceilFx(twd/avg):Math.round(twd/avg*100)/100;
   var fmt=(cur==='JPY')?Number(val).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):Number(val).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   return '<span style="font-size:11px;color:var(--text-dim);margin-left:5px;">≈ '+cur+' '+fmt+'</span>';
 }
@@ -6015,6 +6098,16 @@ function _quoteAutoLang(cust){
 // 主理人模式：填資料產出報價單 Word，回傳 {blob,fname,overseas,en}
 // forceOverseas：true=海外版、false=台灣版；未指定則依客戶登記地自動判斷
 // lang：'zh'=中文、'en'=英文；未指定則依客戶登記地自動判斷（_quoteAutoLang）
+// 報價單／居間報酬確認書「備註」欄的匯率附註（模板佔位符 {fxNote}）。
+// 只有在文件含「與報價幣別不同」的項目時才回傳字串；沒有跨幣別就回空字串，模板端不會留空行。
+// 開頭的 \n 由 docxtemplater 的 linebreaks:true 轉成換行，接在原本那條備註後面另起一行。
+function _fxNoteLine(hasFx, isEn, kind){
+  if(!hasFx) return '';
+  var what=(kind==='rebate')?(isEn?'this Confirmation':'本確認書'):(isEn?'this quotation':'本報價');
+  return '\n'+(isEn
+    ? '\u25aa Where '+what+' includes items priced in another currency, the amounts are converted at the Bank of Taiwan spot rate on the quotation date.'
+    : '\u25aa 若'+what+'含不同幣別之項目，匯率依報價當日台灣銀行即期匯率換算。');
+}
 function _wizBuildQuoteDocx(forceOverseas, lang){
   var Dt=(typeof window.docxtemplater!=='undefined')?window.docxtemplater:(typeof Docxtemplater!=='undefined'?Docxtemplater:null);
   if(typeof PizZip==='undefined'||!Dt){ _toast('Word 產生元件尚未載入，請重新整理頁面再試','err'); return null; }
@@ -6049,7 +6142,9 @@ function _wizBuildQuoteDocx(forceOverseas, lang){
     custContact:cust.contact_name||'', custPhone:cust.contact_phone||cust.company_phone||'', custOwner:cust.owner_name||'', custEmail:cust.email||'',
     items:dataItems,
     subtotal:_fxFmt(_dSub,cfg), tax:_fxFmt(_dTax,cfg), total:_fxFmt(_dTot,cfg),
-    paymentMethod:payText, deliveryTerms:''
+    paymentMethod:payText, deliveryTerms:'',
+    // 有項目的原幣別不等於報價幣別 → 備註加註匯率依據
+    fxNote:_fxNoteLine(items.some(function(x){ return x.currency && x.currency!==cfg.currency; }), isEn, 'quote')
   };
   try{
     var tpl=overseas?(isEn&&typeof QUOTE_TPL_OVERSEAS_EN!=='undefined'?QUOTE_TPL_OVERSEAS_EN:QUOTE_TPL_OVERSEAS)
@@ -6090,12 +6185,25 @@ async function _qdocRender(overseas, lang){
     var inner=document.getElementById('qdoc-inner');
     inner.style.zoom='';
     await window.docx.renderAsync(r.blob,inner,null,{inWrapper:false,ignoreLastRenderedPageBreak:true});
-    // 依實際內容寬度縮放，讓整份報價單完整顯示、不需左右捲
-    requestAnimationFrame(function(){
-      var natW=inner.scrollWidth||0, avail=(paper.clientWidth||900)-2;
-      if(natW>0&&avail>0&&natW>avail){ inner.style.zoom=(avail/natW); }
-    });
+    // 報價單已改直式：紙張寬度貼合文件本身，不留左右白邊，畫面只需上下捲動
+    requestAnimationFrame(function(){ _docFitPaper('qdoc'); });
   }catch(e){ paper.innerHTML='<div style="padding:40px;color:#666;font-size:13px;">預覽失敗（'+((e&&e.message)||e)+'），請直接點「下載 Word」。</div>'; }
+}
+// Word 預覽共用：把白色紙張的寬度貼合文件實際寬度（直式報價單不再左右留白），
+// 畫面只需上下捲動；視窗放不下時才等比縮小。prefix：'qdoc' 報價單／'rdoc' 居間報酬確認書
+function _docFitPaper(prefix){
+  var paper=document.getElementById(prefix+'-paper'),
+      inner=document.getElementById(prefix+'-inner'),
+      bar=document.getElementById(prefix+'-bar');
+  if(!paper||!inner) return;
+  inner.style.zoom='';
+  var natW=inner.scrollWidth||0; if(!natW) return;
+  var avail=Math.max(280,(window.innerWidth||1024)-40);   // 扣掉遮罩左右各 20px 內距
+  var z=(natW>avail)?(avail/natW):1;
+  if(z<1) inner.style.zoom=z;
+  var w=Math.round(natW*z);
+  paper.style.width=w+'px';
+  if(bar) bar.style.width=w+'px';   // 工具列跟著同寬，按鈕才對齊紙張
 }
 function _qdocSwitch(overseas){ _qdocRender(overseas, null); }
 function _qdocLangSwitch(lang){ _qdocRender(null, lang); }
@@ -6108,7 +6216,7 @@ async function _wizPreviewQuoteDocx(){
   var old=document.getElementById('qdoc-modal'); if(old) old.remove();
   var ov=document.createElement('div'); ov.id='qdoc-modal';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:400;display:flex;flex-direction:column;align-items:flex-start;padding:20px;overflow:auto;';
-  ov.innerHTML='<div style="width:1040px;max-width:96vw;margin:0 auto;display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-shrink:0;flex-wrap:wrap;">'+
+  ov.innerHTML='<div id="qdoc-bar" style="width:794px;max-width:calc(100vw - 40px);margin:0 auto;display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-shrink:0;flex-wrap:wrap;">'+
     '<span style="color:#fff;font-weight:600;font-size:14px;">報價單預覽</span>'+
     '<div style="display:inline-flex;border:1px solid rgba(255,255,255,0.5);border-radius:8px;overflow:hidden;">'+
       '<button id="qdoc-tw" onclick="_qdocSwitch(false)" style="border:none;padding:5px 12px;font-size:12.5px;cursor:pointer;background:transparent;color:#fff;">台灣廠商版</button>'+
@@ -6121,7 +6229,7 @@ async function _wizPreviewQuoteDocx(){
     '<button class="btn btn-primary" onclick="_qdocDownload()" style="margin-left:auto;">下載 Word</button>'+
     '<button class="btn btn-secondary" onclick="document.getElementById(\'qdoc-modal\').remove()">關閉</button>'+
   '</div>'+
-  '<div id="qdoc-paper" style="width:1040px;max-width:96vw;margin:0 auto;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,0.3);min-height:400px;overflow:auto;"></div>';
+  '<div id="qdoc-paper" style="width:794px;max-width:calc(100vw - 40px);margin:0 auto 20px;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,0.3);min-height:400px;overflow:hidden;flex-shrink:0;"></div>';
   document.body.appendChild(ov);
   _qdocRender(autoOverseas, autoLang);
 }
@@ -6186,7 +6294,9 @@ function _wizBuildRebateDocx(spId, forceOverseas, lang){
     spAddress:sp.company_address||'',
     items:dataItems,
     subtotal:_fxFmt(_dSub,cfg), tax:_fxFmt(_dTax,cfg), total:_fxFmt(_dTot,cfg),
-    paymentMethod:payText, clientCase:_custName(p.customer_id)
+    paymentMethod:payText, clientCase:_custName(p.customer_id),
+    // dataItems 的 note 只有跨幣別時才有值，直接拿來判斷要不要印匯率附註
+    fxNote:_fxNoteLine(dataItems.some(function(x){ return !!x.note; }), isEn, 'rebate')
   };
   try{
     var tpl=overseas?(isEn&&typeof REBATE_TPL_OVERSEAS_EN!=='undefined'?REBATE_TPL_OVERSEAS_EN:REBATE_TPL_OVERSEAS)
@@ -6224,7 +6334,7 @@ async function _rdocRender(spId, overseas, lang){
     paper.innerHTML='<div id="rdoc-inner"></div>';
     var inner=document.getElementById('rdoc-inner'); inner.style.zoom='';
     await window.docx.renderAsync(r.blob,inner,null,{inWrapper:false,ignoreLastRenderedPageBreak:true});
-    requestAnimationFrame(function(){ var natW=inner.scrollWidth||0, avail=(paper.clientWidth||900)-2; if(natW>0&&avail>0&&natW>avail){ inner.style.zoom=(avail/natW); } });
+    requestAnimationFrame(function(){ _docFitPaper('rdoc'); });
   }catch(e){ paper.innerHTML='<div style="padding:40px;color:#666;font-size:13px;">預覽失敗（'+((e&&e.message)||e)+'），請直接點「下載 Word」。</div>'; }
 }
 function _rdocSwitch(overseas){ _rdocRender(null, overseas, null); }
@@ -6245,7 +6355,7 @@ async function _wizPreviewRebateDocx(){
     ? ('<select id="rdoc-sp" onchange="_rdocSpSwitch(this.value)" style="padding:5px 10px;font-size:12.5px;border-radius:8px;border:1px solid rgba(255,255,255,0.5);background:#fff;color:#111;">'+
         provs.map(function(id){ return '<option value="'+id+'">'+_esc(_spName(id))+'</option>'; }).join('')+'</select>')
     : ('<span style="color:rgba(255,255,255,0.9);font-size:12.5px;">'+_esc(_spName(sp0))+'</span>');
-  ov.innerHTML='<div style="width:1040px;max-width:96vw;margin:0 auto;display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-shrink:0;flex-wrap:wrap;">'+
+  ov.innerHTML='<div id="rdoc-bar" style="width:794px;max-width:calc(100vw - 40px);margin:0 auto;display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-shrink:0;flex-wrap:wrap;">'+
     '<span style="color:#fff;font-weight:600;font-size:14px;">居間報酬確認書預覽</span>'+ spCtl +
     '<div style="display:inline-flex;border:1px solid rgba(255,255,255,0.5);border-radius:8px;overflow:hidden;">'+
       '<button id="rdoc-tw" onclick="_rdocSwitch(false)" style="border:none;padding:5px 12px;font-size:12.5px;cursor:pointer;background:transparent;color:#fff;">台灣服務商版</button>'+
@@ -6258,7 +6368,7 @@ async function _wizPreviewRebateDocx(){
     '<button class="btn btn-primary" onclick="_rdocDownload()" style="margin-left:auto;">下載 Word</button>'+
     '<button class="btn btn-secondary" onclick="document.getElementById(\'rdoc-modal\').remove()">關閉</button>'+
   '</div>'+
-  '<div id="rdoc-paper" style="width:1040px;max-width:96vw;margin:0 auto;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,0.3);min-height:400px;overflow:auto;"></div>';
+  '<div id="rdoc-paper" style="width:794px;max-width:calc(100vw - 40px);margin:0 auto 20px;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,0.3);min-height:400px;overflow:hidden;flex-shrink:0;"></div>';
   document.body.appendChild(ov);
   _rdocRender(sp0, autoOverseas, autoLang);
 }
@@ -6455,7 +6565,7 @@ function _payUpdateTotal(){
 }
 // 報價幣別金額 → TWD（儲存用）
 function _payCfgToTwd(amt_cfg,cfg){
-  if(!cfg||cfg.currency==='TWD') return Math.ceil(Number(amt_cfg)||0);
+  if(!cfg||cfg.currency==='TWD') return _ceilFx(amt_cfg);
   var rate=_quoteRate(cfg); if(!rate) return 0;
   // 保留兩位小數，避免「外幣→整數TWD→外幣」的精度損失（例：USD 720 → 22777 TWD → 719.99 USD）
   return Math.round(Number(amt_cfg||0)*rate*100)/100;
@@ -7065,8 +7175,10 @@ function _spTaxCfgLive(spId){
            wht_nhi:_spNum('sptax-nhi-'+spId,base.wht_nhi), threshold:_spNum('sptax-thr-'+spId,base.threshold) };
 }
 // nodeAmounts：各節點「未稅」金額陣列。回傳稅務明細（金額為該服務商幣別原值）
-function _spTaxCalc(type,cfg,nodeAmounts,isTwd){
-  var rd=function(x){ return isTwd?Math.round(x):Math.round(x*100)/100; };
+function _spTaxCalc(type,cfg,nodeAmounts,isTwd,cur){
+  // cur 省略時維持舊行為（只看 isTwd）；有帶幣別時，日圓也一律取整
+  var noDec=isTwd||_curDec(cur)===0;
+  var rd=function(x){ return noDec?Math.round(x):Math.round(x*100)/100; };
   var untaxed=nodeAmounts.reduce(function(a,v){ return a+Number(v||0); },0);
   var r={ type:type, untaxed:untaxed, vat:0, wht_income:0, wht_nhi:0, deduct:0, add:0, payable:untaxed };
   if(type==='發票'){ r.vat=rd(untaxed*cfg.vat/100); r.add=r.vat; r.payable=untaxed+r.vat; }
@@ -7079,7 +7191,7 @@ function _spTaxCalc(type,cfg,nodeAmounts,isTwd){
   } // 收據：免稅，未稅＝實付
   return r;
 }
-function _spMoneyFmt(v,isTwd,cur){ return isTwd?('NT$ '+_money(Math.round(v))):(cur+' '+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})); }
+function _spMoneyFmt(v,isTwd,cur){ return isTwd?('NT$ '+_money(Math.round(v))):(cur+' '+_curNum(v,cur)); }
 // 目前節點的未稅金額（優先讀 DOM 輸入框，退回記憶體）
 function _spNodeAmounts(spId){
   return (WIZ.spPaymentTerms||[]).filter(function(t){ return t.service_provider_id==spId; }).map(function(t){
@@ -7089,7 +7201,7 @@ function _spNodeAmounts(spId){
 // 一個服務商區塊的稅務摘要列（未稅／稅金或代扣／實付；稅率可就地修改）
 function _spTaxSummaryHtml(spId,isTwd,spCur){
   var type=_spInvoiceType(spId), cfg=_spTaxCfgLive(spId);
-  var r=_spTaxCalc(type,cfg,_spNodeAmounts(spId),isTwd);
+  var r=_spTaxCalc(type,cfg,_spNodeAmounts(spId),isTwd,spCur);
   var box='id="spt-tax-'+spId+'" style="padding:10px 14px;border-top:0.5px solid var(--border);background:#fbfcfe;font-size:12px;color:var(--text-mid);display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;"';
   var ri=function(id,val,w){ return '<input id="'+id+'" type="number" step="any" value="'+val+'" onchange="_spTaxRerender('+spId+')" style="width:'+(w||44)+'px;border:1px solid var(--border);border-radius:5px;padding:2px 5px;font-size:11.5px;text-align:right;font-variant-numeric:tabular-nums;">'; };
   var pay=function(){ return '<span style="margin-left:auto;">實付 <b style="color:'+HP_PAY_COLOR+';font-variant-numeric:tabular-nums;">'+_spMoneyFmt(r.payable,isTwd,spCur)+'</b></span>'; };
@@ -7120,7 +7232,7 @@ function _spTaxRerender(spId){
   if(el) el.outerHTML=_spTaxSummaryHtml(spId,spCur==='TWD',spCur);
 }
 // 由未稅節點金額算出稅務明細（含實付 payable）；全站服務商付款金額一律經此，確保各畫面一致
-function _spPayableCalc(spId,nodeAmounts,isTwd){ return _spTaxCalc(_spInvoiceType(spId),_spTaxCfg(spId),nodeAmounts,isTwd); }
+function _spPayableCalc(spId,nodeAmounts,isTwd,cur){ return _spTaxCalc(_spInvoiceType(spId),_spTaxCfg(spId),nodeAmounts,isTwd,cur); }
 
 async function _sptReload(){
   if(!WIZ.id) return;
@@ -7137,9 +7249,10 @@ function _sptFlush(){
     var notes=document.getElementById('spt-notes-'+t.id);
     var unlock=document.getElementById('spt-unlock-'+t.id);
     if(lbl) t.label=lbl.value;
+    // 空字串／非數字一律當 0（使用者自己清空），但「元素不存在」時完全不動記憶體
     if(amt) t.amount=parseFloat(amt.value)||0;
     if(notes) t.notes=notes.value;
-    if(unlock) t.unlock_client_installment_id=parseInt(unlock.value);
+    if(unlock){ var _u=parseInt(unlock.value); if(!isNaN(_u)) t.unlock_client_installment_id=_u; }
   });
 }
 
@@ -7163,29 +7276,31 @@ function _sptLiveUpdate(spId){
   spts.forEach(function(t){
     var amtEl=document.getElementById('spt-amt-'+t.id); var amt=amtEl?(parseFloat(amtEl.value)||0):Number(t.amount||0);
     var inclEl=document.getElementById('spt-incl-'+t.id);
-    if(inclEl) inclEl.textContent=_spMoneyFmt(_spPayableCalc(spId,[amt],isTwd).payable,isTwd,spCur);
+    if(inclEl) inclEl.textContent=_spMoneyFmt(_spPayableCalc(spId,[amt],isTwd,spCur).payable,isTwd,spCur);
   });
   // 更新總計顯示
   var totalEl=document.getElementById('spt-total-'+spId);
   if(totalEl){
-    totalEl.textContent=total>0?(isTwd?'NT$ '+_money(total):spCur+' '+total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})):'—';
+    totalEl.textContent=total>0?(isTwd?'NT$ '+_money(total):spCur+' '+_curNum(total,spCur)):'—';
   }
   // 更新差額徽章
   var diffEl=document.getElementById('spt-diff-'+spId);
   if(!diffEl) return;
   var refTwd=parseFloat(diffEl.getAttribute('data-ref-twd'))||0;
   if(!refTwd) return;
-  var botRate=(typeof BOT_RATES!=='undefined'&&BOT_RATES&&BOT_RATES[spCur])?(BOT_RATES[spCur].buy+BOT_RATES[spCur].sell)/2:0;
   var isMatch, diffStr;
   if(isTwd){
     isMatch=Math.abs(total-refTwd)<1;
     var lDir=total>refTwd?'多付':'少付';
     diffStr=isMatch?'✓ 吻合':(lDir+' NT$ '+_money(Math.abs(total-refTwd)));
   } else {
-    var refFx=botRate?Math.round(refTwd/botRate*100)/100:0;
-    isMatch=Math.abs(total-refFx)<0.02;
+    // 原幣底價參考在渲染時就算好放進 data-ref-fx（沒有繞台幣，不會有來回換匯誤差）；
+    // 舊資料沒有這個屬性時才回推，且改用本專案的匯率來源（含鎖定匯率）
+    var refFx=parseFloat(diffEl.getAttribute('data-ref-fx'));
+    if(isNaN(refFx)){ var _r=_cfgRate(spCur,_quoteCfg()); refFx=_r?_fxRound(refTwd/_r,spCur):0; }
+    isMatch=Math.abs(total-refFx)<(_curDec(spCur)?0.02:0.5);
     var lDir=total>refFx?'多付':'少付';
-    diffStr=isMatch?'✓ 吻合':(lDir+' '+spCur+' '+Math.abs(total-refFx).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}));
+    diffStr=isMatch?'✓ 吻合':(lDir+' '+spCur+' '+_curNum(Math.abs(total-refFx),spCur));
   }
   diffEl.textContent=diffStr;
   diffEl.style.background=isMatch?'#f0fdf4':'#fef2f2';
@@ -7228,11 +7343,17 @@ async function _sptSave(){
 
   var toInsert=[]; var toUpsert=[];
   WIZ.spPaymentTerms.forEach(function(t){
-    var lbl=((document.getElementById('spt-lbl-'+t.id)||{}).value||t.label||'款項').trim();
-    var amt=parseFloat((document.getElementById('spt-amt-'+t.id)||{}).value)||0;
-    var notes=((document.getElementById('spt-notes-'+t.id)||{}).value||'').trim()||null;
+    // ⚠️ 這些欄位一律「有輸入框才讀畫面，沒有就退回記憶體」——
+    //    任何一個直接預設 0／null 的欄位，都會在區塊被收合或重繪後把資料洗掉。
+    var lblEl=document.getElementById('spt-lbl-'+t.id);
+    var amtEl=document.getElementById('spt-amt-'+t.id);
+    var notesEl=document.getElementById('spt-notes-'+t.id);
     var unlockEl=document.getElementById('spt-unlock-'+t.id);
-    var unlockId=unlockEl?parseInt(unlockEl.value):defaultUnlock;
+    var lbl=((lblEl?lblEl.value:'')||t.label||'款項').trim();
+    var amt=amtEl?(parseFloat(amtEl.value)||0):(Number(t.amount)||0);
+    var notes=(notesEl?(notesEl.value||'').trim():((t.notes||'').trim()))||null;
+    var unlockId=unlockEl?parseInt(unlockEl.value):(t.unlock_client_installment_id!=null?Number(t.unlock_client_installment_id):defaultUnlock);
+    if(isNaN(unlockId)) unlockId=defaultUnlock;
     var row={ project_id:WIZ.id, service_provider_id:t.service_provider_id, installment_index:t.installment_index, label:lbl, amount:amt, currency:t.currency, notes:notes, unlock_client_installment_id:unlockId };
     if(t._isNew||t.id<0) toInsert.push(row);
     else toUpsert.push(Object.assign({id:t.id,updated_time:new Date().toISOString()},row));
@@ -7400,8 +7521,9 @@ function _wizStep8Princ(p,done){
     function conv(twd){
       if(isTwd) return 'NT$ '+_money(Math.round(twd));
       if(spCur===quoteCur&&quoteRate) return _fxFmt(_fxConv(twd,cfg),cfg);
-      var botRate=(typeof BOT_RATES!=='undefined'&&BOT_RATES&&BOT_RATES[spCur])?(BOT_RATES[spCur].buy+BOT_RATES[spCur].sell)/2:0;
-      if(botRate) return spCur+' '+(Math.round(twd/botRate*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+      // 用本專案報價設定的匯率（含鎖定匯率）回推，與 _itemToTwd 同一來源，避免來回換匯誤差
+      var spRate=_cfgRate(spCur,cfg);
+      if(spRate) return spCur+' '+_curNum(_fxRound(twd/spRate,spCur),spCur);
       return 'NT$ '+_money(Math.round(twd));
     }
     var main=badge+'&nbsp;<span style="font-weight:600;font-variant-numeric:tabular-nums;color:'+HP_PAY_COLOR+';">'+conv(payTwd)+'</span>';
@@ -7504,7 +7626,7 @@ function _wizStep8Princ(p,done){
       '</div>';
       // Reference pill from sp_payment_terms
       if(spt){
-        var sptAmtStr=spCur==='TWD'?('NT$ '+_money(Number(spt.amount||0))):(spCur+' '+Number(spt.amount||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}));
+        var sptAmtStr=spCur==='TWD'?('NT$ '+_money(Number(spt.amount||0))):(spCur+' '+_curNum(spt.amount,spCur));
         row+='<div style="margin-bottom:'+(isPaid?'8':'12')+'px;">'+
           '<span style="font-size:11px;padding:2px 9px;border-radius:4px;background:#f1f5f9;color:#475569;border:0.5px solid #cbd5e1;font-weight:500;">協議 · '+_esc(spt.label||'款項')+'&emsp;'+_esc(sptAmtStr)+'</span>'+
         '</div>';
@@ -7540,7 +7662,7 @@ function _wizStep8Princ(p,done){
         '</div>';
       } else if(isPaid){
         row+='<div style="font-size:12px;color:var(--text-mid);display:flex;gap:14px;flex-wrap:wrap;align-items:center;">'+
-          (ppr.actual_amount?'<span>實付：<b>'+(ppr.actual_currency||spCur)+' '+Number(ppr.actual_amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'</b></span>':'')+
+          (ppr.actual_amount?'<span>實付：<b>'+(ppr.actual_currency||spCur)+' '+_curNum(ppr.actual_amount,(ppr.actual_currency||spCur))+'</b></span>':'')+
           (ppr.invoice_number?'<span>發票：<b>'+_esc(ppr.invoice_number)+'</b></span>':'')+
           (hasFile?'<button class="btn btn-secondary" style="padding:2px 8px;font-size:11.5px;" onclick="_ppPreviewFile('+pprId+')">預覽發票</button>':'')+
           (ppr.payment_notes?'<span style="color:var(--text-dim);">備註：'+_esc(ppr.payment_notes)+'</span>':'')+
@@ -7996,9 +8118,11 @@ async function _ppInit(){
       if(spt.currency==='TWD'){ twdAmt=Math.round(Number(spt.amount||0)); rateUsed=1; }
       else if(spt.currency===quoteCur&&quoteRate){ twdAmt=Math.round(Number(spt.amount||0)*quoteRate); rateUsed=quoteRate; }
       else {
-        var botRate=(typeof BOT_RATES!=='undefined'&&BOT_RATES&&BOT_RATES[spt.currency])?(BOT_RATES[spt.currency].buy+BOT_RATES[spt.currency].sell)/2:0;
-        twdAmt=botRate?Math.round(Number(spt.amount||0)*botRate):Math.round(Number(spt.amount||0));
-        rateUsed=botRate||1;
+        // 與 _itemToTwd／底價參考同一個匯率來源（優先本專案鎖定匯率），
+        // 否則同一筆金額在「付款協議」與「逐期付款」會兜不起來
+        var spRate=_cfgRate(spt.currency,cfg);
+        twdAmt=spRate?Math.round(Number(spt.amount||0)*spRate):Math.round(Number(spt.amount||0));
+        rateUsed=spRate||1;
       }
       // 存外幣原值 + 當時鎖定匯率（修正 #3：顯示時直接讀，不再用即時匯率回推）
       toInsert.push({ project_id:WIZ.id, service_provider_id:spt.service_provider_id, sp_payment_term_id:spt.id, installment_index:spt.installment_index, installment_label:spt.label||'款項', installment_pct:0, amount_twd:twdAmt, amount_orig:Number(spt.amount||0), orig_currency:spt.currency||'TWD', fx_rate:rateUsed, client_unlock_installment_id:spt.unlock_client_installment_id, status:'pending' });
@@ -8267,34 +8391,41 @@ function _wizStep8PrincCombined(){
       var bdgSt=isTwd?'background:#f1f5f9;color:#475569;border:0.5px solid #cbd5e1;':'background:#dbeafe;color:#1d4ed8;border:0.5px solid #93c5fd;';
       var badge='<span style="font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;vertical-align:middle;'+bdgSt+'">'+spCur+'</span>';
       var total=terms.reduce(function(s,t){ return s+Number(t.amount||0); },0);
-      var totalHtml=total>0?(isTwd?'NT$ '+_money(total):spCur+' '+total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})):'—';
+      var totalHtml=total>0?(isTwd?'NT$ '+_money(total):spCur+' '+_curNum(total,spCur)):'—';
       var items=WIZ.itemsByMatch[m.id]||[];
       var refTwd=items.reduce(function(s,it){ var bp=Number(it.base_price||0);return s+_itemToTwd(bp,_itemCurrency(it,spId)); },0);
+      // 底價的「原幣」金額：該服務商的項目若全都同一幣別、且就是服務商的收款幣別，
+      // 直接用原幣加總 —— 不繞台幣，才不會因為「鎖定匯率換過去、快照匯率換回來」而跑掉。
+      var _refCurs={}; items.forEach(function(it){ _refCurs[_itemCurrency(it,spId)]=1; });
+      var _refCurList=Object.keys(_refCurs);
+      var refOrig=(_refCurList.length===1&&_refCurList[0]===spCur)
+        ? items.reduce(function(s,it){ return s+Number(it.base_price||0); },0) : null;
       var refHtml='';
       if(refTwd>0){
-        var botRate=(typeof BOT_RATES!=='undefined'&&BOT_RATES&&BOT_RATES[spCur])?(BOT_RATES[spCur].buy+BOT_RATES[spCur].sell)/2:0;
         var refDisplay,isMatch,diffStr;
         if(isTwd){
           refDisplay='NT$ '+_money(refTwd); isMatch=Math.abs(total-refTwd)<1;
           diffStr=isMatch?'✓ 吻合':((total>refTwd?'多付':'少付')+' NT$ '+_money(Math.abs(total-refTwd)));
         } else {
-          var refFx=botRate?Math.round(refTwd/botRate*100)/100:0;
-          refDisplay=spCur+' '+refFx.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'<span style="font-size:11px;color:var(--text-dim);margin-left:4px;">≈ NT$ '+_money(refTwd)+'</span>';
-          isMatch=Math.abs(total-refFx)<0.02;
-          diffStr=isMatch?'✓ 吻合':((total>refFx?'多付':'少付')+' '+spCur+' '+Math.abs(total-refFx).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}));
+          // 沒有單一原幣可用時才回推，且用 _cfgRate（與 _itemToTwd 同一來源，含本專案鎖定匯率）
+          var _spRate=_cfgRate(spCur,cfg);
+          var refFx=(refOrig!=null)?_fxRound(refOrig,spCur):(_spRate?_fxRound(refTwd/_spRate,spCur):0);
+          refDisplay=spCur+' '+_curNum(refFx,spCur)+'<span style="font-size:11px;color:var(--text-dim);margin-left:4px;">≈ NT$ '+_money(refTwd)+'</span>';
+          isMatch=Math.abs(total-refFx)<(_curDec(spCur)?0.02:0.5);
+          diffStr=isMatch?'✓ 吻合':((total>refFx?'多付':'少付')+' '+spCur+' '+_curNum(Math.abs(total-refFx),spCur));
         }
         refHtml='<span style="font-size:11.5px;color:var(--text-dim);">底價參考 '+refDisplay+'</span>'+
-          '<span id="spt-diff-'+spId+'" data-ref-twd="'+refTwd+'" data-sp-cur="'+spCur+'" style="font-size:11px;padding:1px 7px;border-radius:4px;font-weight:600;background:'+(isMatch?'#f0fdf4':'#fef2f2')+';color:'+(isMatch?'#16a34a':'#dc2626')+';border:0.5px solid '+(isMatch?'#bbf7d0':'#fecaca')+';">'+diffStr+'</span>';
+          '<span id="spt-diff-'+spId+'" data-ref-twd="'+refTwd+'"'+(isTwd?'':' data-ref-fx="'+refFx+'"')+' data-sp-cur="'+spCur+'" style="font-size:11px;padding:1px 7px;border-radius:4px;font-weight:600;background:'+(isMatch?'#f0fdf4':'#fef2f2')+';color:'+(isMatch?'#16a34a':'#dc2626')+';border:0.5px solid '+(isMatch?'#bbf7d0':'#fecaca')+';">'+diffStr+'</span>';
       }
       var headerRow=terms.length?'<div style="display:grid;grid-template-columns:22px 88px 128px 118px 1fr 146px 24px;gap:8px;align-items:center;padding:6px 14px;font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--text-dim);text-transform:uppercase;border-top:0.5px solid var(--border);"><span></span><span>標籤</span><span>未稅金額（'+spCur+'）</span><span>含稅實付</span><span>備注</span><span>解鎖條件</span><span></span></div>':'';
       var rows=terms.map(function(t,idx){
         var selOpts=insts.map(function(ci,ciIdx){ return '<option value="'+ci.id+'"'+(t.unlock_client_installment_id===ci.id?' selected':'')+'>收到客戶第'+(ciIdx+1)+'期（'+_esc(ci.label||'款項')+'）</option>'; }).join('');
-        var amtVal=Number(t.amount||0).toFixed(isTwd?0:2);
+        var amtVal=Number(t.amount||0).toFixed(_curDec(spCur));   // 日圓不給小數位
         var locked=_sptTermLocked(t);
         return '<div style="display:grid;grid-template-columns:22px 88px 128px 118px 1fr 146px 24px;gap:8px;align-items:center;padding:8px 14px;border-top:0.5px solid var(--border);font-size:13px;">'+
           '<span style="font-size:11px;color:var(--text-dim);font-weight:700;text-align:center;">#'+(idx+1)+'</span>'+
           '<input class="cm-input" id="spt-lbl-'+t.id+'" '+(locked?'readonly ':'')+'value="'+_esc(t.label||'')+'" placeholder="標籤" style="font-size:12px;padding:5px 8px;'+(locked?'background:#f1f5f9;color:var(--text-mid);':'')+'">'+
-          '<div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:#fff;"><span style="padding:0 8px;font-size:11.5px;color:var(--text-dim);background:#f8fafc;border-right:1px solid var(--border);white-space:nowrap;align-self:stretch;display:flex;align-items:center;">'+spCur+'</span><input type="number" class="cm-input" id="spt-amt-'+t.id+'" '+(locked?'disabled ':'')+'value="'+amtVal+'" step="'+(isTwd?'1':'0.01')+'" oninput="_sptLiveUpdate('+spId+')" style="border:none;font-size:12px;padding:5px 8px;font-variant-numeric:tabular-nums;background:transparent;'+(locked?'color:var(--text-mid);':'')+'"></div>'+'<div id="spt-incl-'+t.id+'" title="依開立憑證方式自動計算" style="border:1px solid var(--border);border-radius:7px;background:#f8fafc;padding:5px 8px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;color:'+HP_PAY_COLOR+';white-space:nowrap;overflow:hidden;">'+_spMoneyFmt(_spPayableCalc(spId,[Number(t.amount||0)],isTwd).payable,isTwd,spCur)+'</div>'+
+          '<div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:#fff;"><span style="padding:0 8px;font-size:11.5px;color:var(--text-dim);background:#f8fafc;border-right:1px solid var(--border);white-space:nowrap;align-self:stretch;display:flex;align-items:center;">'+spCur+'</span><input type="number" class="cm-input" id="spt-amt-'+t.id+'" '+(locked?'disabled ':'')+'value="'+amtVal+'" step="'+(_curDec(spCur)?'0.01':'1')+'" oninput="_sptLiveUpdate('+spId+')" style="border:none;font-size:12px;padding:5px 8px;font-variant-numeric:tabular-nums;background:transparent;'+(locked?'color:var(--text-mid);':'')+'"></div>'+'<div id="spt-incl-'+t.id+'" title="依開立憑證方式自動計算" style="border:1px solid var(--border);border-radius:7px;background:#f8fafc;padding:5px 8px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;color:'+HP_PAY_COLOR+';white-space:nowrap;overflow:hidden;">'+_spMoneyFmt(_spPayableCalc(spId,[Number(t.amount||0)],isTwd,spCur).payable,isTwd,spCur)+'</div>'+
           '<input class="cm-input" id="spt-notes-'+t.id+'" '+(locked?'readonly ':'')+'value="'+_esc(t.notes||'')+'" placeholder="備注（選填）" style="font-size:12px;padding:5px 8px;'+(locked?'background:#f1f5f9;color:var(--text-mid);':'')+'">'+
           '<select class="cm-input" id="spt-unlock-'+t.id+'" '+(locked?'disabled ':'')+'style="font-size:12px;padding:5px 8px;'+(locked?'background:#f1f5f9;color:var(--text-mid);':'')+'">'+selOpts+'</select>'+
           (locked?'<span title="已收／已付，已鎖定不可修改" style="text-align:center;color:#16a34a;font-size:11px;font-weight:600;">已鎖定</span>':'<button onclick="_sptDeleteTerm('+t.id+')" class="btn btn-secondary" style="padding:3px 8px;font-size:12px;color:#dc2626;">×</button>')+
@@ -8378,7 +8509,7 @@ function _wizStep8PrincCombined(){
         var clientReceived=ppr&&!!ppr.client_received_at;
         var instIdx=insts.findIndex(function(i){ return i.id===spt.unlock_client_installment_id; });
         var instLabel='客戶第 '+(instIdx>=0?(instIdx+1):(spt.unlock_client_installment_id||'?'))+' 期';
-        var sptAmtStr=isTwd?('NT$ '+_money(Number(spt.amount||0))):(spCur+' '+Number(spt.amount||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}));
+        var sptAmtStr=isTwd?('NT$ '+_money(Number(spt.amount||0))):(spCur+' '+_curNum(spt.amount,spCur));
         var unlockHtml=clientReceived
           ?'<span style="color:#16a34a;font-size:11px;margin-right:3px;">✓</span>'+instLabel
           :'<span style="color:#94a3b8;font-size:11px;margin-right:3px;">◌</span>'+instLabel;
@@ -8691,19 +8822,21 @@ function updateCrecTable(){
   _persistView('commission_records');
   var slicePids=order.slice((crecPage-1)*PAGE_SIZE,crecPage*PAGE_SIZE);
 
+  // 欄位一律不換行；表格外層 .table-wrap 會在放不下時改成左右捲動
+  var _thS='padding:10px 12px;white-space:nowrap;';
   var head='<thead><tr style="background:#f8f9fb;font-size:12px;">'+
     '<th style="width:28px;padding:10px 8px;"></th>'+
-    '<th style="padding:10px 12px;">專案</th>'+
-    '<th style="padding:10px 12px;">客戶</th>'+
-    '<th style="padding:10px 12px;">模式</th>'+
-    '<th style="padding:10px 12px;">商務夥伴</th>'+
-    '<th style="text-align:right;padding:10px 12px;">客戶收款</th>'+
-    '<th style="text-align:right;padding:10px 12px;">服務商成本<span style="font-weight:400;color:var(--text-dim);font-size:11px;">（未稅／實付）</span></th>'+
-    '<th style="text-align:right;padding:10px 12px;">差額（毛利）</th>'+
-    '<th style="text-align:right;padding:10px 12px;">商務獎金（實付）</th>'+
-    '<th style="padding:10px 12px;width:76px;">支付狀態</th>'+
-    '<th style="padding:10px 12px;width:100px;">最後操作人</th>'+
-    '<th style="padding:10px 12px;width:96px;text-align:right;">操作</th>'+
+    '<th style="'+_thS+'">專案</th>'+
+    '<th style="'+_thS+'">客戶</th>'+
+    '<th style="'+_thS+'">模式</th>'+
+    '<th style="'+_thS+'">商務夥伴</th>'+
+    '<th style="text-align:right;'+_thS+'">客戶收款<span style="font-weight:400;color:var(--text-dim);font-size:11px;">（未稅／實收）</span></th>'+
+    '<th style="text-align:right;'+_thS+'">服務商成本<span style="font-weight:400;color:var(--text-dim);font-size:11px;">（未稅／實付）</span></th>'+
+    '<th style="text-align:right;'+_thS+'">差額（毛利）</th>'+
+    '<th style="text-align:right;'+_thS+'">商務獎金（實付）</th>'+
+    '<th style="'+_thS+'width:76px;">支付狀態</th>'+
+    '<th style="'+_thS+'width:100px;">最後操作人</th>'+
+    '<th style="'+_thS+'width:96px;text-align:right;">操作</th>'+
   '</tr></thead>';
 
   var bodyHtml='';
@@ -8716,6 +8849,8 @@ function updateCrecTable(){
 
     // 彙總金額
     var clientRecv=finRecs.filter(function(f){ return f.record_type==='receivable'; }).reduce(function(a,f){ return a+Number(f.amount||0); },0);
+    // 未稅收款：毛利＝未稅收款 − 未稅成本，所以主顯示要用未稅，含稅（實收）放小字
+    var clientRecvUntax=finRecs.filter(function(f){ return f.record_type==='receivable'; }).reduce(function(a,f){ return a+Number(f.amount_untaxed!=null?f.amount_untaxed:(f.amount||0)); },0);
     var spCostTotal=finRecs.filter(function(f){ return f.record_type==='payable_provider'; }).reduce(function(a,f){ return a+Number(f.amount_untaxed!=null?f.amount_untaxed:(f.amount||0)); },0);  // 服務商成本用未稅（利潤基準），非含稅實付
     // 若 financial_records 無資料，退而用 provider_payment_records
     if(!spCostTotal) spCostTotal=pprRecs.reduce(function(a,r){ return a+Number(r.amount_twd||0); },0);
@@ -8723,17 +8858,41 @@ function updateCrecTable(){
     var partnerTotal=recs.reduce(function(a,c){ return a+Number(c.partner_amount_taxed||0); },0);
     var mode=proj&&proj.cooperation_mode;
     var isIntermediary=mode==='intermediary';
-    // 偵測專案層級的 FX（若所有 SP 幣別相同且非 TWD，就在摘要列顯示原始幣別）
-    var _projFxFirstCur=null; var _projFxAllSame=true;
-    recs.forEach(function(c){ var sp=_find(DB.service_providers,c.service_provider_id); var cur=(sp&&sp.payment_currency)||'TWD'; if(_projFxFirstCur===null) _projFxFirstCur=cur; else if(_projFxFirstCur!==cur) _projFxAllSame=false; });
-    // projFx 優先採用帳務 payable_provider 上存的鎖定匯率（修正 #3），否則 fallback
-    var _projPpFx=finRecs.find(function(f){ return f.record_type==='payable_provider'&&f.fx_rate>0&&f.orig_currency&&f.orig_currency!=='TWD'; });
-    var projFx=_projPpFx?{cur:_projPpFx.orig_currency,rate:Number(_projPpFx.fx_rate)}:((_projFxAllSame&&_projFxFirstCur&&_projFxFirstCur!=='TWD'&&recs.length)?_spFxRateRec(recs[0],pid):null);
-    // 偵測專案層級的 BP 幣別（所有 BP 幣別相同且非 TWD 才統一顯示外幣）— 摘要列與合計列共用
-    var _bpFxFirst=null; var _bpFxSame=true;
-    recs.forEach(function(c){ if(!c.business_partner_id) return; var bf=_bpFxRateRec(c); var cur=bf?bf.cur:'TWD'; if(_bpFxFirst===null) _bpFxFirst=cur; else if(_bpFxFirst!==cur) _bpFxSame=false; });
-    var _bpHasBp=recs.some(function(c){ return !!c.business_partner_id; });
-    var projBpFx=(_bpFxSame&&_bpFxFirst&&_bpFxFirst!=='TWD'&&_bpHasBp)?_bpFxRateRec(recs.find(function(c){ return !!c.business_partner_id; })):null;
+    // ── 合計欄的原幣拆解（取代舊的 projFx／projBpFx）──
+    // 舊做法是「找到第一筆有外幣匯率的紀錄，就用那個幣別換算整包總額」，
+    // 一台幣一日圓混在一起時會生出根本不存在的數字（例：TWD 35,000 被寫成 JPY 175,000）。
+    // 現在改成逐筆用自己的原幣別累加，原值優先讀結算當時存下的 *_orig。
+    var _spCostMap={}, _bpPaidMap={}, _bpUntaxMap={}, _bpTaxMap={}, _profitMap={};
+    var _spFinAll=finRecs.filter(function(f){ return f.record_type==='payable_provider'; });
+    if(_spFinAll.length){
+      _spFinAll.forEach(function(f){
+        var twd=Number(f.amount_untaxed!=null?f.amount_untaxed:(f.amount||0));
+        var fx=_finRecFx(f); var cur=fx?fx.cur:'TWD';
+        var o=(cur==='TWD')?twd:(f.amount_orig!=null?Number(f.amount_orig):(_fxOrigAmt(twd,fx)||twd));
+        _crecPartsPush(_spCostMap,cur,o);
+      });
+    } else {
+      pprRecs.forEach(function(r){
+        var cur=r.orig_currency||'TWD';
+        var o=(cur==='TWD')?Number(r.amount_twd||0):Number(r.amount_orig!=null?r.amount_orig:(r.amount_twd||0));
+        _crecPartsPush(_spCostMap,cur,o);
+      });
+    }
+    recs.forEach(function(c){
+      var cFx=_spFxRateRec(c,pid); var pCur=cFx?cFx.cur:'TWD';
+      var pv=Number(c.profit_untaxed||0);
+      _crecPartsPush(_profitMap,pCur,(pCur==='TWD')?pv:(c.profit_untaxed_orig!=null?Number(c.profit_untaxed_orig):(_fxOrigAmt(pv,cFx)||pv)));
+      if(!c.business_partner_id) return;
+      var bf=_bpFxRateRec(c); var bCur=bf?bf.cur:'TWD';
+      var tv=Number(c.partner_amount_taxed||0), uv=Number(c.partner_amount_untaxed||0);
+      var tO=(bCur==='TWD')?tv:(c.partner_amount_taxed_orig!=null?Number(c.partner_amount_taxed_orig):(_fxOrigAmt(tv,bf)||tv));
+      var uO=(bCur==='TWD')?uv:(c.partner_amount_untaxed_orig!=null?Number(c.partner_amount_untaxed_orig):(_fxOrigAmt(uv,bf)||uv));
+      _crecPartsPush(_bpPaidMap,bCur,tO);
+      _crecPartsPush(_bpUntaxMap,bCur,uO);
+      _crecPartsPush(_bpTaxMap,bCur,tO-uO);
+    });
+    var spCostParts=_crecPartsList(_spCostMap), profitParts=_crecPartsList(_profitMap),
+        bpPaidParts=_crecPartsList(_bpPaidMap), bpUntaxParts=_crecPartsList(_bpUntaxMap), bpTaxParts=_crecPartsList(_bpTaxMap);
 
     var allPaid=recs.every(function(c){ return (c.partner_payment_status||'pending')==='paid'; });
     var noBp=recs.every(function(c){ return !c.business_partner_id; });
@@ -8746,15 +8905,22 @@ function updateCrecTable(){
 
     bodyHtml+='<tr style="border-top:1px solid var(--border);cursor:pointer;" onclick="crecToggle('+pid+')">'+
       '<td style="padding:10px 8px;text-align:center;color:var(--text-dim);font-size:13px;">'+(expanded?'▾':'▸')+'</td>'+
-      '<td style="padding:10px 12px;font-weight:600;">'+_esc(_projOf(pid))+'</td>'+
-      '<td style="padding:10px 12px;color:var(--text-mid);">'+_esc(_custName(proj?proj.customer_id:null))+'</td>'+
-      '<td style="padding:10px 12px;">'+modeTag+'</td>'+
-      '<td style="padding:10px 12px;">'+_esc(bpNames)+'</td>'+
-      '<td style="text-align:right;padding:10px 12px;font-variant-numeric:tabular-nums;">'+(clientRecv?'NT$ '+_money(clientRecv):'—')+'</td>'+
-      '<td style="text-align:right;padding:10px 12px;font-variant-numeric:tabular-nums;">'+(spCostTotal?_crecFxAmt(spCostTotal,projFx):'—')+'</td>'+
-      '<td style="text-align:right;padding:10px 12px;font-variant-numeric:tabular-nums;color:#0369a1;font-weight:600;">'+_crecFxAmt(profitTotal,isIntermediary?projFx:null)+'</td>'+
-      '<td style="text-align:right;padding:10px 12px;font-weight:700;font-variant-numeric:tabular-nums;">'+_crecFxAmt(partnerTotal,projBpFx)+'</td>'+
-      '<td style="padding:10px 12px;">'+statusBadge+'</td>'+
+      '<td style="padding:10px 12px;font-weight:600;white-space:nowrap;">'+_esc(_projOf(pid))+'</td>'+
+      '<td style="padding:10px 12px;color:var(--text-mid);white-space:nowrap;">'+_esc(_custName(proj?proj.customer_id:null))+'</td>'+
+      '<td style="padding:10px 12px;white-space:nowrap;">'+modeTag+'</td>'+
+      '<td style="padding:10px 12px;white-space:nowrap;">'+_esc(bpNames)+'</td>'+
+      '<td style="text-align:right;padding:10px 12px;font-variant-numeric:tabular-nums;white-space:nowrap;">'+(function(){
+        if(!clientRecv&&!clientRecvUntax) return '—';
+        var u=clientRecvUntax||clientRecv;
+        var s='<span style="white-space:nowrap;">NT$ '+_money(u)+'</span>';
+        // 含稅與未稅不同才多印一行（免稅／零稅率的專案就不用多這行）
+        if(clientRecv&&Math.round(clientRecv)!==Math.round(u)) s+='<div style="font-size:10px;color:var(--text-dim);font-weight:400;margin-top:1px;white-space:nowrap;">實收 NT$ '+_money(clientRecv)+'</div>';
+        return s;
+      })()+'</td>'+
+      '<td style="text-align:right;padding:10px 12px;font-variant-numeric:tabular-nums;white-space:nowrap;">'+(spCostTotal?_crecTotalAmt(spCostTotal,spCostParts):'—')+'</td>'+
+      '<td style="text-align:right;padding:10px 12px;font-variant-numeric:tabular-nums;color:#0369a1;font-weight:600;white-space:nowrap;">'+_crecTotalAmt(profitTotal,isIntermediary?profitParts:null)+'</td>'+
+      '<td style="text-align:right;padding:10px 12px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;">'+_crecTotalAmt(partnerTotal,bpPaidParts)+'</td>'+
+      '<td style="padding:10px 12px;white-space:nowrap;">'+statusBadge+'</td>'+
       '<td style="padding:10px 12px;color:var(--text-mid);font-size:12px;white-space:nowrap;">'+_esc((recs[0]&&recs[0].updated_by)||'—')+'</td>'+
       '<td style="padding:10px 12px;text-align:right;">'+actionHtml+'</td>'+
     '</tr>';
@@ -8782,40 +8948,36 @@ function updateCrecTable(){
         var bFx=noBpC?null:_bpFxRateRec(c);
         return '<tr id="crec-row-'+c.id+'" style="border-bottom:1px solid #f0f2f5;">'+
           '<td style="padding:7px 10px;font-weight:600;white-space:nowrap;">'+_esc(_spName(c.service_provider_id))+'</td>'+
-          '<td style="padding:7px 10px;">'+_orderTypeBadge(c.order_type)+'</td>'+
-          '<td style="padding:7px 10px;">'+_esc(c.business_partner_id?_bpName(c.business_partner_id):'—')+'</td>'+
-          '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-mid);">'+(spFinAmt?(_crecFxAmt(spFinAmt,cFx,spFinOrig)+(spFinPay&&Math.round(spFinPay)!==Math.round(spFinAmt)?'<div style="font-size:11px;color:'+HP_PAY_COLOR+';">實付 NT$ '+_money(Math.round(spFinPay))+'</div>':'')):'—')+'</td>'+
-          '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;color:#0369a1;">'+_crecFxAmt(profit,isIntermediary?cFx:null,isIntermediary?c.profit_untaxed_orig:null)+'</td>'+
+          '<td style="padding:7px 10px;white-space:nowrap;">'+_orderTypeBadge(c.order_type)+'</td>'+
+          '<td style="padding:7px 10px;white-space:nowrap;">'+_esc(c.business_partner_id?_bpName(c.business_partner_id):'—')+'</td>'+
+          '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-mid);white-space:nowrap;">'+(spFinAmt?(_crecFxAmt(spFinAmt,cFx,spFinOrig)+(spFinPay&&Math.round(spFinPay)!==Math.round(spFinAmt)?'<div style="font-size:11px;color:'+HP_PAY_COLOR+';white-space:nowrap;">實付 NT$ '+_money(Math.round(spFinPay))+'</div>':'')):'—')+'</td>'+
+          '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;color:#0369a1;white-space:nowrap;">'+_crecFxAmt(profit,isIntermediary?cFx:null,isIntermediary?c.profit_untaxed_orig:null)+'</td>'+
           '<td style="padding:7px 10px;text-align:right;white-space:nowrap;">'+(noBpC?'—':(c.partner_percent||0)+'%')+'</td>'+
-          '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;">'+(noBpC?'—':_crecFxAmt(bonusUntax,bFx,c.partner_amount_untaxed_orig))+'</td>'+
-          '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-mid);">'+(noBpC?'—':(bFx&&taxAmt===0?'0':bFx?_crecFxAmt(taxAmt,bFx,taxAmtOrig):'NT$ '+_money(taxAmt)))+'</td>'+
-          '<td style="padding:7px 10px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">'+(noBpC?'—':_crecFxAmt(bonusTax,bFx,c.partner_amount_taxed_orig))+'</td>'+
-          '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-mid);">NT$ '+_money(gcAmt)+'</td>'+
-          '<td style="padding:7px 10px;">'+(noBpC?'<span style="color:var(--text-dim);">—</span>':_crDocCell(c))+'</td>'+
-          '<td style="padding:7px 10px;">'+(noBpC?_badge('無商務','gray'):(isPaid?_badge('已支付','green'):_badge('未支付','amber')))+'</td>'+
+          '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;">'+(noBpC?'—':_crecFxAmt(bonusUntax,bFx,c.partner_amount_untaxed_orig))+'</td>'+
+          '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-mid);white-space:nowrap;">'+(noBpC?'—':(bFx&&taxAmt===0?'0':bFx?_crecFxAmt(taxAmt,bFx,taxAmtOrig):'NT$ '+_money(taxAmt)))+'</td>'+
+          '<td style="padding:7px 10px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;">'+(noBpC?'—':_crecFxAmt(bonusTax,bFx,c.partner_amount_taxed_orig))+'</td>'+
+          '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-mid);white-space:nowrap;">NT$ '+_money(gcAmt)+'</td>'+
+          '<td style="padding:7px 10px;white-space:nowrap;">'+(noBpC?'<span style="color:var(--text-dim);">—</span>':_crDocCell(c))+'</td>'+
+          '<td style="padding:7px 10px;white-space:nowrap;">'+(noBpC?_badge('無商務','gray'):(isPaid?_badge('已支付','green'):_badge('未支付','amber')))+'</td>'+
           '<td style="padding:7px 10px;text-align:right;white-space:nowrap;">'+(noBpC?'—':_crDocActions(c))+'</td>'+
         '</tr>';
       }).join('');
 
-      // 合計列
-      var totSpCost=recs.reduce(function(a,c){
-        var sf=finRecs.filter(function(f){ return f.record_type==='payable_provider'&&f.counterparty_id===c.service_provider_id; }).reduce(function(s,f){ return s+Number(f.amount_untaxed!=null?f.amount_untaxed:(f.amount||0)); },0);
-        if(!sf) sf=pprRecs.filter(function(r){ return r.service_provider_id===c.service_provider_id; }).reduce(function(s,r){ return s+Number(r.amount_twd||0); },0);
-        return a+sf;
-      },0);
+      // 合計列：服務商成本直接沿用主列的 spCostTotal（逐筆帳務加總一次），
+      // 舊寫法是「每筆分潤各自去撈該服務商的帳務再加總」，同一服務商有兩筆分潤時會重複計算
       var totBonusUntax=recs.reduce(function(a,c){ return a+Number(c.partner_amount_untaxed||0); },0);
       var totTax=partnerTotal-totBonusUntax;
       var totGc=recs.reduce(function(a,c){ return a+Number(c.gc_amount_untaxed||0); },0);
-      // projBpFx 已於專案分組層級計算（摘要列與合計列共用）
+      // 幣別拆解（spCostParts／bpUntaxParts…）已於專案分組層級計算，摘要列與合計列共用
       var totRow='<tr style="border-top:2px solid #e5e7eb;background:#f8fafc;font-weight:700;">'+
-        '<td colspan="3" style="padding:7px 10px;font-size:12px;color:var(--text-dim);">合計</td>'+
-        '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;">'+(totSpCost?_crecFxAmt(totSpCost,projFx):'—')+'</td>'+
-        '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:#0369a1;">'+_crecFxAmt(profitTotal,isIntermediary?projFx:null)+'</td>'+
+        '<td colspan="3" style="padding:7px 10px;font-size:12px;color:var(--text-dim);white-space:nowrap;">合計</td>'+
+        '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;">'+(spCostTotal?_crecTotalAmt(spCostTotal,spCostParts):'—')+'</td>'+
+        '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:#0369a1;white-space:nowrap;">'+_crecTotalAmt(profitTotal,isIntermediary?profitParts:null)+'</td>'+
         '<td style="padding:7px 10px;"></td>'+
-        '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;">'+_crecFxAmt(totBonusUntax,projBpFx)+'</td>'+
-        '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-mid);">'+_crecFxAmt(totTax,projBpFx)+'</td>'+
-        '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;">'+_crecFxAmt(partnerTotal,projBpFx)+'</td>'+
-        '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-mid);">NT$ '+_money(totGc)+'</td>'+
+        '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;">'+_crecTotalAmt(totBonusUntax,bpUntaxParts)+'</td>'+
+        '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-mid);white-space:nowrap;">'+_crecTotalAmt(totTax,bpTaxParts)+'</td>'+
+        '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;">'+_crecTotalAmt(partnerTotal,bpPaidParts)+'</td>'+
+        '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-mid);white-space:nowrap;">NT$ '+_money(totGc)+'</td>'+
         '<td colspan="3" style="padding:7px 10px;"></td>'+
       '</tr>';
 
@@ -8825,17 +8987,17 @@ function updateCrecTable(){
           '<table style="width:100%;border-collapse:collapse;font-size:12.5px;">'+
             '<thead><tr style="border-bottom:2px solid #e5e7eb;background:#f1f5f9;font-size:11.5px;">'+
               '<th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">服務商</th>'+
-              '<th style="padding:6px 10px;text-align:left;font-weight:600;">首/回</th>'+
-              '<th style="padding:6px 10px;text-align:left;font-weight:600;">商務夥伴</th>'+
+              '<th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">首/回</th>'+
+              '<th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">商務夥伴</th>'+
               '<th style="padding:6px 10px;text-align:right;font-weight:600;white-space:nowrap;">服務商成本</th>'+
               '<th style="padding:6px 10px;text-align:right;font-weight:600;white-space:nowrap;">差額（毛利）</th>'+
-              '<th style="padding:6px 10px;text-align:right;font-weight:600;">分潤%</th>'+
+              '<th style="padding:6px 10px;text-align:right;font-weight:600;white-space:nowrap;">分潤%</th>'+
               '<th style="padding:6px 10px;text-align:right;font-weight:600;white-space:nowrap;">獎金（未稅）</th>'+
-              '<th style="padding:6px 10px;text-align:right;font-weight:600;">稅金</th>'+
+              '<th style="padding:6px 10px;text-align:right;font-weight:600;white-space:nowrap;">稅金</th>'+
               '<th style="padding:6px 10px;text-align:right;font-weight:600;white-space:nowrap;">獎金（含稅）</th>'+
               '<th style="padding:6px 10px;text-align:right;font-weight:600;white-space:nowrap;">GC 留存</th>'+
-              '<th style="padding:6px 10px;font-weight:600;min-width:120px;">憑證</th>'+
-              '<th style="padding:6px 10px;font-weight:600;">支付</th>'+
+              '<th style="padding:6px 10px;font-weight:600;min-width:120px;white-space:nowrap;">憑證</th>'+
+              '<th style="padding:6px 10px;font-weight:600;white-space:nowrap;">支付</th>'+
               '<th style="padding:6px 10px;text-align:right;font-weight:600;min-width:190px;">操作</th>'+
             '</tr></thead>'+
             '<tbody>'+commRows+totRow+'</tbody>'+
@@ -9057,7 +9219,8 @@ function _crDocActions(c){
     var rd = bp ? _bpReadiness(bp) : {ok:false, missing:['商務夥伴資料']};
     if (!doc) {
       if (!rd.ok) {
-        out.push(B('btn-secondary','開立勞報單','',true,'建檔缺：' + rd.missing.join('、')));
+        // 缺件時直接把項數寫在按鈕上，不要只靠 hover 的 title —— 否則點下去像壞掉
+        out.push(B('btn-secondary','開立勞報單（缺 ' + rd.missing.length + ' 項）','',true,'商務夥伴建檔缺：' + rd.missing.join('、') + '\n請先按「去補件」補齊'));
         out.push(B('btn-primary','去補件','startEditBusinessPartner(\''+c.business_partner_id+'\')'));
       } else {
         out.push(B('btn-primary','開立勞報單','_lfOpen('+c.id+')'));
@@ -9080,7 +9243,7 @@ function _crDocActions(c){
       out.push(B('btn-secondary','作廢','_docVoid('+doc.id+')'));
     }
     if (!doc || doc.status !== 'signed') {
-      out.push(B('btn-secondary','已付','',true,'勞報單須先收到簽回'));
+      out.push(B('btn-secondary','已付','',true,'勞報單須先收到簽回才能標記已付'));
     }
   } else {
     // 發票／收據
@@ -12096,13 +12259,31 @@ function _finRecFx(f){
 }
 // 商務分潤用：把 TWD 金額格式化為「CUR orig ≈ TWD xxx」字串（純內容，不含 <td>）
 // showFx=false 時直接顯示 NT$ TWD（商務獎金等永遠 TWD 的欄位不傳 fx）
+// ─── 合計欄的幣別拆解（商務分潤紀錄）───
+// 累加時一律用「該筆自己的原幣別」，不要拿某一筆的幣別代表整個專案
+function _crecPartsPush(map,cur,amt){ amt=Number(amt||0); if(!amt) return; cur=cur||'TWD'; map[cur]=(map[cur]||0)+amt; }
+function _crecPartsList(map){
+  var keys=Object.keys(map).filter(function(k){ return Math.round(Number(map[k])*100)!==0; });
+  keys.sort(function(a,b){ return a==='TWD'?-1:(b==='TWD'?1:a.localeCompare(b)); });   // 台幣排最前
+  return keys.map(function(k){ return {cur:k,amt:map[k]}; });
+}
+// 合計欄顯示：台幣為主（唯一能相加的口徑），下方小字列出各原幣別；全部都是台幣時不多印一行
+function _crecTotalAmt(twdVal,parts){
+  var main='<span style="white-space:nowrap;">NT$ '+_money(twdVal)+'</span>';
+  parts=parts||[];
+  if(!parts.some(function(p){ return p.cur!=='TWD'; })) return main;
+  var txt=parts.map(function(p){ return p.cur+' '+_curNum(p.amt,p.cur); }).join(' ＋ ');
+  return main+'<div style="font-size:10px;color:var(--text-dim);font-weight:400;margin-top:1px;white-space:nowrap;">'+txt+'</div>';
+}
 function _crecFxAmt(twdVal,fx,origVal){
   var n=Number(twdVal||0);
   if(!fx||n===0) return 'NT$ '+_money(n);
   // origVal：結算當時存下的外幣原值（修正 #3）；無則以匯率回推
   var orig=(origVal!=null)?Number(origVal):_fxOrigAmt(n,fx);
   var origStr=Number(orig).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});
-  return fx.cur+' '+origStr+'<div style="font-size:10px;color:var(--text-dim);font-weight:400;margin-top:1px;">≈ TWD '+_money(n)+'</div>';
+  // 兩行各自不換行，避免被拆成「JPY / 45,000」或「≈ TWD / 9,000」
+  return '<span style="white-space:nowrap;">'+fx.cur+' '+origStr+'</span>'+
+    '<div style="font-size:10px;color:var(--text-dim);font-weight:400;margin-top:1px;white-space:nowrap;">≈ TWD '+_money(n)+'</div>';
 }
 function renderFinancialRecords(){
   var main=document.getElementById('main-content');

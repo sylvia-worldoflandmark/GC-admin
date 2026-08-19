@@ -355,8 +355,11 @@ function blogFiltered(){
   return BLOG_DB.filter(function(p){
     if (blogTab !== 'all' && p.status !== blogTab) return false;
     if (cats.length){
-      var c = p.category || '__none';
-      if (cats.indexOf(c) < 0) return false;
+      var cl = blogCatList(p);
+      var hit = cl.length
+        ? cl.some(function(c){ return cats.indexOf(c) >= 0; })
+        : (cats.indexOf('__none') >= 0);
+      if (!hit) return false;
     }
     if (ops.length && ops.indexOf(p.updated_by || p.created_by || '') < 0) return false;
     if (!q) return true;
@@ -414,7 +417,7 @@ function renderBlogList(){
     + '</div></div>'
     + '<div class="table-card"><div class="table-wrap" style="overflow-x:auto;"><table style="min-width:max-content;width:100%;">'
     + '<thead><tr>'
-    +   '<th style="width:70px">封面</th><th>標題</th><th style="width:82px">分類</th><th style="width:92px">狀態</th>'
+    +   '<th style="width:70px">封面</th><th>標題</th><th style="width:150px">分類</th><th style="width:92px">狀態</th>'
     +   '<th style="width:104px">最後操作</th><th style="width:112px">發佈時間</th><th style="width:112px">最後更新</th>'
     +   '<th style="width:96px;text-align:right">操作</th>'
     + '</tr></thead><tbody id="blog-tbody"></tbody></table></div>'
@@ -573,7 +576,7 @@ function blogHideRowMenu(){
 
 function blogRowHtml(p){
   var st = BLOG_STATUS[p.status] || BLOG_STATUS.draft;
-  var cat = BLOG_CATS.filter(function(c){ return c.slug === p.category; })[0];
+  var catNames = blogCatNames(blogCatList(p));
   var thumb = p.cover_url ? ' style="background-image:url(\'' + bgEsc(p.cover_url) + '\')"' : '';
   var tags = (p.tags || []).map(function(t){ return '<span>#' + bgEsc(t) + '</span>'; }).join('');
 
@@ -584,7 +587,9 @@ function blogRowHtml(p){
     + '<td><span class="blog-name">' + bgEsc(p.title || '（未命名）') + (p.is_pinned ? '<span class="blog-pin">置頂</span>' : '') + '</span>'
     +     '<span class="blog-slug">/blog/' + bgEsc(p.slug) + '/</span>'
     +     (tags ? '<span class="blog-rowtags">' + tags + '</span>' : '') + '</td>'
-    + '<td>' + (cat ? '<span class="blog-bd" style="background:#ede9fe;color:#7c3aed">' + bgEsc(cat.name) + '</span>' : '<span class="blog-bd blog-bd-gray">未分類</span>') + '</td>'
+    + '<td>' + (catNames.length
+        ? catNames.map(function(n){ return '<span class="blog-bd" style="background:#ede9fe;color:#7c3aed;margin:1px 3px 1px 0;display:inline-block">' + bgEsc(n) + '</span>'; }).join('')
+        : '<span class="blog-bd blog-bd-gray">未分類</span>') + '</td>'
     + '<td><span class="blog-bd ' + st.cls + '"><i></i>' + st.label + '</span></td>'
     + '<td>' + bgEsc(p.updated_by || p.created_by || '—') + '</td>'
     + '<td>' + bgDate(p.published_at) + '</td>'
@@ -602,7 +607,7 @@ function blogFind(id){ return BLOG_DB.filter(function(p){ return p.id === id; })
 function blogExportCsv(){
   var rows = blogFiltered().map(function(p){
     return [ p.id, p.slug, p.title, p.summary,
-             (BLOG_CATS.filter(function(c){ return c.slug === p.category; })[0] || {}).name || '未分類',
+             blogCatNames(blogCatList(p)).join(' / ') || '未分類',
              (p.tags || []).join(' / '),
              (BLOG_STATUS[p.status] || {}).label || p.status,
              p.is_pinned ? '是' : '',
@@ -670,7 +675,7 @@ function blogValidate(p){
   var miss = [];
   if (!String(p.title || '').trim())    miss.push('標題');
   if (!String(p.summary || '').trim())  miss.push('摘要');
-  if (!p.category)                      miss.push('分類');
+  if (!blogCatList(p).length)           miss.push('分類');
   if (!p.cover_url)                     miss.push('封面圖');
   var blocks = (p.content && p.content.blocks) || [];
   var hasText = blocks.some(function(b){
@@ -786,11 +791,12 @@ function blogPreview(id){
   }
   if (!p) return;
 
-  var cat = BLOG_CATS.filter(function(c){ return c.slug === p.category; })[0];
+  var _pf = blogCatFields(blogCatList(p));
   var payload = {
     slug: p.slug || '', title: p.title || '', summary: p.summary || '',
     cover_url: p.cover_url || null, cover_source: p.cover_source || null,
-    category: p.category || null, category_name: (cat && cat.name) || '',
+    category: _pf.category, category_name: _pf.category_name || '',
+    categories: _pf.categories, category_names: _pf.category_names,
     tags: p.tags || [], gallery: p.gallery || [], gallery_ratio: p.gallery_ratio || '16:9',
     content: p.content || { v:1, blocks:[] },
     published_at: p.published_at || null, last_published_at: p.last_published_at || null,
@@ -896,9 +902,12 @@ async function blogRestoreRev(revId){
   if (!rev) return;
   if (!confirm('確定要把文章內容還原到第 ' + rev.revision_no + ' 版嗎？\n目前的內容會被覆蓋（但仍然會留在異動紀錄裡）。')) return;
   var s = rev.snapshot || {};
+  var _rc = blogCatFields(blogCatList(s));   // 舊版快照可能只有單一 category
   var patch = {
     title:s.title, summary:s.summary, cover_url:s.cover_url, cover_source:s.cover_source,
-    category:s.category, tags:s.tags || [], gallery:s.gallery || [], gallery_ratio:s.gallery_ratio || '16:9',
+    category:_rc.category,
+    categories:_rc.categories,
+    tags:s.tags || [], gallery:s.gallery || [], gallery_ratio:s.gallery_ratio || '16:9',
     content:s.content || { v:1, blocks:[] }, meta_title:s.meta_title, meta_description:s.meta_description,
     updated_by: bgMe()
   };
@@ -941,7 +950,7 @@ document.addEventListener('keydown', function(e){
 function blogBlank(){
   return {
     id:null, slug:'', title:'', summary:'', cover_url:'', cover_source:'',
-    category:(BLOG_CATS[0] && BLOG_CATS[0].slug) || null, tags:[],
+    category:null, category_name:null, categories:[], category_names:[], tags:[],
     gallery:[], gallery_ratio:'16:9',
     content:{ v:1, blocks:[] }, status:'draft', is_pinned:false,
     created_by:bgMe(), updated_by:'', published_by:'',
@@ -995,7 +1004,7 @@ function blogHistState(){
   return JSON.stringify({
     title:e.title || '', slug:e.slug || '', summary:e.summary || '',
     cover_url:e.cover_url || '', cover_source:e.cover_source || '',
-    category:e.category || '', is_pinned:!!e.is_pinned,
+    category:e.category || '', categories:blogCatList(e), is_pinned:!!e.is_pinned,
     tags:e.tags || [], gallery:e.gallery || [], gallery_ratio:e.gallery_ratio || '16:9',
     blocks: document.getElementById('blog-doc') ? blogReadDoc(true) : ((e.content && e.content.blocks) || [])
   });
@@ -1090,7 +1099,10 @@ function blogHistApply(){
   var e = BLOG_EDIT;
   e.title = st.title; e.slug = st.slug; e.summary = st.summary;
   e.cover_url = st.cover_url || null; e.cover_source = st.cover_source || null;
-  e.category = st.category || null; e.is_pinned = st.is_pinned;
+  var _sc = blogCatFields(st.categories && st.categories.length ? st.categories : (st.category ? [st.category] : []));
+  e.categories = _sc.categories; e.category_names = _sc.category_names;
+  e.category = _sc.category; e.category_name = _sc.category_name;
+  e.is_pinned = st.is_pinned;
   e.tags = st.tags; e.gallery = st.gallery; e.gallery_ratio = st.gallery_ratio;
   e.content = { v:1, blocks: st.blocks };
   blogHideFmt();
@@ -1198,8 +1210,11 @@ function blogLockBanner(e){
 function blogCardSettings(ro){
   var e = BLOG_EDIT;
   var d = ro ? ' disabled' : '';
-  var catOpts = '<option value="">未分類</option>' + BLOG_CATS.map(function(c){
-    return '<option value="' + bgEsc(c.slug) + '"' + (e.category === c.slug ? ' selected' : '') + '>' + bgEsc(c.name) + '</option>';
+  var _sel = blogCatList(e);
+  var catChips = BLOG_CATS.map(function(c){
+    var on = _sel.indexOf(c.slug) >= 0;
+    return '<div class="blog-chk' + (on ? ' blog-on' : '') + '"'
+      + (ro ? '' : ' onclick="blogToggleCat(\'' + bgEsc(c.slug) + '\',this)"') + '><i></i>' + bgEsc(c.name) + '</div>';
   }).join('');
 
   return '<div class="blog-card' + (ro ? ' blog-locked' : '') + '">'
@@ -1214,9 +1229,12 @@ function blogCardSettings(ro){
   +   '</div>'
   +   '<div class="blog-hint" id="blog-slug-hint">文章網址將是 <b>' + BLOG_SITE + '/blog/' + bgEsc(e.slug || '…') + '/</b>　·　按「自動產生」會把中文標題翻成英文，翻不出來就退回日期加編號，隨時可以手動改。</div>'
   + '</div></div>'
-  + '<div class="blog-row"><label>分類</label><div class="blog-f3">'
-  +   '<select class="blog-i" onchange="blogField(\'category\',this.value||null)"' + d + '>' + catOpts + '</select>'
-  +   '<div class="blog-chk' + (e.is_pinned ? ' blog-on' : '') + '" onclick="' + (ro ? '' : 'blogTogglePin(this)') + '"><i></i>置頂</div>'
+  + '<div class="blog-row"><label>分類<b>*</b></label><div>'
+  +   '<div id="blog-catbox" style="display:flex;flex-wrap:wrap;gap:9px 18px;align-items:center;padding:2px 0">' + catChips
+  +     '<span style="width:1px;height:18px;background:rgba(0,0,0,.12)"></span>'
+  +     '<div class="blog-chk' + (e.is_pinned ? ' blog-on' : '') + '" onclick="' + (ro ? '' : 'blogTogglePin(this)') + '"><i></i>置頂</div>'
+  +   '</div>'
+  +   '<div class="blog-hint">可以複選。<b>第一個勾選的是主分類</b>，官網文章頁與「相關文章」以主分類為準；列表頁的分類篩選則是勾到哪個就會出現在哪個。</div>'
   + '</div></div>'
   + '<div class="blog-row"><label>標籤</label><div>'
   +   '<div class="blog-tagbox" id="blog-tagbox">' + blogTagChips(ro) + '</div>'
@@ -1332,6 +1350,42 @@ function blogRefreshTags(){
 }
 
 function blogField(k, v){ BLOG_EDIT[k] = v; blogTouch(); if (k === 'slug') blogSlugHint(); }
+
+/* ── 多分類共用工具 ────────────────────────────────────────────────
+   categories（slug 陣列）是主資料；category / category_name 保留為「第一個」，
+   官網與舊資料在還沒全面切換前都不會壞。讀寫分類一律走這三支。 */
+function blogCatList(p){
+  if (!p) return [];
+  if (Array.isArray(p.categories) && p.categories.length) return p.categories.filter(Boolean);
+  return p.category ? [p.category] : [];
+}
+function blogCatNames(list){
+  return (list || []).map(function(s){
+    var c = BLOG_CATS.filter(function(x){ return x.slug === s; })[0];
+    return (c && c.name) || s;
+  });
+}
+function blogCatFields(list){
+  list = (list || []).filter(Boolean);
+  var names = blogCatNames(list);
+  // ⚠️ 只有 categories 與 category 是 blog_posts 的實體欄位。
+  //    category_name(s) 是 public_blog_posts view 用 blog_categories 即時 join 出來的，
+  //    **不可以寫進資料庫**，這裡回傳只是給畫面與預覽用。
+  return { categories:list, category_names:names,
+           category:list[0] || null, category_name:names[0] || null };
+}
+/* 編輯器：點分類籤 → 切換選取（第一個選的就是主分類） */
+function blogToggleCat(slug, el){
+  var e = BLOG_EDIT; if (!e) return;
+  var list = blogCatList(e);
+  var i = list.indexOf(slug);
+  if (i >= 0) list.splice(i, 1); else list.push(slug);
+  var f = blogCatFields(list);
+  e.categories = f.categories; e.category_names = f.category_names;
+  e.category = f.category;     e.category_name = f.category_name;
+  if (el) el.classList.toggle('blog-on', i < 0);
+  blogTouchNow();
+}
 function blogSlugHint(){
   var el = document.getElementById('blog-slug-hint');
   if (!el) return;
@@ -1440,9 +1494,12 @@ function blogShrink(file){
 async function blogEnsurePost(){
   if (BLOG_EDIT.id) return BLOG_EDIT.id;
   if (!BLOG_EDIT.slug) BLOG_EDIT.slug = await blogUniqueSlug(blogDateSlug());
+  var _nf = blogCatFields(blogCatList(BLOG_EDIT));
   var r = await sb.from('blog_posts').insert({
     slug: BLOG_EDIT.slug, title: BLOG_EDIT.title || '', summary: BLOG_EDIT.summary || '',
-    category: BLOG_EDIT.category || null, tags: BLOG_EDIT.tags || [],
+    category: _nf.category,
+    categories: _nf.categories,
+    tags: BLOG_EDIT.tags || [],
     status: 'draft', created_by: bgMe(), updated_by: bgMe()
   }).select().single();
   if (r.error){ bgToast('建立草稿失敗：' + r.error.message, 'err'); return null; }
@@ -2633,10 +2690,13 @@ function blogConvertNb(nb, type){
 function blogCollect(){
   var e = BLOG_EDIT;
   e.content = { v:1, blocks: blogReadDoc() };
+  var _cf = blogCatFields(blogCatList(e));
   return {
     slug: e.slug, title: e.title || '', summary: e.summary || '',
     cover_url: e.cover_url || null, cover_source: e.cover_source || null,
-    category: e.category || null, tags: e.tags || [],
+    category: _cf.category,
+    categories: _cf.categories,
+    tags: e.tags || [],
     gallery: e.gallery || [], gallery_ratio: e.gallery_ratio || '16:9',
     content: e.content, is_pinned: !!e.is_pinned,
     updated_by: bgMe()
