@@ -192,25 +192,42 @@ function blogInjectStyle(){
   /* Notion 式內文 */
   + '.blog-dh{background:#f8f9fb;border:1px solid var(--border);border-radius:9px;padding:11px 14px;font-size:12px;color:var(--text-mid);line-height:1.9;margin-bottom:16px}'
   + '.blog-dh kbd{background:#fff;border:1px solid rgba(0,0,0,.16);border-bottom-width:2px;border-radius:5px;padding:1px 7px;font-family:Inter,monospace;font-size:11.5px}'
-  + '.blog-docbox{border:1px solid var(--border);border-radius:11px;background:#fff;padding:12px 16px 0;transition:.16s}'
+  + '.blog-docbox{position:relative;border:1px solid var(--border);border-radius:11px;background:#fff;padding:12px 16px 0;transition:.16s}'
   + '.blog-docbox:focus-within{border-color:rgba(37,99,235,.45);box-shadow:0 0 0 3px rgba(37,99,235,.08)}'
-  + '.blog-doc{position:relative;padding:4px 0 12px 34px}'
-  + '.blog-nb{position:relative;margin:0 0 2px}'
-  + '.blog-nbt{position:absolute;left:-34px;top:3px;display:flex;gap:1px;opacity:0;transition:opacity .14s}'
-  + '.blog-nb:hover .blog-nbt{opacity:1}'
-  + '.blog-nbt span{width:24px;height:26px;border-radius:6px;display:grid;place-items:center;color:rgba(17,24,39,.32);cursor:pointer;font-size:14px;line-height:1;user-select:none}'
-  + '.blog-nbt span:hover{background:#eef0f3;color:var(--text)}'
-  + '.blog-c{outline:0;font-size:14.5px;line-height:2.05;color:var(--text);padding:4px 6px;border-radius:6px;transition:background .14s}'
-  + '.blog-c:focus{background:#f8faff}'
-  + '.blog-c[data-ph]:empty::before{content:attr(data-ph);color:rgba(17,24,39,.26)}'
-  + '.blog-c.blog-h2{font-family:Syne,sans-serif;font-size:20px;font-weight:700;line-height:1.55;margin-top:16px}'
-  + '.blog-c.blog-h3{font-family:Syne,sans-serif;font-size:16.5px;font-weight:700;line-height:1.6;margin-top:12px}'
+  /* 整份內文是「一個」可編輯區（Word 式）：全選、跨段刪除、退格併段都交給瀏覽器原生行為。
+     圖片／影片／分隔線是塞在同一份文件裡的 contenteditable="false" 物件。 */
+  + '.blog-doc{position:relative;padding:4px 0 12px 52px;outline:0;font-size:14.5px;line-height:2.05;color:var(--text)}'
+  + '.blog-doc>*{margin:0 0 2px;padding:2px 6px;border-radius:6px}'
+  + '.blog-doc>p{min-height:1.9em}'
+  + '.blog-doc>h2{font-family:Syne,sans-serif;font-size:20px;font-weight:700;line-height:1.55;margin-top:16px}'
+  + '.blog-doc>h3{font-family:Syne,sans-serif;font-size:16.5px;font-weight:700;line-height:1.6;margin-top:12px}'
+  + '.blog-doc>blockquote{border-left:3px solid var(--accent);background:#f6f9ff;padding:11px 15px;color:var(--text-mid)}'
   /* min-height：空項目也要佔一行。高度 0 的話它的項目符號會疊到下一行上 */
-  + '.blog-c.blog-ul>div,.blog-c.blog-ol>div{position:relative;padding-left:22px;margin-bottom:4px;min-height:1.9em}'
-  + '.blog-c.blog-ul>div::before{content:"";position:absolute;left:6px;top:.92em;width:5px;height:5px;border-radius:50%;background:var(--accent)}'
-  + '.blog-c.blog-ol{counter-reset:blogoli}.blog-c.blog-ol>div{counter-increment:blogoli}'
-  + '.blog-c.blog-ol>div::before{content:counter(blogoli) ".";position:absolute;left:2px;color:var(--accent);font-weight:700;font-size:13px}'
-  + '.blog-c.blog-quote{border-left:3px solid var(--accent);background:#f6f9ff;padding:11px 15px;color:var(--text-mid)}'
+  + '.blog-doc ul,.blog-doc ol{list-style:none;padding-left:4px}'
+  + '.blog-doc li{position:relative;padding-left:22px;margin-bottom:4px;min-height:1.9em}'
+  + '.blog-doc ul>li::before{content:"";position:absolute;left:6px;top:.92em;width:5px;height:5px;border-radius:50%;background:var(--accent)}'
+  + '.blog-doc ol{counter-reset:blogoli}.blog-doc ol>li{counter-increment:blogoli}'
+  + '.blog-doc ol>li::before{content:counter(blogoli) ".";position:absolute;left:2px;color:var(--accent);font-weight:700;font-size:13px}'
+  + '.blog-doc [data-ph]:empty::before{content:attr(data-ph);color:rgba(17,24,39,.26)}'
+  + '.blog-doc>p:only-child:empty::before{content:"在這裡打字…　按 / 可插入標題、圖片、影片、引言";color:rgba(17,24,39,.26)}'
+  + '.blog-nb{position:relative;margin:0 0 2px;padding:2px 0}'
+  /* 重點框：框裡面自己又是一小份文件（可以放說明段落＋條列） */
+  + '.blog-cal{margin:14px 0 16px;padding:14px 18px 12px;border-radius:11px;background:#f4f5f7;border:1px solid var(--border)}'
+  + '.blog-cal[data-style="warn"]{background:#fffbeb;border-color:#fcd34d}'
+  + '.blog-calt{font-size:14px;font-weight:700;color:var(--text);line-height:1.7;margin-bottom:4px;padding:2px 4px;border-radius:6px;outline:0}'
+  + '.blog-cal[data-style="warn"] .blog-calt{color:#92400e}'
+  + '.blog-calb>*{margin:0 0 2px;padding:2px 4px;border-radius:6px}'
+  + '.blog-calb>p{min-height:1.9em}'
+  + '.blog-calb>p:only-child:empty::before{content:"框裡面要寫的內容…";color:rgba(17,24,39,.26)}'
+  + '.blog-cal .blog-caltag{position:absolute;top:-9px;left:14px;background:#fff;border:1px solid var(--border);border-radius:20px;padding:0 8px;font-size:10.5px;color:var(--text-dim);line-height:17px}'
+  + '.blog-cal[data-style="warn"] .blog-caltag{border-color:#fcd34d;color:#b45309}'
+  /* 游標退到圖片前面按退格：先「選起來」，再按一次才真的刪掉 */
+  + '.blog-nb.blog-msel{outline:2px solid var(--accent);outline-offset:3px;border-radius:8px}'
+  /* 段落左邊的 ＋／⠿：掛在可編輯區「外面」浮著，否則它會被當成內文的一部分打進文章裡 */
+  + '.blog-gut{position:absolute;display:none;gap:1px;z-index:6}'
+  + '.blog-gut.blog-on{display:flex}'
+  + '.blog-gut span{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:rgba(17,24,39,.32);cursor:pointer;font-size:14px;line-height:1;user-select:none;background:#fff}'
+  + '.blog-gut span:hover{background:#eef0f3;color:var(--text)}'
   + '.blog-hr{height:1px;background:var(--border);margin:16px 0}'
   + '.blog-embw{position:relative}'
   + '.blog-emb{width:100%;border-radius:9px;position:relative;overflow:hidden;background:#e9ecf1 center/cover no-repeat;border:1px solid var(--border);cursor:zoom-in;min-height:120px}'
@@ -682,7 +699,8 @@ function blogValidate(p){
     return (b.type === 'paragraph' && String(b.html || '').replace(/<[^>]*>/g,'').trim())
         || (b.type === 'heading'   && String(b.text || '').trim())
         || (b.type === 'list'      && (b.items || []).length)
-        || (b.type === 'quote'     && String(b.text || '').trim());
+        || (b.type === 'quote'     && String(b.text || '').trim())
+        || (b.type === 'callout'   && ((b.blocks || []).length || String(b.title || '').trim()));
   });
   if (!hasText) miss.push('內文至少一段');
   return miss;
@@ -990,8 +1008,8 @@ function blogBackToList(){
 }
 
 /* ═══ 復原 / 重做 ═════════════════════════════════════════════════════
-   每個區塊都是獨立的 contenteditable，瀏覽器內建的 Cmd+Z 只在單一區塊
-   內有效，而且刪除區塊、轉換型別、換圖這些操作根本不在它的紀錄裡。
+   瀏覽器內建的 Cmd+Z 只管可編輯區裡的文字，刪除區塊、轉換型別、換圖、
+   改標題與分類這些操作根本不在它的紀錄裡。
    所以這裡自己做一份：把整個編輯器的狀態拍成快照，堆成一個堆疊。
    打字的快照會延遲合併（不會每敲一個字就存一步），點擊類的操作則立刻存。 */
 
@@ -1010,32 +1028,44 @@ function blogHistState(){
   });
 }
 
-/* 游標位置：第幾個區塊 + 該區塊純文字的第幾個字 */
+/* 游標位置：從 #blog-doc 走下去的索引路徑 + 該段純文字的第幾個字。
+   用路徑而不是單一索引，重點框裡面的段落才定位得到。 */
+function blogPathOf(el){
+  var doc = document.getElementById('blog-doc');
+  var path = [], n = el;
+  while (n && n !== doc && n.parentNode){
+    path.unshift(Array.prototype.indexOf.call(n.parentNode.children, n));
+    n = n.parentNode;
+  }
+  return (n === doc) ? path : null;
+}
+function blogElAt(path){
+  var n = document.getElementById('blog-doc');
+  for (var i = 0; i < path.length && n; i++) n = n.children[path[i]];
+  return n || null;
+}
 function blogCaretMark(){
   var doc = document.getElementById('blog-doc');
   var s = window.getSelection();
   if (!doc || !s || !s.rangeCount || !s.anchorNode) return null;
-  var el = s.anchorNode.nodeType === 3 ? s.anchorNode.parentNode : s.anchorNode;
-  if (!el || !el.closest || !doc.contains(el)) return null;
-  var c = el.closest('.blog-c');
+  if (!doc.contains(s.anchorNode)) return null;
+  var c = blogTopOf(s.anchorNode);
   if (!c) return null;
-  var bi = Array.prototype.indexOf.call(doc.children, c.closest('.blog-nb'));
-  if (bi < 0) return null;
+  var path = blogPathOf(c);
+  if (!path) return null;
   try {
     var r = document.createRange();
     r.selectNodeContents(c);
     r.setEnd(s.anchorNode, s.anchorOffset);
-    return { bi:bi, off:r.toString().length };
-  } catch(err){ return { bi:bi, off:0 }; }
+    return { path:path, off:r.toString().length };
+  } catch(err){ return { path:path, off:0 }; }
 }
 function blogCaretRestore(m){
-  if (!m) return;
+  if (!m || !m.path) return;
   var doc = document.getElementById('blog-doc');
   if (!doc) return;
-  var nb = doc.children[m.bi];
-  if (!nb) return;
-  var c = nb.querySelector('.blog-c[contenteditable="true"]');
-  if (!c) return;
+  var c = blogElAt(m.path);
+  if (!c || blogIsMedia(c)) return;
   var rem = m.off, node = null, t;
   var w = document.createTreeWalker(c, NodeFilter.SHOW_TEXT, null);
   while ((t = w.nextNode())){
@@ -1048,7 +1078,7 @@ function blogCaretRestore(m){
   r.collapse(true);
   var s = window.getSelection();
   s.removeAllRanges(); s.addRange(r);
-  c.focus();
+  doc.focus();
 }
 
 function blogHistClear(){
@@ -1660,24 +1690,30 @@ var BLOG_SLASH_ITEMS = [
   ['quote', '❝',  '引言',       '強調一段話'],
   ['img',   '▣',  '圖片',       '維持原圖比例，不裁切'],
   ['vid',   '▶',  '影片',       '貼連結自動抓縮圖'],
-  ['hr',    '—',  '分隔線',     '分段用']
+  ['hr',    '—',  '分隔線',     '分段用'],
+  ['cal',   '▤',  '重點框',     '標題＋重點條列的灰底框']
 ];
 
 function blogCardDoc(ro){
   return '<div class="blog-card' + (ro ? ' blog-locked' : '') + '">'
   + '<div class="blog-ch"><span class="blog-n">3</span>內文<span class="blog-sub" id="blog-wc"></span></div>'
-  + (ro ? '' : '<div class="blog-dh">直接在下面的框裡打字。<b>按 <kbd>/</kbd> 是把「目前這一段」改成標題、清單、引言、圖片…</b>；'
-      + '想在下面<b>另外加一段</b>，點該段左邊浮出的 <b>＋</b> 或用框最下面那排按鈕。<br>'
-      + '<b>已經寫好的字要改格式：把它選起來</b>，上方會浮出工具列，可以轉成標題／引言／清單，或套用粗體、斜體、底線、刪除線、顏色、螢光筆與連結。<br>'
-      + '<b>標題、引言、清單要改回內文</b>：把游標點進那一段，上方會浮出一排轉換鈕，按「內文」即可（也可以點左邊的 <kbd>⠿</kbd>）。<br>'
-      + '<b>要刪除或搬動某一段：點該段左邊的 <kbd>⠿</kbd></b>。　打錯了按 <kbd>⌘Z</kbd> 復原。</div>')
-  + '<div class="blog-docbox">'
-  +   '<div class="blog-doc" id="blog-doc">' + blogBlocksToHtml(BLOG_EDIT.content.blocks || [], ro) + '</div>'
+  + (ro ? '' : '<div class="blog-dh">下面整個框就是<b>一份文件</b>，跟 Word 一樣：'
+      + '<b><kbd>⌘A</kbd> 全選、用滑鼠跨好幾段選取、按 <kbd>delete</kbd> 併回上一段</b>都可以直接做。<br>'
+      + '<b>要改格式：把字選起來</b>，上方會浮出工具列，可以轉成標題／引言／清單，或套用粗體、斜體、底線、刪除線、顏色、螢光筆與連結。'
+      + '轉換<b>只會套在選到的那幾行</b>，所以同一段落區域裡可以「標題 → 一段說明 → 幾個項目」混著寫。<br>'
+      + '<b>插入圖片、影片、分隔線、重點框</b>：按 <kbd>/</kbd>，或點該段左邊浮出的 <b>＋</b>，或用框最下面那排按鈕。'
+      + '<b>重點框</b>裡面可以寫標題、說明段落與條列；要換成警示色的「提醒框」，點框左邊的 <kbd>⠿</kbd>。<br>'
+      + '<b>要搬動或刪除某一段：點該段左邊的 <kbd>⠿</kbd></b>。　打錯了按 <kbd>⌘Z</kbd> 復原。</div>')
+  + '<div class="blog-docbox" id="blog-docbox">'
+  +   '<div class="blog-doc" id="blog-doc"' + (ro ? '' : ' contenteditable="true" spellcheck="false"') + '>'
+  +     blogBlocksToHtml(BLOG_EDIT.content.blocks || [], ro) + '</div>'
+  +   (ro ? '' : '<div class="blog-gut" id="blog-gut"><span class="blog-add" title="在這一段下面插入區塊">＋</span><span class="blog-drag" title="這一段的搬移／刪除選單">⠿</span></div>')
   +   (ro ? '' : '<div class="blog-foot">'
   +     '<span class="blog-fk">插入</span>'
   +     '<button class="btn btn-secondary" onclick="blogFootAdd(\'p\')">新增段落</button>'
   +     '<button class="btn btn-secondary" onclick="blogFootAdd(\'img\')">上傳圖片</button>'
   +     '<button class="btn btn-secondary" onclick="blogFootAdd(\'vid\')">貼影片連結</button>'
+  +     '<button class="btn btn-secondary" onclick="blogFootAdd(\'cal\')">重點框</button>'
   +     '<span class="blog-fh">或在文件裡按 <kbd>/</kbd></span></div>')
   + '</div></div>';
 }
@@ -1793,40 +1829,107 @@ function blogSanitize(html){
   return d.innerHTML;
 }
 
-function blogNbTools(ro){
-  return ro ? '' : '<div class="blog-nbt"><span class="blog-add" title="插入區塊">＋</span><span class="blog-drag" title="拖曳搬移／點一下開選單">⠿</span></div>';
+/* ── 內文的 DOM 結構（Word 式的單一可編輯區）──────────────────────────
+   #blog-doc 自己就是 contenteditable，它的每一個「直接子節點」就是一段：
+     <p> 內文　<h2>/<h3> 標題　<blockquote> 引言　<ul>/<ol> 清單
+     <div class="blog-nb" contenteditable="false"> 圖片／影片／輪播／分隔線
+   ⚠ 段落型別一律看「標籤名」，不看 class —— 使用者按 Enter 時瀏覽器會自己
+     複製一個同標籤的節點出來，class 與 data-* 都不保證跟著走。
+   ⚠ 早期版本是「每一段各自一個小 contenteditable」，那樣瀏覽器就不可能跨段
+     選取，⌘A 只選得到一段、退格也併不回上一段。整份改成一個可編輯區之後
+     全選、跨段刪除、退格併段全部都是原生行為，不用自己模擬。            */
+
+var BLOG_TEXT_TAGS = { p:'p', h2:'h2', h3:'h3', blockquote:'quote', ul:'ul', ol:'ol' };
+var BLOG_MEDIA_T = ['img','vid','car','hr'];
+
+function blogDoc(){ return document.getElementById('blog-doc'); }
+
+/* 這一段是什麼型別 */
+function blogBlkType(el){
+  if (!el || el.nodeType !== 1) return '';
+  if (el.classList && el.classList.contains('blog-nb')) return el.getAttribute('data-t') || '';
+  var tag = el.tagName.toLowerCase();
+  if (tag === 'hr') return 'hr';
+  return BLOG_TEXT_TAGS[tag] || 'p';
 }
+function blogIsMedia(el){ return BLOG_MEDIA_T.indexOf(blogBlkType(el)) >= 0; }
+function blogIsCal(el){ return blogBlkType(el) === 'cal'; }
+/* 圖片與重點框後面都要留一段可以打字的地方，不然游標無處可去 */
+function blogNeedsTail(el){ return blogIsMedia(el) || blogIsCal(el); }
+
+/* ── 「容器」＝ 段落住在哪裡 ───────────────────────────────────────
+   平常是 #blog-doc 本身；重點框裡面的段落則住在那個框的 .blog-calb。
+   所以是兩層的文件：框裡面也能有段落與清單，而且各自獨立。         */
+function blogHostOf(node){
+  var doc = blogDoc();
+  if (!doc || !node) return null;
+  var n = node.nodeType === 3 ? node.parentNode : node;
+  while (n && n !== doc){
+    if (n.classList && n.classList.contains('blog-calb')) return n;
+    n = n.parentNode;
+  }
+  return (n === doc) ? doc : null;
+}
+/* 從任一節點往上找到「它所屬容器的直接子節點」＝它所屬的那一段。
+   重點框的標題不在 .blog-calb 裡，所以會回整個框（這是刻意的）。 */
+function blogTopOf(node){
+  var host = blogHostOf(node);
+  if (!host) return null;
+  var n = node.nodeType === 3 ? node.parentNode : node;
+  while (n && n.parentNode && n.parentNode !== host) n = n.parentNode;
+  return (n && n.parentNode === host) ? n : null;
+}
+/* 游標目前所在的那一段 */
+function blogCurBlk(){
+  var s = window.getSelection();
+  if (!s || !s.rangeCount) return null;
+  return blogTopOf(s.getRangeAt(0).startContainer);
+}
+/* 游標在不在重點框的標題那一行 */
+function blogCalTitleOf(node){
+  var n = node && node.nodeType === 3 ? node.parentNode : node;
+  return (n && n.closest) ? n.closest('.blog-calt') : null;
+}
+
 function blogBlockHtml(b, ro){
-  var t = blogNbTools(ro);
-  var ed = ro ? '' : ' contenteditable="true"';
   var j = function(o){ return bgEsc(JSON.stringify(o)); };
+  var ce = ' contenteditable="false"';
   switch (b.type){
     case 'heading':
-      return '<div class="blog-nb" data-t="h' + (b.level || 2) + '">' + t
-        + '<div class="blog-c blog-h' + (b.level || 2) + '"' + ed + ' data-ph="標題">'
-        + (b.html ? blogSanitize(b.html) : bgEsc(b.text || '')) + '</div></div>';
+      var hn = (b.level === 3 ? 'h3' : 'h2');
+      return '<' + hn + ' data-ph="標題">'
+        + (b.html ? blogSanitize(b.html) : bgEsc(b.text || '')) + '</' + hn + '>';
     case 'list':
-      return '<div class="blog-nb" data-t="' + (b.style === 'ol' ? 'ol' : 'ul') + '">' + t
-        + '<div class="blog-c blog-' + (b.style === 'ol' ? 'ol' : 'ul') + '"' + ed + '>'
-        + ((b.items || ['']).map(function(x){ return '<div>' + blogSanitize(x) + '</div>'; }).join('')) + '</div></div>';
+      var lt = (b.style === 'ol' ? 'ol' : 'ul');
+      return '<' + lt + '>'
+        + ((b.items && b.items.length ? b.items : ['']).map(function(x){
+            return '<li>' + blogSanitize(x) + '</li>'; }).join(''))
+        + '</' + lt + '>';
     case 'quote':
-      return '<div class="blog-nb" data-t="quote">' + t
-        + '<div class="blog-c blog-quote"' + ed + ' data-ph="想強調的一句話">'
-        + (b.html ? blogSanitize(b.html) : bgEsc(b.text || '')) + '</div></div>';
+      return '<blockquote data-ph="想強調的一句話">'
+        + (b.html ? blogSanitize(b.html) : bgEsc(b.text || '')) + '</blockquote>';
     case 'divider':
-      return '<div class="blog-nb" data-t="hr">' + t + '<div class="blog-c"><div class="blog-hr"></div></div></div>';
+      return '<div class="blog-nb" data-t="hr"' + ce + '><div class="blog-hr"></div></div>';
+    case 'callout':
+      var cs = (b.style === 'warn' ? 'warn' : 'note');
+      var inner = (b.blocks && b.blocks.length ? b.blocks : [{ type:'paragraph', html:'' }])
+        .map(function(x){ return blogCalInner(x, ro); }).join('');
+      return '<div class="blog-nb blog-cal" data-t="cal" data-style="' + cs + '">'
+        + '<span class="blog-caltag"' + ce + '>' + (cs === 'warn' ? '提醒框' : '重點框') + '</span>'
+        + '<div class="blog-calt" data-ph="框的標題（可留空）">' + (b.title ? blogSanitize(b.title) : '') + '</div>'
+        + '<div class="blog-calb">' + inner + '</div></div>';
     case 'image':
       var ar = (b.w && b.h) ? (b.w + ' × ' + b.h + '（' + blogRatioText(b.w, b.h) + '）· 不裁切') : '原圖比例 · 不裁切';
-      return '<div class="blog-nb" data-t="img" data-j="' + j(b) + '">' + t + '<div class="blog-c">'
+      return '<div class="blog-nb" data-t="img" data-j="' + j(b) + '"' + ce + '>'
         + '<div class="blog-embw"><span class="blog-ratio">' + bgEsc(ar) + '</span>'
         + '<div class="blog-emb"' + (b.url ? ' style="background-image:url(\'' + bgEsc(b.url) + '\');aspect-ratio:' + ((b.w && b.h) ? b.w + '/' + b.h : '16/9') + '"' : ' style="aspect-ratio:16/9"') + ' onclick="blogLightbox(\'' + bgEsc(b.url || '') + '\',\'' + bgEsc(b.caption || '') + '\')"></div></div>'
         + (ro ? '' : '<div class="blog-embt"><button class="btn btn-secondary" onclick="blogNbPickImage(this)">' + (b.url ? '更換圖片' : '上傳圖片') + '</button></div>')
         + '<div class="blog-embm">'
         +   '<input class="blog-cap" placeholder="圖說（可留空）" value="' + bgEsc(b.caption || '') + '" oninput="blogNbMeta(this,\'caption\')"' + (ro ? ' disabled' : '') + '>'
         +   '<input class="blog-csrc" placeholder="來源（可留空）" value="' + bgEsc(b.source || '') + '" oninput="blogNbMeta(this,\'source\')"' + (ro ? ' disabled' : '') + '>'
-        + '</div></div></div>';
+        + '</div></div>';
     case 'video':
-      return '<div class="blog-nb" data-t="vid" data-j="' + j(b) + '">' + t + '<div class="blog-c">'
+      return '<div class="blog-nb" data-t="vid" data-j="' + j(b) + '"' + ce + '>'
         + '<div class="blog-embw"><span class="blog-ratio">' + bgEsc(b.platform ? b.platform + ' · 自動抓縮圖' : '貼上連結後自動抓縮圖') + '</span>'
         + '<div class="blog-emb blog-vid"' + (b.thumb ? ' style="background-image:url(\'' + bgEsc(b.thumb) + '\')"' : '') + ' onclick="blogLightbox(\'' + bgEsc(b.thumb || '') + '\',\'' + bgEsc(b.caption || '') + '\')">'
         + '<div class="blog-vp"><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></div></div></div>'
@@ -1835,15 +1938,21 @@ function blogBlockHtml(b, ro){
         + '<div class="blog-embm">'
         +   '<input class="blog-cap" placeholder="圖說（可留空）" value="' + bgEsc(b.caption || '') + '" oninput="blogNbMeta(this,\'caption\')"' + (ro ? ' disabled' : '') + '>'
         +   '<input class="blog-csrc" placeholder="來源（可留空）" value="' + bgEsc(b.source || '') + '" oninput="blogNbMeta(this,\'source\')"' + (ro ? ' disabled' : '') + '>'
-        + '</div></div></div>';
+        + '</div></div>';
     case 'carousel':
-      return '<div class="blog-nb" data-t="car" data-j="' + j(b) + '">' + t + '<div class="blog-c">'
+      return '<div class="blog-nb" data-t="car" data-j="' + j(b) + '"' + ce + '>'
         + '<span class="blog-ratio" style="position:static;display:inline-block;background:#f0f9ff;color:#0369a1;border-color:#bae6fd">內文輪播 · '
-        + ((b.items || []).length) + ' 張 · ' + bgEsc(b.ratio || '16:9') + '</span></div></div>';
+        + ((b.items || []).length) + ' 張 · ' + bgEsc(b.ratio || '16:9') + '</span></div>';
     default:
-      return '<div class="blog-nb" data-t="p">' + t
-        + '<div class="blog-c"' + ed + ' data-ph="在這裡打字…　按 / 可插入標題、圖片、影片、引言">' + blogSanitize(b.html || '') + '</div></div>';
+      return '<p>' + blogSanitize(b.html || '') + '</p>';
   }
+}
+/* 重點框裡面只放文字類區塊；圖片、影片這種一律退回成段落，
+   免得框裡面又冒出一個不能編輯的物件 */
+function blogCalInner(b, ro){
+  var t = b && b.type;
+  if (t === 'list' || t === 'heading' || t === 'quote') return blogBlockHtml(b, ro);
+  return '<p>' + blogSanitize((b && b.html) || '') + '</p>';
 }
 function blogRatioText(w, h){
   var g = function(a, b){ return b ? g(b, a % b) : a; };
@@ -1852,54 +1961,81 @@ function blogRatioText(w, h){
 }
 function blogBlocksToHtml(blocks, ro){
   if (!blocks || !blocks.length) blocks = [{ type:'paragraph', html:'' }];
-  return blocks.map(function(b){ return blogBlockHtml(b, ro); }).join('');
+  var html = blocks.map(function(b){ return blogBlockHtml(b, ro); }).join('');
+  // 文件最後一段是圖片／影片／分隔線的話補一個空段落，否則游標沒地方可以點下去
+  var last = blocks[blocks.length - 1] || {};
+  if (!ro && ['image','video','carousel','divider','callout'].indexOf(last.type) >= 0) html += '<p></p>';
+  return html;
 }
 
 /* DOM → blocks
    keepEmpty=true 時連空白區塊也留著 —— 復原紀錄要忠實反映畫面，
-   否則「按 ＋ 新增一個空段落」這一步會因為被濾掉而復原不了。
-   存檔時一律用預設（false），空區塊不會寫進資料庫。 */
+   否則「按 Enter 多開一個空段落」這一步會因為被濾掉而復原不了。
+   存檔時一律用預設（false），空區塊不會寫進資料庫。
+   重點框會遞迴讀它自己的內容區，讀出來的結構跟外層完全一樣。 */
 function blogReadDoc(keepEmpty){
-  var doc = document.getElementById('blog-doc');
+  var doc = blogDoc();
   if (!doc) return (BLOG_EDIT.content && BLOG_EDIT.content.blocks) || [];
+  return blogReadBlocks(doc, keepEmpty, false);
+}
+function blogReadBlocks(host, keepEmpty, inCal){
   var out = [];
-  Array.prototype.slice.call(doc.querySelectorAll(':scope > .blog-nb')).forEach(function(nb){
-    var t = nb.getAttribute('data-t');
-    var c = nb.querySelector('.blog-c');
-    if (t === 'h2' || t === 'h3'){
-      // text 一律保留純文字版本：SEO、目錄、搜尋、異動紀錄都吃這個欄位
-      var txt = (c.textContent || '').trim();
-      if (txt || keepEmpty) out.push({ type:'heading', level: t === 'h3' ? 3 : 2, text: txt, html: blogSanitize(c.innerHTML) });
-    } else if (t === 'ul' || t === 'ol'){
-      // 容忍還沒被整理好的結構：夾在 <div> 之間的裸文字也要算成一個項目，
-      // 不能像以前那樣只讀 children —— 那會整行不見。
-      var items = [], buf = '';
-      var flush = function(){ if (String(buf).replace(/<[^>]*>/g,'').trim()) items.push(blogSanitize(buf)); buf = ''; };
-      Array.prototype.slice.call(c.childNodes).forEach(function(n){
-        if (n.nodeType === 1 && n.tagName.toLowerCase() === 'div'){ flush();
-          var h = blogSanitize(n.innerHTML);
-          if (String(h).replace(/<[^>]*>/g,'').trim()) items.push(h);
-          return;
-        }
-        if (n.nodeType === 3) buf += bgEsc(n.nodeValue);
-        else if (n.nodeType === 1) buf += n.outerHTML;
-      });
-      flush();
-      if (items.length || keepEmpty) out.push({ type:'list', style:t, items: items.length ? items : [''] });
-    } else if (t === 'quote'){
-      var q = (c.textContent || '').trim();
-      if (q || keepEmpty) out.push({ type:'quote', text:q, html: blogSanitize(c.innerHTML), source:'' });
-    } else if (t === 'hr'){
-      out.push({ type:'divider' });
-    } else if (t === 'img' || t === 'vid' || t === 'car'){
+  var plain = function(h){ return String(h).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim(); };
+  Array.prototype.slice.call(host.childNodes).forEach(function(el){
+    // 裸文字節點：貼上、退格合併都可能留下，不收的話那一行會整行不見
+    if (el.nodeType === 3){
+      var tx = (el.nodeValue || '').trim();
+      if (tx) out.push({ type:'paragraph', html: bgEsc(tx) });
+      return;
+    }
+    if (el.nodeType !== 1) return;
+    var t = blogBlkType(el);
+    if (t === 'cal'){
+      if (inCal) return;                     // 框裡面不再放框
+      var body = el.querySelector('.blog-calb');
+      var ti = el.querySelector('.blog-calt');
+      var kids = body ? blogReadBlocks(body, keepEmpty, true) : [];
+      var title = ti ? blogSanitize(ti.innerHTML) : '';
+      if (kids.length || plain(title) || keepEmpty){
+        out.push({ type:'callout', style: el.getAttribute('data-style') === 'warn' ? 'warn' : 'note',
+                   title: title, blocks: kids });
+      }
+      return;
+    }
+    if (inCal && (BLOG_MEDIA_T.indexOf(t) >= 0)) return;   // 框裡面不放圖片、影片、分隔線
+    if (t === 'img' || t === 'vid' || t === 'car'){
       var j = {};
-      try { j = JSON.parse(nb.getAttribute('data-j') || '{}'); } catch(e){}
+      try { j = JSON.parse(el.getAttribute('data-j') || '{}'); } catch(e){}
       j.type = (t === 'img' ? 'image' : t === 'vid' ? 'video' : 'carousel');
       out.push(j);
-    } else {
-      var html = blogSanitize(c.innerHTML);
-      if (String(html).replace(/<[^>]*>/g,'').replace(/&nbsp;/g,'').trim() || keepEmpty) out.push({ type:'paragraph', html:html });
+      return;
     }
+    if (t === 'hr'){ out.push({ type:'divider' }); return; }
+    if (t === 'h2' || t === 'h3'){
+      // text 一律保留純文字版本：SEO、目錄、搜尋、異動紀錄都吃這個欄位
+      var txt = (el.textContent || '').trim();
+      if (txt || keepEmpty) out.push({ type:'heading', level: t === 'h3' ? 3 : 2, text: txt, html: blogSanitize(el.innerHTML) });
+      return;
+    }
+    if (t === 'ul' || t === 'ol'){
+      var items = [];
+      Array.prototype.slice.call(el.querySelectorAll('li')).forEach(function(li){
+        // 巢狀清單在資料結構裡沒有對應，一律攤平成同一層，內容不會掉
+        var c = li.cloneNode(true);
+        Array.prototype.slice.call(c.querySelectorAll('ul,ol')).forEach(function(x){ x.remove(); });
+        var h = blogSanitize(c.innerHTML);
+        if (plain(h)) items.push(h);
+      });
+      if (items.length || keepEmpty) out.push({ type:'list', style:t, items: items.length ? items : [''] });
+      return;
+    }
+    if (t === 'quote'){
+      var q = (el.textContent || '').trim();
+      if (q || keepEmpty) out.push({ type:'quote', text:q, html: blogSanitize(el.innerHTML), source:'' });
+      return;
+    }
+    var html = blogSanitize(el.innerHTML);
+    if (plain(html) || keepEmpty) out.push({ type:'paragraph', html:html });
   });
   return out;
 }
@@ -1974,25 +2110,37 @@ function blogMakeNb(type){
   else if (type === 'hr')    b = { type:'divider' };
   else if (type === 'img')   b = { type:'image', url:'', caption:'', source:'' };
   else if (type === 'vid')   b = { type:'video', url:'', thumb:'', caption:'', source:'' };
+  else if (type === 'cal')   b = { type:'callout', style:'note', title:'', blocks:[{ type:'paragraph', html:'' }] };
+  else if (type === 'calw')  b = { type:'callout', style:'warn', title:'', blocks:[{ type:'paragraph', html:'' }] };
   else                       b = { type:'paragraph', html:'' };
   var wrap = document.createElement('div');
   wrap.innerHTML = blogBlockHtml(b, false);
-  return wrap.firstChild;
+  return wrap.firstElementChild;
 }
-/* 把游標放進區塊裡。清單一定要放進第一個 <div>（項目）裡面，
-   放在容器上的話使用者打的第一行會變成沒有包 <div> 的裸文字 —— 那一行
-   不會有項目符號，存檔時也會被整行吃掉。 */
+
+/* 把游標放進某一段。清單要放進 <li> 裡；圖片這種沒有文字的，就放到它後面
+   那一段（沒有的話補一個空段落出來）。 */
 function blogFocusBlock(el, atEnd){
-  if (!el) return;
-  var f = el.querySelector('[contenteditable]');
-  if (!f) return;
-  f.focus();
-  var t = el.getAttribute('data-t');
-  var target = f;
-  if (t === 'ul' || t === 'ol'){
-    target = atEnd ? f.lastElementChild : f.firstElementChild;
-    if (!target){ target = document.createElement('div'); f.appendChild(target); }
+  var doc = blogDoc();
+  if (!el || !doc) return;
+  var target = el;
+  if (blogIsCal(target)){                    // 重點框：游標先落在標題那一行
+    var ti = target.querySelector('.blog-calt');
+    var bd = target.querySelector('.blog-calb');
+    target = (atEnd && bd && bd.lastElementChild) ? bd.lastElementChild : (ti || target);
   }
+  if (blogIsMedia(target)){
+    var nx = target.nextElementSibling;
+    if (!nx || blogIsMedia(nx)){ nx = blogMakeNb('p'); target.after(nx); }
+    target = nx;
+  }
+  var tag = target.tagName.toLowerCase();
+  if (tag === 'ul' || tag === 'ol'){
+    var li = atEnd ? target.lastElementChild : target.firstElementChild;
+    if (!li){ li = document.createElement('li'); target.appendChild(li); }
+    target = li;
+  }
+  doc.focus();
   var r = document.createRange();
   r.selectNodeContents(target);
   r.collapse(!atEnd);
@@ -2001,9 +2149,14 @@ function blogFocusBlock(el, atEnd){
 }
 
 function blogInsertAfter(nb, type){
+  var doc = blogDoc();
+  if (!doc) return null;
   var el = blogMakeNb(type);
-  if (nb && nb.parentNode) nb.parentNode.insertBefore(el, nb.nextSibling);
-  else document.getElementById('blog-doc').appendChild(el);
+  // nb 可能住在重點框的內容區裡，一律插在「它自己的容器」中
+  if (nb && nb.parentNode && doc.contains(nb)) nb.after(el);
+  else doc.appendChild(el);
+  // 圖片／重點框後面一定要留一段可以打字的地方，否則游標無處可去
+  if (blogNeedsTail(el) && (!el.nextElementSibling || blogNeedsTail(el.nextElementSibling))) el.after(blogMakeNb('p'));
   blogTouchNow();
   blogFocusBlock(el, false);
   if (type === 'img'){ var b = el.querySelector('.blog-embt button'); if (b) b.click(); }
@@ -2011,63 +2164,239 @@ function blogInsertAfter(nb, type){
   return el;
 }
 
-/* ── 清單結構的整理與換行 ──────────────────────────────────────────
-   清單的每個項目都必須是 .blog-c 的直接 <div> 子節點。瀏覽器在
-   contenteditable 裡自己處理 Enter、退格、貼上時常常會留下裸文字節點
-   或空的 <div> —— 空 <div> 高度是 0，它的項目符號就會疊到下一行去。 */
-function blogFixList(c){
-  if (!c) return;
-  var kids = Array.prototype.slice.call(c.childNodes);
-  var buf = null;
-  kids.forEach(function(n){
-    if (n.nodeType === 1 && n.tagName.toLowerCase() === 'div'){ buf = null; return; }
-    if (n.nodeType !== 1 && n.nodeType !== 3){ n.remove(); return; }
-    if (n.nodeType === 3 && !n.nodeValue.length){ n.remove(); return; }
-    if (!buf){ buf = document.createElement('div'); c.insertBefore(buf, n); }
-    buf.appendChild(n);                 // 裸文字／行內標籤收進一個項目
+/* ── 文件結構的整理 ───────────────────────────────────────────────
+   原生編輯（貼上、跨段刪除、退格併段）偶爾會在最外層留下裸文字節點或
+   <div>，放著不管存檔時會掉字、樣式也會跑掉。有動到 DOM 才回 true，
+   呼叫端據此決定要不要把游標放回原處。                                */
+function blogNormalizeDoc(){
+  var doc = blogDoc();
+  if (!doc) return false;
+  var changed = blogNormalizeHost(doc, false);
+  // 重點框裡面也是一份小文件，同樣要整理
+  Array.prototype.slice.call(doc.querySelectorAll('.blog-cal')).forEach(function(cal){
+    if (!cal.querySelector('.blog-calt')){
+      var ti = document.createElement('div');
+      ti.className = 'blog-calt';
+      ti.setAttribute('data-ph', '框的標題（可留空）');
+      cal.insertBefore(ti, cal.firstChild);
+      changed = true;
+    }
+    var body = cal.querySelector('.blog-calb');
+    if (!body){
+      body = document.createElement('div');
+      body.className = 'blog-calb';
+      cal.appendChild(body);
+      changed = true;
+    }
+    if (blogNormalizeHost(body, true)) changed = true;
   });
-  if (!c.children.length) c.appendChild(document.createElement('div'));
+  return changed;
+}
+function blogNormalizeHost(host, inCal){
+  var changed = false, buf = null;
+  Array.prototype.slice.call(host.childNodes).forEach(function(n){
+    if (n.nodeType === 1 && n.classList && (n.classList.contains('blog-nb') || n.classList.contains('blog-calt') || n.classList.contains('blog-calb') || n.classList.contains('blog-caltag'))){ buf = null; return; }
+    if (n.nodeType === 1 && BLOG_TEXT_TAGS[n.tagName.toLowerCase()]){ buf = null; return; }
+    if (n.nodeType === 1 && n.tagName.toLowerCase() === 'hr'){ buf = null; return; }
+    if (n.nodeType === 1 && n.tagName.toLowerCase() === 'div'){     // 瀏覽器有時會生出 <div>
+      var p = document.createElement('p');
+      while (n.firstChild) p.appendChild(n.firstChild);
+      n.replaceWith(p); changed = true; buf = null; return;
+    }
+    if (n.nodeType !== 1 && n.nodeType !== 3){ n.remove(); changed = true; return; }
+    if (n.nodeType === 3 && !n.nodeValue.length){ n.remove(); changed = true; return; }
+    if (!buf){ buf = document.createElement('p'); host.insertBefore(buf, n); changed = true; }
+    buf.appendChild(n);                       // 裸文字／行內標籤收進一個段落
+  });
+  var blocks = Array.prototype.slice.call(host.children).filter(function(x){
+    return !(x.classList && (x.classList.contains('blog-calt') || x.classList.contains('blog-caltag')));
+  });
+  if (!blocks.length){ host.appendChild(blogMakeNb('p')); changed = true; }
+  if (!inCal){
+    var last = host.lastElementChild;
+    if (last && blogNeedsTail(last)){ host.appendChild(blogMakeNb('p')); changed = true; }
+  }
+  return changed;
 }
 
-/* 目前游標所在的那個項目 <div> */
-function blogListItemOf(node, c){
-  var n = node && node.nodeType === 3 ? node.parentNode : node;
-  while (n && n !== c && n.parentNode !== c) n = n.parentNode;
-  return (n && n.parentNode === c) ? n : null;
+/* ── 選取範圍 → 要套格式的「行」 ─────────────────────────────────
+   一次可以蓋到好幾段，清單再細到每一個 <li>。有這個，才做得到
+   「只把選到的那三行變成項目符號，上面的標題與說明原樣留著」。      */
+function blogHits(r, el){
+  var pre = document.createRange();
+  try { pre.selectNodeContents(el); } catch(e){ return false; }
+  try {
+    var a = r.compareBoundaryPoints(Range.END_TO_START, pre);   // 選取起點 vs 這一段的結尾
+    var b = r.compareBoundaryPoints(Range.START_TO_END, pre);   // 選取終點 vs 這一段的開頭
+    if (r.collapsed) return a <= 0 && b >= 0;
+    return a < 0 && b > 0;                    // 剛好停在邊界上不算選到
+  } catch(e){ return false; }
 }
-
-/* 清單裡按 Enter：自己處理，確保結構永遠是乾淨的 div 陣列。
-   在空項目上按 Enter＝離開清單（跟一般編輯器一致）。 */
-function blogListEnter(nb, c){
+function blogLiHtml(li){
+  var c = li.cloneNode(true);
+  Array.prototype.slice.call(c.querySelectorAll('ul,ol')).forEach(function(x){ x.remove(); });
+  return c.innerHTML;
+}
+/* 這次選取要作用在哪個容器：游標起點在重點框裡就只動那個框 */
+function blogSelHost(){
+  var doc = blogDoc();
+  if (!doc) return null;
   var s = window.getSelection();
-  if (!s.rangeCount) return;
-  blogFixList(c);
+  if (!s || !s.rangeCount) return null;
+  var r = s.getRangeAt(0);
+  if (!doc.contains(r.commonAncestorContainer)) return null;
+  return blogHostOf(r.startContainer) || doc;
+}
+function blogSelRows(){
+  var host = blogSelHost();
+  if (!host) return [];
+  var s = window.getSelection();
+  var r = s.getRangeAt(0);
+  var rows = [];
+  Array.prototype.slice.call(host.children).forEach(function(b){
+    var t = blogBlkType(b);
+    if (BLOG_MEDIA_T.indexOf(t) >= 0 || t === 'cal') return;   // 沒有文字／自己是個容器
+    if (b.classList && (b.classList.contains('blog-calt') || b.classList.contains('blog-caltag'))) return;
+    if (!blogHits(r, b)) return;
+    if (t === 'ul' || t === 'ol'){
+      Array.prototype.slice.call(b.children).forEach(function(li){
+        if (li.tagName.toLowerCase() === 'li' && blogHits(r, li)) rows.push({ el:li, list:b });
+      });
+    } else rows.push({ el:b, list:null });
+  });
+  return rows;
+}
+
+/* 把選取範圍蓋到的每一行改成 type。做法是把「第一行所屬的那一段」到
+   「最後一行所屬的那一段」整段攤成一列一列，選到的換型別、沒選到的原樣
+   留著，再重新組回去 —— 所以選一半清單改成內文、或把中間三行改成項目
+   符號，都不會影響到旁邊的內容。 */
+function blogSetBlock(type){
+  var doc = blogDoc();
+  if (!doc || BLOG_MEDIA_T.indexOf(type) >= 0 || type === 'cal') return null;
+  var host = blogSelHost();
+  if (!host) return null;
+  var rows = blogSelRows();
+  if (!rows.length) return null;
+  var sel = window.getSelection();
+  var wasCollapsed = !sel || !sel.rangeCount || sel.getRangeAt(0).collapsed;
+
+  var first = rows[0].list || rows[0].el;
+  var last  = rows[rows.length - 1].list || rows[rows.length - 1].el;
+  var i0 = Array.prototype.indexOf.call(host.children, first);
+  var i1 = Array.prototype.indexOf.call(host.children, last);
+  if (i0 < 0 || i1 < 0) return null;
+
+  var picked = rows.map(function(x){ return x.el; });
+  var olds = [], i;
+  for (i = i0; i <= i1; i++) olds.push(host.children[i]);
+  var anchor = olds[olds.length - 1].nextSibling;
+
+  var plan = [];
+  olds.forEach(function(b){
+    var t = blogBlkType(b);
+    if (BLOG_MEDIA_T.indexOf(t) >= 0){ plan.push({ keep:b }); return; }
+    if (t === 'ul' || t === 'ol'){
+      Array.prototype.slice.call(b.children).forEach(function(li){
+        if (li.tagName.toLowerCase() !== 'li') return;
+        var on = picked.indexOf(li) >= 0;
+        plan.push({ html: blogLiHtml(li), t: on ? type : t, sel: on });
+      });
+      return;
+    }
+    var hit = picked.indexOf(b) >= 0;
+    plan.push({ html: b.innerHTML, t: hit ? type : t, sel: hit });
+  });
+
+  var frag = document.createDocumentFragment();
+  var curList = null, fr = null, lr = null;
+  plan.forEach(function(row){
+    if (row.keep){ curList = null; frag.appendChild(row.keep); return; }   // 圖片節點整個搬過去
+    var el;
+    if (row.t === 'ul' || row.t === 'ol'){
+      if (!curList || curList.tagName.toLowerCase() !== row.t){
+        curList = document.createElement(row.t);
+        frag.appendChild(curList);
+      }
+      el = document.createElement('li');
+      curList.appendChild(el);
+    } else {
+      curList = null;
+      el = document.createElement(row.t === 'quote' ? 'blockquote' : (row.t === 'h2' || row.t === 'h3' ? row.t : 'p'));
+      if (row.t === 'h2' || row.t === 'h3') el.setAttribute('data-ph', '標題');
+      if (row.t === 'quote') el.setAttribute('data-ph', '想強調的一句話');
+      frag.appendChild(el);
+    }
+    el.innerHTML = blogSanitize(row.html || '');
+    if (row.sel){ if (!fr) fr = el; lr = el; }
+  });
+
+  olds.forEach(function(n){ if (n.parentNode === host) host.removeChild(n); });
+  host.insertBefore(frag, anchor);
+  blogNormalizeDoc();
+
+  // 套完格式把原本那幾行重新選起來（原本只有游標就把游標放回去）
+  if (fr && lr){
+    doc.focus();
+    var r2 = document.createRange();
+    if (wasCollapsed){ r2.selectNodeContents(lr); r2.collapse(false); }
+    else { r2.setStart(fr, 0); r2.setEnd(lr, lr.childNodes.length); }
+    var s2 = window.getSelection();
+    s2.removeAllRanges(); s2.addRange(r2);
+  }
+  blogTouchNow();
+  blogWordCount();
+  return fr;
+}
+
+/* 把「某一整段」轉成另一種型別（左邊 ⠿ 選單、slash 選單用的）。
+   做法是先把那一段整個選起來，再走跟工具列同一條路。 */
+function blogConvertBlk(el, type){
+  var doc = blogDoc();
+  if (!doc || !el) return null;
+  if (blogIsMedia(el) || blogIsCal(el)){ bgToast('圖片、影片、分隔線與重點框沒辦法整段轉換。', 'err'); return null; }
+  doc.focus();
+  var r = document.createRange();
+  r.selectNodeContents(el);
+  var s = window.getSelection();
+  s.removeAllRanges(); s.addRange(r);
+  return blogSetBlock(type);
+}
+
+/* 標題／引言裡按 Enter：下一段回到內文（Word 就是這樣） */
+function blogSplitToPara(blk){
+  var s = window.getSelection();
+  if (!s || !s.rangeCount) return;
   var r = s.getRangeAt(0);
   if (!r.collapsed) r.deleteContents();
-  var item = blogListItemOf(r.startContainer, c) || c.lastElementChild;
-  if (!item) return;
-
-  if (!(item.textContent || '').trim()){          // 空項目 → 離開清單
-    var only = c.children.length <= 1;
-    item.remove();
-    blogTouchNow();
-    if (only) blogConvertNb(nb, 'p');
-    else blogInsertAfter(nb, 'p');
-    return;
-  }
-
   var tail = document.createRange();
-  tail.selectNodeContents(item);
+  tail.selectNodeContents(blk);
   try { tail.setStart(r.startContainer, r.startOffset); } catch(e){ tail.collapse(false); }
-  var ni = document.createElement('div');
-  ni.appendChild(tail.extractContents());
-  item.after(ni);
-  var nr = document.createRange();
-  nr.selectNodeContents(ni); nr.collapse(true);
-  s.removeAllRanges(); s.addRange(nr);
+  var p = document.createElement('p');
+  p.appendChild(tail.extractContents());
+  blk.after(p);
+  blogFocusBlock(p, false);
   blogTouchNow();
   blogWordCount();
 }
+
+/* 空的項目上按 Enter＝離開清單。中間離開的話清單要切成兩半。 */
+function blogListExit(li, list){
+  var rest = null;
+  if (li.nextElementSibling){
+    rest = document.createElement(list.tagName.toLowerCase());
+    while (li.nextSibling) rest.appendChild(li.nextSibling);
+  }
+  li.remove();
+  var p = document.createElement('p');
+  list.after(p);
+  if (rest) p.after(rest);
+  if (!list.children.length) list.remove();
+  blogFocusBlock(p, false);
+  blogTouchNow();
+  blogWordCount();
+}
+
 function blogFootAdd(type){
   var doc = document.getElementById('blog-doc');
   var last = doc && doc.lastElementChild;
@@ -2105,6 +2434,9 @@ function blogEnsureMenus(){
           return '<button data-cv="' + it[0] + '" title="轉成' + it[2] + '">' + it[1] + '</button>';
         }).join('')
     + '</div><div class="blog-bsep"></div></div>'
+    + '<div id="blog-bcal" style="display:none"><div class="blog-sh" style="padding:4px 10px 6px">框的樣式</div><div class="blog-bcg">'
+    +   '<button data-cal="note" title="中性的重點框">重點</button><button data-cal="warn" title="帶警示色的提醒框">提醒</button>'
+    + '</div><div class="blog-bsep"></div></div>'
     + '<div class="blog-bi" data-bm="up"><span>↑</span>上移一段</div>'
     + '<div class="blog-bi" data-bm="down"><span>↓</span>下移一段</div>'
     + '<div class="blog-bi" data-bm="dup"><span>⧉</span>複製這一段</div>'
@@ -2125,9 +2457,15 @@ function blogEnsureMenus(){
   });
 
   m.addEventListener('click', function(ev){
+    var cl = ev.target.closest('[data-cal]');
+    if (cl){
+      if (_blogBMenuTarget && document.contains(_blogBMenuTarget)) blogCalStyle(_blogBMenuTarget, cl.getAttribute('data-cal'));
+      blogHideBMenu();
+      return;
+    }
     var cv = ev.target.closest('[data-cv]');
     if (cv){
-      if (_blogBMenuTarget && document.contains(_blogBMenuTarget)) blogConvertNb(_blogBMenuTarget, cv.getAttribute('data-cv'));
+      if (_blogBMenuTarget && document.contains(_blogBMenuTarget)) blogConvertBlk(_blogBMenuTarget, cv.getAttribute('data-cv'));
       blogHideBMenu();
       return;
     }
@@ -2136,9 +2474,8 @@ function blogEnsureMenus(){
     var nb = _blogBMenuTarget, a = it.getAttribute('data-bm'), doc = document.getElementById('blog-doc');
     if (!doc) return;
     if (a === 'del'){
-      var only = doc.querySelectorAll('.blog-nb').length <= 1;
       nb.remove();
-      if (only) doc.appendChild(blogMakeNb('p'));
+      blogNormalizeDoc();
     } else if (a === 'up'){ var pv = nb.previousElementSibling; if (pv) pv.before(nb); }
     else if (a === 'down'){ var nx = nb.nextElementSibling; if (nx) nx.after(nb); }
     else if (a === 'dup'){ nb.after(nb.cloneNode(true)); }
@@ -2185,13 +2522,18 @@ function blogShowSlash(nb, anchor, mode){
   var s = document.getElementById('blog-slash');
   var h = s && s.querySelector('.blog-sh');
   if (h) h.textContent = (_blogSlashMode === 'convert') ? '把這一段改成' : '在下面插入區塊';
+  // 重點框裡面只放文字：圖片、影片、分隔線與框中框都不給選
+  var inCal = !!(nb && blogHostOf(nb) !== blogDoc());
+  if (s) Array.prototype.slice.call(s.querySelectorAll('.blog-si')).forEach(function(it){
+    var k = it.getAttribute('data-ins');
+    it.style.display = (inCal && ['img','vid','hr','cal'].indexOf(k) >= 0) ? 'none' : '';
+  });
   blogHideBMenu();
   blogFloatAt(s, anchor || nb);
 }
 
 /* 砍掉觸發選單的那個 "/"（游標前一個字元；找不到就砍整段結尾的） */
-function blogStripSlash(nb){
-  var c = nb.querySelector('.blog-c[contenteditable="true"]');
+function blogStripSlash(c){
   if (!c) return;
   var s = window.getSelection();
   if (s && s.rangeCount){
@@ -2213,19 +2555,18 @@ function blogStripSlash(nb){
 var BLOG_TEXT_TYPES = ['p','h2','h3','ul','ol','quote'];
 
 function blogSlashApply(nb, type, mode){
+  if (!nb) return;
   if (mode !== 'convert'){ blogInsertAfter(nb, type); return; }
 
-  var cur = nb.getAttribute('data-t');
-  if (['img','vid','car','hr'].indexOf(cur) >= 0){ blogInsertAfter(nb, type); return; }
+  var cur = blogBlkType(nb);
+  if (BLOG_MEDIA_T.indexOf(cur) >= 0){ blogInsertAfter(nb, type); return; }
 
   blogStripSlash(nb);
-  var c = nb.querySelector('.blog-c[contenteditable="true"]');
-  var empty = !c || !(c.textContent || '').trim();
+  var empty = !(nb.textContent || '').trim();
 
   if (BLOG_TEXT_TYPES.indexOf(type) >= 0){
-    if (cur === type){ blogFocusBlock(nb, true); blogTouchNow(); return; }
-    var el = blogConvertNb(nb, type);
-    if (!el) blogInsertAfter(nb, type);
+    if (cur === type){ blogFocusBlock(nb, true); return; }
+    if (!blogConvertBlk(nb, type)) blogInsertAfter(nb, type);
     return;
   }
 
@@ -2233,9 +2574,9 @@ function blogSlashApply(nb, type, mode){
   if (!empty){ blogInsertAfter(nb, type); return; }
   var neu = blogMakeNb(type);
   nb.replaceWith(neu);
+  if (!neu.nextElementSibling || blogNeedsTail(neu.nextElementSibling)) neu.after(blogMakeNb('p'));
   blogTouchNow();
-  var f = neu.querySelector('[contenteditable]');
-  if (f) f.focus();
+  blogFocusBlock(neu, false);
   if (type === 'img'){ var bt = neu.querySelector('.blog-embt button'); if (bt) bt.click(); }
   blogWordCount();
 }
@@ -2246,59 +2587,232 @@ function blogShowBMenu(nb, anchor){
   blogHideSlash();
   // 圖片／影片／分隔線沒有文字，不顯示「轉換為」
   var cv = document.getElementById('blog-bcv');
-  var t = nb ? nb.getAttribute('data-t') : '';
-  if (cv) cv.style.display = (['img','vid','car','hr'].indexOf(t) >= 0) ? 'none' : '';
+  var t = blogBlkType(nb);
+  if (cv) cv.style.display = (BLOG_MEDIA_T.indexOf(t) >= 0 || t === 'cal') ? 'none' : '';
+  var cl = document.getElementById('blog-bcal');
+  if (cl){
+    cl.style.display = (t === 'cal') ? '' : 'none';
+    var cur = nb ? nb.getAttribute('data-style') : '';
+    Array.prototype.slice.call(cl.querySelectorAll('[data-cal]')).forEach(function(b){
+      b.classList.toggle('blog-on', b.getAttribute('data-cal') === (cur === 'warn' ? 'warn' : 'note'));
+    });
+  }
   blogFloatAt(document.getElementById('blog-bmenu'), anchor || nb);
 }
+/* 切換重點框的樣式（重點／提醒） */
+function blogCalStyle(el, style){
+  if (!el || !blogIsCal(el)) return;
+  var st = (style === 'warn') ? 'warn' : 'note';
+  el.setAttribute('data-style', st);
+  var tag = el.querySelector('.blog-caltag');
+  if (tag) tag.textContent = (st === 'warn' ? '提醒框' : '重點框');
+  blogTouchNow();
+}
 function blogHideBMenu(){ var m = document.getElementById('blog-bmenu'); if (m) m.classList.remove('blog-on'); }
+
+/* ── 圖片這類物件的「選起來」狀態 ─────────────────────────────────
+   游標退到圖片前面按退格：第一下先把它框起來，再按一下才真的刪掉。
+   直接刪掉太容易誤觸（圖片重上傳很麻煩）。                            */
+var _blogMediaBound = false;
+function blogClearMediaSel(){
+  var doc = blogDoc();
+  if (!doc) return;
+  Array.prototype.slice.call(doc.querySelectorAll('.blog-nb.blog-msel')).forEach(function(x){ x.classList.remove('blog-msel'); });
+}
+function blogMarkMedia(el){
+  blogClearMediaSel();
+  if (el){ el.classList.add('blog-msel'); bgToast('再按一次刪除鍵就會刪掉這個區塊'); }
+}
+/* 游標是不是停在這一段的最前面／最後面 */
+function blogAtEdge(blk, r, atStart){
+  try {
+    var t = document.createRange();
+    t.selectNodeContents(blk);
+    if (atStart) t.setEnd(r.startContainer, r.startOffset);
+    else t.setStart(r.startContainer, r.startOffset);
+    return t.toString().length === 0;
+  } catch(e){ return false; }
+}
+/* 游標所在的那個 <li> */
+function blogLiOf(node, list){
+  var n = node && node.nodeType === 3 ? node.parentNode : node;
+  while (n && n.parentNode && n.parentNode !== list) n = n.parentNode;
+  return (n && n.parentNode === list && n.tagName && n.tagName.toLowerCase() === 'li') ? n : null;
+}
+
+/* ── 段落左邊的 ＋／⠿ ────────────────────────────────────────────
+   這兩顆按鈕不能放在可編輯區裡面（會被當成內文，打字、全選、複製都會
+   帶到它們），所以改成浮在編輯框上、跟著滑鼠指到的那一段移動。       */
+var _blogGutTarget = null;
+
+function blogBindGutter(doc){
+  var box = document.getElementById('blog-docbox');
+  var gut = document.getElementById('blog-gut');
+  if (!box || !gut) return;
+  var place = function(blk){
+    _blogGutTarget = blk || null;
+    if (!blk){ gut.classList.remove('blog-on'); return; }
+    var br = box.getBoundingClientRect(), r = blk.getBoundingClientRect();
+    gut.style.top  = Math.round(r.top - br.top) + 'px';
+    gut.style.left = Math.round(doc.offsetLeft) + 'px';
+    gut.classList.add('blog-on');
+  };
+  box.addEventListener('mousemove', function(e){
+    if (gut.contains(e.target)) return;            // 滑到按鈕上時不要換目標
+    var blk = doc.contains(e.target) ? blogTopOf(e.target) : null;
+    if (blk !== _blogGutTarget) place(blk);
+  });
+  box.addEventListener('mouseleave', function(){ place(null); });
+  gut.addEventListener('mousedown', function(e){ e.preventDefault(); });   // 不要讓內文失焦
+  gut.addEventListener('click', function(e){
+    var t = _blogGutTarget;
+    if (!t || !document.contains(t)) return;
+    if (e.target.closest('.blog-add')){ e.stopPropagation(); blogShowSlash(t, e.target, 'insert'); }
+    else if (e.target.closest('.blog-drag')){ e.stopPropagation(); blogShowBMenu(t, e.target); }
+  });
+}
 
 function blogBindDoc(){
   var doc = document.getElementById('blog-doc');
   if (!doc) return;
   // 同一個節點只綁一次。重複綁的話一次 Enter 會被處理兩遍（第二遍作用在
   // 剛產生的空項目上，看起來就像「按 Enter 直接跳出清單」）。
+  if (doc.getAttribute('contenteditable') !== 'true'){   // 已發佈／非管理員：只看不改
+    blogSummaryCount(); blogWordCount(); blogSlugHint(); return;
+  }
   if (doc.getAttribute('data-bound') === '1'){ blogEnsureFmt(); blogSummaryCount(); blogWordCount(); blogSlugHint(); return; }
   doc.setAttribute('data-bound', '1');
-  doc.addEventListener('click', function(e){
-    var a = e.target.closest('.blog-add');
-    if (a){ e.stopPropagation(); blogShowSlash(a.closest('.blog-nb'), a, 'insert'); return; }
-    var d = e.target.closest('.blog-drag');
-    if (d){ e.stopPropagation(); blogShowBMenu(d.closest('.blog-nb'), d); return; }
-  });
+  // 讓瀏覽器換行時產生 <p> 而不是 <div>，結構才跟存檔時的假設一致
+  try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch(e){}
+  blogNormalizeDoc();
+  blogBindGutter(doc);
+  if (!_blogMediaBound){ _blogMediaBound = true; document.addEventListener('mousedown', blogClearMediaSel); }
+
   doc.addEventListener('keyup', function(e){
-    if (e.key === '/'){ var nb = e.target.closest('.blog-nb'); if (nb) blogShowSlash(nb, nb, 'convert'); }
+    if (e.key === '/'){ var blk = blogCurBlk(); if (blk) blogShowSlash(blk, blk, 'convert'); }
     else if (['ArrowDown','ArrowUp','Enter','Shift','Control','Meta','Alt'].indexOf(e.key) < 0) blogHideSlash();
   });
+
   doc.addEventListener('keydown', function(e){
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k'){ e.preventDefault(); blogFmtLink(); return; }
+    if ((e.metaKey || e.ctrlKey) && (e.key || '').toLowerCase() === 'k'){ e.preventDefault(); blogFmtLink(); return; }
+
+    // 已經框起來的圖片／影片：再按一次刪除鍵就真的刪掉
+    var msel = doc.querySelector('.blog-nb.blog-msel');
+    if (msel){
+      if (e.key === 'Backspace' || e.key === 'Delete'){
+        e.preventDefault();
+        var nxt = msel.nextElementSibling || msel.previousElementSibling;
+        msel.remove();
+        blogNormalizeDoc();
+        if (nxt && document.contains(nxt)) blogFocusBlock(nxt, false);
+        blogTouchNow(); blogWordCount();
+        return;
+      }
+      blogClearMediaSel();
+    }
+
     if (e.key === 'Enter' && !e.shiftKey){
-      if (blogImeBusy(e)) return;       // 選字用的 Enter，不要拿來斷段落
-      var nb = e.target.closest('.blog-nb');
-      if (!nb) return;
-      e.preventDefault();
-      if (['ul','ol'].indexOf(nb.getAttribute('data-t')) >= 0) blogListEnter(nb, nb.querySelector('.blog-c'));
-      else blogInsertAfter(nb, 'p');
+      if (blogImeBusy(e)) return;             // 選字用的 Enter，不要拿來斷段落
+      var sel0 = window.getSelection();
+      var ti = (sel0 && sel0.rangeCount) ? blogCalTitleOf(sel0.getRangeAt(0).startContainer) : null;
+      if (ti){                                 // 框的標題按 Enter＝跳到框裡面的內容
+        e.preventDefault();
+        var bd = ti.parentNode.querySelector('.blog-calb');
+        if (bd && bd.firstElementChild) blogFocusBlock(bd.firstElementChild, false);
+        return;
+      }
+      var blk = blogCurBlk();
+      if (!blk) return;
+      var hostB = blogHostOf(blk);
+      // 框裡面最後一段是空的再按 Enter＝離開這個框
+      if (hostB && hostB !== doc && !blk.nextElementSibling && !(blk.textContent || '').trim()
+          && hostB.children.length > 1){
+        e.preventDefault();
+        var cal = hostB.closest('.blog-cal');
+        blk.remove();
+        if (cal){
+          var np = blogMakeNb('p');
+          cal.after(np);
+          blogFocusBlock(np, false);
+          blogTouchNow(); blogWordCount();
+        }
+        return;
+      }
+      var t = blogBlkType(blk);
+      if (t === 'ul' || t === 'ol'){
+        var s = window.getSelection();
+        var li = (s && s.rangeCount) ? blogLiOf(s.getRangeAt(0).startContainer, blk) : null;
+        // 空項目上按 Enter＝離開清單；其餘交給瀏覽器（它會自己多一個 <li>）
+        if (li && !(li.textContent || '').trim()){ e.preventDefault(); blogListExit(li, blk); }
+        return;
+      }
+      // 標題與引言後面接的通常是內文，跟 Word 一樣換行就回到內文
+      if (t === 'h2' || t === 'h3' || t === 'quote'){ e.preventDefault(); blogSplitToPara(blk); return; }
+      return;                                  // 一般段落用原生行為，退格才併得回上一段
+    }
+
+    // 退格／delete 碰到圖片這類物件：先框起來，不要一下就刪掉
+    if (e.key === 'Backspace' || e.key === 'Delete'){
+      var sel = window.getSelection();
+      if (!sel || !sel.rangeCount || !sel.getRangeAt(0).collapsed) return;
+      var cur = blogCurBlk();
+      if (!cur) return;
+      var r = sel.getRangeAt(0);
+      var curHost = blogHostOf(cur);
+      // 框裡第一段的段首退格：回到框的標題，不要把段落併進標題那個 div
+      if (e.key === 'Backspace' && curHost && curHost !== doc && !cur.previousElementSibling && blogAtEdge(cur, r, true)){
+        var ti2 = curHost.parentNode.querySelector('.blog-calt');
+        if (ti2){
+          e.preventDefault();
+          var rr = document.createRange();
+          rr.selectNodeContents(ti2); rr.collapse(false);
+          sel.removeAllRanges(); sel.addRange(rr);
+          return;
+        }
+      }
+      if (e.key === 'Backspace' && blogAtEdge(cur, r, true)){
+        var pv = cur.previousElementSibling;
+        if (pv && blogIsMedia(pv)){ e.preventDefault(); blogMarkMedia(pv); }
+      } else if (e.key === 'Delete' && blogAtEdge(cur, r, false)){
+        var nx2 = cur.nextElementSibling;
+        if (nx2 && blogIsMedia(nx2)){ e.preventDefault(); blogMarkMedia(nx2); }
+      }
     }
   });
-  doc.addEventListener('input', function(e){
-    // 貼上、退格合併也可能把清單弄成裸文字，發現變形就就地整理好（游標留在原處）
-    var nb = e.target && e.target.closest ? e.target.closest('.blog-nb') : null;
-    if (nb && ['ul','ol'].indexOf(nb.getAttribute('data-t')) >= 0){
-      var c = nb.querySelector('.blog-c');
-      var bad = c && Array.prototype.slice.call(c.childNodes).some(function(n){
-        return !(n.nodeType === 1 && n.tagName.toLowerCase() === 'div');
-      });
-      if (bad){ var m = blogCaretMark(); blogFixList(c); blogCaretRestore(m); }
-    }
+
+  // 框的標題是獨立一行：段首退格、段尾 delete 都不要讓它跟別段合併
+  doc.addEventListener('keydown', function(e){
+    if (e.key !== 'Backspace' && e.key !== 'Delete') return;
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount || !sel.getRangeAt(0).collapsed) return;
+    var r = sel.getRangeAt(0);
+    var ti = blogCalTitleOf(r.startContainer);
+    if (!ti) return;
+    if (e.key === 'Backspace' && blogAtEdge(ti, r, true)) e.preventDefault();
+    if (e.key === 'Delete' && blogAtEdge(ti, r, false)) e.preventDefault();
+  });
+
+  doc.addEventListener('input', function(){
+    // 原生編輯（貼上、跨段刪除、退格併段）偶爾會在最外層留下裸文字或 <div>，
+    // 發現變形就就地整理好，游標盡量留在原處
+    var m = blogCaretMark();
+    if (blogNormalizeDoc()) blogCaretRestore(m);
     _blogTypedAt = Date.now();
     blogTouch(); blogWordCount();
   });
+
   doc.addEventListener('mouseup', function(){ setTimeout(blogFmtUpdate, 0); });
+
+  // 一律以純文字貼上（外部樣式不要帶進來），但換行會照樣拆成一段一段
   doc.addEventListener('paste', function(e){
     e.preventDefault();
-    var txt = (e.clipboardData || window.clipboardData).getData('text/plain');
-    document.execCommand('insertText', false, txt);
+    var txt = ((e.clipboardData || window.clipboardData).getData('text/plain') || '').replace(/\r\n?/g, '\n');
+    txt.split('\n').forEach(function(ln, i){
+      if (i) document.execCommand('insertParagraph');
+      if (ln) document.execCommand('insertText', false, ln);
+    });
   });
+
   var dz = document.getElementById('blog-dz');
   if (dz){
     ['dragenter','dragover'].forEach(function(ev){ dz.addEventListener(ev, function(x){ x.preventDefault(); dz.classList.add('blog-hot'); }); });
@@ -2327,15 +2841,14 @@ var BLOG_BLK_ITEMS = [['p','內文','內文段落'],['h2','H2','大標題'],['h3
 
 var _blogFmtBound = false, _blogPalKind = 'fore', _blogRange = null;
 
-/* 選取範圍所在的可編輯區塊；不在內文裡就回 null */
+/* 選取範圍在不在內文裡；在的話回內文那個可編輯區 */
 function blogFmtHost(){
+  var doc = blogDoc();
   var s = window.getSelection();
-  if (!s || !s.rangeCount) return null;
+  if (!doc || !s || !s.rangeCount) return null;
+  if (doc.getAttribute('contenteditable') !== 'true') return null;   // 已發佈的文章只能看
   var n = s.getRangeAt(0).commonAncestorContainer;
-  if (n.nodeType === 3) n = n.parentNode;
-  if (!n || !n.closest) return null;
-  var c = n.closest('.blog-c[contenteditable="true"]');
-  return (c && c.closest('#blog-doc')) ? c : null;
+  return doc.contains(n) ? doc : null;
 }
 function blogSaveRange(){
   var s = window.getSelection();
@@ -2346,8 +2859,9 @@ function blogUseRange(){
   var host = _blogRange.commonAncestorContainer;
   if (host.nodeType === 3) host = host.parentNode;
   if (!host || !document.contains(host)) return false;
-  var c = host.closest && host.closest('.blog-c[contenteditable="true"]');
-  if (c) c.focus();
+  var doc = blogDoc();
+  if (!doc || !doc.contains(host)) return false;
+  doc.focus();
   var s = window.getSelection();
   s.removeAllRanges(); s.addRange(_blogRange);
   return true;
@@ -2402,7 +2916,7 @@ function blogEnsureFmt(){
   f.addEventListener('click', function(e){
     var b = e.target.closest('button');
     if (!b) return;
-    if (b.dataset.blk){ blogConvertNb(blogFmtNb(), b.dataset.blk); blogHideFmt(); return; }
+    if (b.dataset.blk){ blogUseRange(); blogSetBlock(b.dataset.blk); blogHideFmt(); return; }
     if (b.dataset.cmd){ blogExec(b.dataset.cmd); return; }
     if (b.dataset.pal){ blogShowPal(b.dataset.pal, b); return; }
     var a = b.dataset.act;
@@ -2429,10 +2943,9 @@ function blogEnsureFmt(){
   return f;
 }
 
-/* 選取範圍所在的區塊（.blog-nb） */
+/* 選取範圍所在的那一段 */
 function blogFmtNb(){
-  var c = blogFmtHost();
-  return c ? c.closest('.blog-nb') : null;
+  return blogFmtHost() ? blogCurBlk() : null;
 }
 
 function blogHideFmt(){
@@ -2471,8 +2984,8 @@ function blogFmtUpdate(){
   var keep = function(){ if (!pal || !pal.classList.contains('blog-on')) blogHideFmt(); };
   if (!host || !s || !s.rangeCount){ keep(); return; }
 
-  var nb = host.closest('.blog-nb');
-  var t = nb ? nb.getAttribute('data-t') : 'p';
+  var nb = blogCurBlk();
+  var t = blogBlkType(nb) || 'p';
   var sel = !s.isCollapsed && !!String(s).trim();
 
   /* 沒有選字時：只要游標停在「不是一般內文」的區塊裡（標題／引言／清單），
@@ -2496,7 +3009,7 @@ function blogFmtUpdate(){
   if (cd) cd.classList.toggle('blog-on', !!(an && an.closest && an.closest('code')));
 
   var r = s.getRangeAt(0).getBoundingClientRect();
-  if (!r.width && !r.height) r = host.getBoundingClientRect();   // 游標沒有寬度時改抓整個區塊
+  if (!r.width && !r.height) r = (nb || host).getBoundingClientRect();   // 游標沒有寬度時改抓整段
   if (!r.width && !r.height) return;
   // 選取範圍整個捲出畫面時就別浮出來，免得工具列黏在無關的地方
   if (r.bottom < 0 || r.top > window.innerHeight){ blogHideFmt(); return; }
@@ -2577,9 +3090,34 @@ function blogClearColor(kind){
       sp.remove();
     }
   });
-  host.innerHTML = blogSanitize(host.innerHTML);
+  blogTidySel();
   blogTouchNow();
   blogHideFmt();
+}
+
+/* 套完格式後把「被選到的那幾行」的 HTML 洗一遍。
+   ⚠ 只能一行一行洗：blogSanitize 只留行內標籤，整份文件丟進去
+     會把 <p>/<h2>/<ul> 全部拆平，文章結構就沒了。 */
+function blogTidySel(){
+  var doc = blogDoc();
+  if (!doc) return;
+  var s = window.getSelection();
+  var r = (s && s.rangeCount) ? s.getRangeAt(0) : null;
+  var m = blogCaretMark();
+  var host = blogSelHost() || doc;
+  var leaves = [], changed = false;
+  Array.prototype.slice.call(host.children).forEach(function(b){
+    if (blogIsMedia(b) || blogIsCal(b)) return;
+    if (r && !blogHits(r, b)) return;
+    var tag = b.tagName.toLowerCase();
+    if (tag === 'ul' || tag === 'ol') Array.prototype.slice.call(b.querySelectorAll('li')).forEach(function(li){ leaves.push(li); });
+    else leaves.push(b);
+  });
+  leaves.forEach(function(el){
+    var h = blogSanitize(el.innerHTML);
+    if (h !== el.innerHTML){ el.innerHTML = h; changed = true; }
+  });
+  if (changed) blogCaretRestore(m);
 }
 
 /* 行內強調底色 <code>：已經在 code 裡就拆掉，否則包起來 */
@@ -2599,7 +3137,7 @@ function blogFmtCode(){
     try { r.surroundContents(c); }
     catch(e){ c.appendChild(r.extractContents()); r.insertNode(c); }   // 跨標籤選取時的退路
   }
-  host.innerHTML = blogSanitize(host.innerHTML);
+  blogTidySel();
   blogTouchNow();
   blogHideFmt();
 }
@@ -2623,7 +3161,7 @@ function blogFmtLink(){
     }
     document.execCommand('createLink', false, url);
   }
-  host.innerHTML = blogSanitize(host.innerHTML);
+  blogTidySel();
   blogTouchNow();
   blogHideFmt();
 }
@@ -2642,48 +3180,9 @@ function blogFmtClear(){
     while (c.firstChild) c.parentNode.insertBefore(c.firstChild, c);
     c.remove();
   });
-  host.innerHTML = blogSanitize(host.innerHTML);
+  blogTidySel();
   blogTouchNow();
   blogHideFmt();
-}
-
-/* 轉換區塊型別，內容照搬過去 */
-function blogConvertNb(nb, type){
-  if (!nb) return null;
-  var cur = nb.getAttribute('data-t');
-  if (cur === type) return nb;
-  if (['img','vid','car','hr'].indexOf(cur) >= 0){
-    bgToast('圖片、影片與分隔線沒有文字可以轉換。', 'err');
-    return null;
-  }
-  var c = nb.querySelector('.blog-c');
-  var html, text = (c.textContent || '').trim();
-  if (cur === 'ul' || cur === 'ol'){
-    var parts = Array.prototype.slice.call(c.children).map(function(d){ return blogSanitize(d.innerHTML); });
-    html = (parts.length ? parts : [blogSanitize(c.innerHTML)]).join('<br>');
-  } else {
-    html = blogSanitize(c.innerHTML);
-  }
-
-  var b;
-  if (type === 'h2' || type === 'h3')  b = { type:'heading', level: type === 'h3' ? 3 : 2, text:text, html:html };
-  else if (type === 'quote')           b = { type:'quote', text:text, html:html, source:'' };
-  else if (type === 'ul' || type === 'ol'){
-    var items = html.split(/<br\s*\/?>/i).map(function(x){ return blogSanitize(x); })
-      .filter(function(x){ return String(x).replace(/<[^>]*>/g, '').trim(); });
-    b = { type:'list', style:type, items: items.length ? items : [''] };
-  }
-  else b = { type:'paragraph', html:html };
-
-  var wrap = document.createElement('div');
-  wrap.innerHTML = blogBlockHtml(b, false);
-  var el = wrap.firstChild;
-  nb.replaceWith(el);
-  blogTouchNow();
-
-  blogFocusBlock(el, true);
-  blogWordCount();
-  return el;
 }
 
 /* ── 儲存 / 發佈 ─────────────────────────────────────────────────── */
