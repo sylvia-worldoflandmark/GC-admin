@@ -71,22 +71,42 @@ var BLOG_DIRTY = false;
 function blogInjectStyle(){
   if (document.getElementById('blog-admin-style')) return;
   var css = ''
-  + '.blog-tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:18px;overflow-x:auto}'
+  /* ── 版面密度：後台盡量不要留大片空白（sylvia 2026-08-20 指定）──
+     1. 頁首、頁籤、工具列的上下留白收緊
+     2. 工具列固定一行：搜尋框會自己伸縮，右邊的按鈕永遠靠右上角
+     3. 編輯器頂欄同理，「儲存草稿／發佈文章」不再自己佔一整列 */
+  + '.blog-ph{margin-bottom:14px}'
+  + '.blog-ph .breadcrumb{margin-bottom:7px}'
+  + '.blog-ph h1{margin-bottom:2px}'
+  + '.blog-tb{flex-wrap:nowrap;align-items:center;gap:10px;margin-bottom:12px}'
+  + '.blog-tb .toolbar-left{flex:1 1 auto;min-width:0;flex-wrap:nowrap;gap:8px}'
+  + '.blog-tb .toolbar-left>*{flex:0 0 auto}'
+  + '.blog-tb .toolbar-left>.search-box{flex:1 1 220px;width:auto;min-width:128px;max-width:320px;padding:7px 12px}'
+  + '.blog-tb .toolbar-right{flex:0 0 auto;flex-wrap:nowrap;gap:8px;margin-left:auto}'
+  + '.blog-tb .toolbar-right .btn{white-space:nowrap}'
+  + '.blog-tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:12px;overflow-x:auto}'
   + '.blog-tab{padding:10px 16px;font-size:13px;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;display:flex;align-items:center;gap:7px;transition:.15s}'
   + '.blog-tab:hover{color:var(--text-mid)}'
   + '.blog-tab.blog-on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}'
   + '.blog-tab .blog-c{background:#f3f4f6;color:var(--text-dim);font-size:11px;padding:1px 7px;border-radius:20px;font-weight:600}'
   + '.blog-tab.blog-on .blog-c{background:#dbeafe;color:var(--accent)}'
-  + '.blog-bd{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600}'
+  + '.blog-bd{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;white-space:nowrap}'
   + '.blog-bd i{width:5px;height:5px;border-radius:50%;background:currentColor;display:block}'
   + '.blog-bd-green{background:#dcfce7;color:#16a34a}.blog-bd-blue{background:#dbeafe;color:#2563eb}'
   + '.blog-bd-amber{background:#fef3c7;color:#d97706}.blog-bd-gray{background:#f3f4f6;color:rgba(17,24,39,.45)}'
-  + '.blog-pin{background:#fff7ed;color:#ea580c;border-radius:4px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:6px;white-space:nowrap;display:inline-block}'
+  + '.blog-pin{background:#fff7ed;color:#ea580c;border-radius:4px;font-size:10px;font-weight:700;padding:1px 6px;white-space:nowrap;flex:none}'
   + '.blog-th{width:54px;height:38px;border-radius:6px;flex:none;background:#e9ecf1 center/cover no-repeat;display:inline-block;vertical-align:middle}'
-  + '.blog-name{color:var(--text);font-weight:500;font-size:13.5px;line-height:1.55;display:block;max-width:360px;white-space:normal}'
-  + '.blog-slug{font-family:Inter,monospace;font-size:11px;color:var(--text-dim);margin-top:3px;display:block}'
-  + '.blog-rowtags{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}'
-  + '.blog-rowtags span{border:1px solid var(--border);border-radius:100px;padding:0 7px;font-size:10.5px;color:var(--text-dim)}'
+  /* 標題也不換行：放不下就截成「…」，滑鼠移上去看得到全名。
+     每一列高度一致，整張表才掃得動（sylvia 2026-08-19 指定）。 */
+  + '.blog-nmrow{display:flex;align-items:center;gap:6px;min-width:0;max-width:540px}'
+  + '.blog-name{color:var(--text);font-weight:500;font-size:13.5px;line-height:1.55;min-width:0;flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+  + '.blog-slug{font-family:Inter,monospace;font-size:11px;color:var(--text-dim);margin-top:3px;display:block;white-space:nowrap}'
+  + '.blog-rowtags{display:flex;gap:4px;flex-wrap:nowrap;overflow:hidden;max-width:520px;margin-top:5px}'
+  + '.blog-rowtags span{border:1px solid var(--border);border-radius:100px;padding:0 7px;font-size:10.5px;color:var(--text-dim);white-space:nowrap}'
+  /* 表格欄位一律不換行（放不下時由 .table-wrap 橫向捲動）——主檔的 thead th 已經是 nowrap，
+     但 tbody td 沒有，所以「發佈中」這種三個字的徽章在窄欄位會被折成兩行。
+     唯一的例外是標題欄：文章標題本來就長，硬不換行會把整張表撐爆。 */
+  + '.blog-table tbody td{white-space:nowrap}'
   + '.blog-ops{display:flex;gap:3px;justify-content:flex-end}'
   /* 列表每一列的「管理」按鈕 + 動作選單 */
   + '.blog-rowbtn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;font-size:12.5px;font-weight:500;font-family:inherit;cursor:pointer;background:#fff;color:var(--text-mid);border:1px solid var(--border);transition:.15s;white-space:nowrap}'
@@ -113,22 +133,24 @@ function blogInjectStyle(){
   + '.blog-rmi.blog-off:hover i{color:var(--text-dim)}'
   + '.blog-rmsep{height:1px;background:var(--border);margin:5px 8px}'
   /* 編輯器 */
-  + '.blog-ed-top{background:#fff;border:1px solid var(--border);border-radius:12px;padding:13px 18px;display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;position:sticky;top:-26px;z-index:15}'
+  + '.blog-ed-top{background:#fff;border:1px solid var(--border);border-radius:12px;padding:9px 14px;display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:nowrap;position:sticky;top:-26px;z-index:15}'
   + '.blog-back{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-mid);cursor:pointer}'
   + '.blog-back:hover{color:var(--accent)}'
   + '.blog-sep{width:1px;height:20px;background:var(--border)}'
-  + '.blog-auto{font-size:11.5px;color:var(--text-dim);display:flex;align-items:center;gap:6px}'
+  + '.blog-auto{font-size:11.5px;color:var(--text-dim);display:flex;align-items:center;gap:6px;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}'
   + '.blog-auto i{width:6px;height:6px;border-radius:50%;background:#16a34a;display:block}'
   + '.blog-undos{display:flex;gap:2px}'
   + '.blog-ur{width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:#fff;color:var(--text-mid);cursor:pointer;display:grid;place-items:center;transition:.15s;padding:0}'
   + '.blog-ur:hover:not([disabled]){background:#eff4ff;color:var(--accent);border-color:#c7d2fe}'
   + '.blog-ur[disabled]{opacity:.32;cursor:default}'
-  + '.blog-acts{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}'
-  + '.blog-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px 24px;margin-bottom:18px}'
+  + '.blog-acts{margin-left:auto;display:flex;gap:8px;flex-wrap:nowrap;flex:none}'
+  + '.blog-acts .btn{white-space:nowrap}'
+  + '.blog-back,.blog-bd,.blog-sep,.blog-undos{flex:none}'
+  + '.blog-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:12px}'
   + '.blog-ch{font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px}'
   + '.blog-ch .blog-n{width:19px;height:19px;border-radius:5px;background:#eff4ff;color:var(--accent);display:grid;place-items:center;font-size:10.5px;font-weight:700}'
   + '.blog-ch .blog-sub{margin-left:auto;font-weight:400;font-size:11.5px;color:var(--text-dim)}'
-  + '.blog-row{display:grid;grid-template-columns:96px 1fr;gap:14px;align-items:start;margin-bottom:14px}'
+  + '.blog-row{display:grid;grid-template-columns:96px 1fr;gap:14px;align-items:start;margin-bottom:11px}'
   + '.blog-row>label{font-size:12.5px;color:var(--text-mid);padding-top:9px}'
   + '.blog-row>label b{color:var(--danger);font-weight:400;margin-left:2px}'
   + '.blog-i{width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13.5px;font-family:inherit;color:var(--text);background:#fff;outline:0}'
@@ -327,7 +349,18 @@ function blogInjectStyle(){
   +   '.blog-slide{grid-template-columns:26px 1fr;gap:10px}.blog-sth{width:100%;height:150px}'
   +   '.blog-sops{flex-direction:row;grid-column:1/-1}'
   +   '.blog-cover{flex-direction:column;align-items:stretch}.blog-cover-pv{width:100%;height:130px}'
-  +   '.blog-ed-top{position:static}.blog-acts{width:100%}.blog-acts button{flex:1;justify-content:center}'
+  /* 視窗變窄時：按鈕還是留在右上角，只把中間可省略的字先收起來，
+     真的塞不下才讓這一列自己左右捲動，不要再換行多佔一整列。 */
+  +   '.blog-ed-top{position:static;overflow-x:auto}.blog-auto{display:none}'
+  +   '.blog-tb .toolbar-left>.search-box{flex:1 1 150px}'
+  + '}'
+  /* 手機：頂欄只留圖示與按鈕，「返回列表」四個字收起來，才不用左右捲 */
+  + '@media(max-width:560px){'
+  +   '.blog-ed-top{padding:8px 10px;gap:8px}.blog-ed-top .blog-sep{display:none}'
+  +   '.blog-back span{display:none}.blog-back{gap:0}'
+  +   '.blog-card{padding:14px 14px}'
+  +   '.blog-tb{flex-wrap:wrap}.blog-tb .toolbar-left{flex:1 1 100%}'
+  +   '.blog-tb .toolbar-left>.search-box{max-width:none}'
   + '}';
   var st = document.createElement('style');
   st.id = 'blog-admin-style';
@@ -418,21 +451,21 @@ function renderBlogList(){
     }).join('');
 
   main.innerHTML =
-    '<div class="page-header">'
+    '<div class="page-header blog-ph">'
     + '<div class="breadcrumb"><span>官網管理</span><span class="sep">›</span><span>部落格文章</span></div>'
     + '<h1>部落格文章</h1>'
     + '<p>資料表：<code style="font-size:12px;color:var(--text-dim);background:#f3f4f6;padding:2px 7px;border-radius:4px;">blog_posts</code>　官網「洞察文章」的文章管理與發佈</p>'
     + '</div>'
     + '<div class="blog-tabs">' + tabs + '</div>'
-    + '<div class="toolbar"><div class="toolbar-left">'
-    +   '<div class="search-box" style="width:300px;"><svg class="search-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M15 15l3 3" stroke-linecap="round"/></svg>'
+    + '<div class="toolbar blog-tb"><div class="toolbar-left">'
+    +   '<div class="search-box"><svg class="search-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M15 15l3 3" stroke-linecap="round"/></svg>'
     +   '<input id="blog-search-input" type="text" placeholder="搜尋標題、摘要或標籤…"></div>'
     +   ms
-    + '</div><div class="toolbar-right" style="display:flex;gap:8px;">'
+    + '</div><div class="toolbar-right">'
     +   (typeof _exportBtn === 'function' ? _exportBtn('blogExportCsv') : '')
     +   (isAdmin ? '<button class="btn btn-primary" onclick="openBlogEditor(null)"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg> 新增文章</button>' : '')
     + '</div></div>'
-    + '<div class="table-card"><div class="table-wrap" style="overflow-x:auto;"><table style="min-width:max-content;width:100%;">'
+    + '<div class="table-card"><div class="table-wrap" style="overflow-x:auto;"><table class="blog-table" style="min-width:max-content;width:100%;">'
     + '<thead><tr>'
     +   '<th style="width:70px">封面</th><th>標題</th><th style="width:150px">分類</th><th style="width:92px">狀態</th>'
     +   '<th style="width:104px">最後操作</th><th style="width:112px">發佈時間</th><th style="width:112px">最後更新</th>'
@@ -601,7 +634,8 @@ function blogRowHtml(p){
 
   return '<tr' + (p.status === 'unpublished' ? ' style="background:#fffbf5"' : '') + '>'
     + '<td><span class="blog-th"' + thumb + '></span></td>'
-    + '<td><span class="blog-name">' + bgEsc(p.title || '（未命名）') + (p.is_pinned ? '<span class="blog-pin">置頂</span>' : '') + '</span>'
+    + '<td><span class="blog-nmrow">' + (p.is_pinned ? '<span class="blog-pin">置頂</span>' : '')
+    +     '<span class="blog-name" title="' + bgEsc(p.title || '') + '">' + bgEsc(p.title || '（未命名）') + '</span></span>'
     +     '<span class="blog-slug">/blog/' + bgEsc(p.slug) + '/</span>'
     +     (tags ? '<span class="blog-rowtags">' + tags + '</span>' : '') + '</td>'
     + '<td>' + (catNames.length
@@ -1203,7 +1237,7 @@ function blogRenderEditor(){
 
   main.innerHTML =
     '<div class="blog-ed-top">'
-    + '<div class="blog-back" onclick="blogBackToList()"><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4l-6 6 6 6"/></svg>返回列表</div>'
+    + '<div class="blog-back" onclick="blogBackToList()"><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4l-6 6 6 6"/></svg><span>返回列表</span></div>'
     + '<div class="blog-sep"></div>'
     + (ro ? '' : '<div class="blog-undos">'
         + '<button id="blog-undo" class="blog-ur" onclick="blogUndo()" title="復原上一動（⌘Z）" disabled>'
@@ -1492,14 +1526,27 @@ function blogFileErr(file){
   var name = String(file.name || '').toLowerCase();
   if (/\.(heic|heif)$/.test(name) || /heic|heif/.test(file.type || ''))
     return '「' + file.name + '」是 iPhone 的 HEIC 格式，多數瀏覽器顯示不出來。請在手機上改成「最相容」拍攝，或先轉成 JPG 再上傳。';
-  var okType = /^image\/(jpeg|png|webp)$/.test(file.type || '') || /\.(jpe?g|png|webp)$/.test(name);
-  if (!okType) return '「' + file.name + '」不是支援的格式。只收 JPG、PNG、WebP。';
+  var okType = /^image\/(jpeg|png|webp|svg\+xml)$/.test(file.type || '') || /\.(jpe?g|png|webp|svg)$/.test(name);
+  if (!okType) return '「' + file.name + '」不是支援的格式。只收 JPG、PNG、WebP、SVG。';
   if (file.size > BLOG_MAX_MB * 1024 * 1024)
     return '「' + file.name + '」有 ' + (file.size / 1048576).toFixed(1) + ' MB，超過 ' + BLOG_MAX_MB + ' MB 上限。請先壓縮再上傳。';
   return '';
 }
+function blogIsSvg(file){
+  return /svg/.test(file.type || '') || /\.svg$/i.test(String(file.name || ''));
+}
 function blogShrink(file){
   return new Promise(function(resolve){
+    // SVG 是向量檔，本來就不會糊，也不該被畫進 canvas 轉成點陣（會失真又變大）。
+    // 直接原檔上傳，只量一下尺寸拿來算比例；官網一律用 <img> 或 CSS background
+    // 呈現，SVG 裡就算夾帶 script 也不會執行。
+    if (blogIsSvg(file)){
+      var su = URL.createObjectURL(file), si = new Image();
+      si.onload  = function(){ URL.revokeObjectURL(su); resolve({ blob:file, w:si.naturalWidth||0, h:si.naturalHeight||0 }); };
+      si.onerror = function(){ URL.revokeObjectURL(su); resolve({ blob:file, w:0, h:0 }); };
+      si.src = su;
+      return;
+    }
     if (typeof createImageBitmap !== 'function' || !document.createElement('canvas').getContext){
       resolve({ blob:file, w:0, h:0 }); return;
     }
@@ -1554,7 +1601,7 @@ async function blogUpload(file){
 function blogPickFiles(multiple, cb){
   var inp = document.createElement('input');
   inp.type = 'file';
-  inp.accept = 'image/jpeg,image/png,image/webp';
+  inp.accept = 'image/jpeg,image/png,image/webp,image/svg+xml,.svg';
   if (multiple) inp.multiple = true;
   inp.onchange = function(){ cb(Array.prototype.slice.call(inp.files || [])); };
   inp.click();
