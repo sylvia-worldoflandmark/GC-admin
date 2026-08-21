@@ -324,6 +324,29 @@ function blogInjectStyle(){
   + '.blog-lbc{margin-top:14px;color:rgba(255,255,255,.62);font-size:13px;text-align:center}'
   /* 抽屜 */
   + '.blog-mask{position:fixed;inset:0;background:rgba(17,24,39,.4);z-index:9990}'
+  /* 預覽連結的小選單 */
+  + '.blog-pvmenu{position:fixed;z-index:9992;min-width:240px;max-width:min(420px,92vw);background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 16px 40px rgba(17,24,39,.18);padding:5px}'
+  + '.blog-pvurl{font-size:11px;line-height:1.7;color:var(--text-dim);word-break:break-all;padding:8px 10px 9px;border-bottom:1px solid var(--border);margin-bottom:4px}'
+  + '.blog-pvmenu button{display:block;width:100%;text-align:left;padding:8px 10px;border:none;background:none;border-radius:7px;font-family:inherit;font-size:12.5px;color:var(--text-mid);cursor:pointer}'
+  + '.blog-pvmenu button:hover{background:#f3f4f6;color:var(--text)}'
+  + '.blog-pvmenu .blog-pvoff{color:#dc2626}'
+  + '.blog-pvmenu .blog-pvoff:hover{background:#fef2f2}'
+  /* 匯入 Notion／Markdown 的視窗 */
+  + '.blog-imp{position:fixed;z-index:9991;left:50%;top:50%;transform:translate(-50%,-50%);width:min(680px,92vw);max-height:88vh;display:flex;flex-direction:column;background:#fff;border-radius:14px;box-shadow:0 24px 60px rgba(17,24,39,.28);overflow:hidden}'
+  + '.blog-imph{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}'
+  + '.blog-imph h3{font-size:15px;font-weight:600;margin:0}'
+  + '.blog-impb{padding:14px 18px;overflow-y:auto}'
+  + '.blog-impn{font-size:12.5px;line-height:1.85;color:var(--text-mid);background:#f7f8fa;border:1px solid var(--border);border-radius:9px;padding:10px 13px;margin-bottom:12px}'
+  + '.blog-impn code{background:#eef1f5;border-radius:4px;padding:1px 5px;font-size:11.5px}'
+  + '.blog-impfile{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}'
+  + '.blog-impfn{font-size:12px;color:var(--text-dim)}'
+  + '.blog-impta{width:100%;height:200px;resize:vertical;border:1px solid var(--border);border-radius:9px;padding:11px 13px;font-family:inherit;font-size:13px;line-height:1.8;color:var(--text);outline:none}'
+  + '.blog-impta:focus{border-color:var(--accent)}'
+  + '.blog-impsum{margin-top:10px;font-size:12.5px;line-height:1.8;color:var(--text-mid)}'
+  + '.blog-impf{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 18px;border-top:1px solid var(--border);background:#fbfcfd}'
+  + '.blog-impmode{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--text-mid)}'
+  + '.blog-impmode label{display:inline-flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}'
+  + '.blog-impbtns{display:flex;gap:8px;margin-left:auto}'
   + '.blog-dw{position:fixed;top:0;right:0;bottom:0;width:470px;max-width:100%;background:#fff;z-index:9991;box-shadow:-14px 0 44px rgba(0,0,0,.16);display:flex;flex-direction:column}'
   + '.blog-dwh{padding:19px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:11px}'
   + '.blog-dwh h3{font-family:Syne,sans-serif;font-size:1.05rem;font-weight:700}'
@@ -682,6 +705,8 @@ async function blogSetStatus(id, next, action, note){
     patch.last_published_at = now;
     patch.published_by = bgMe();
     if (!p.published_at) patch.published_at = now;
+    // 正式發佈之後，之前發出去的預覽連結就該失效（文章已經有正式網址了）
+    if (p.preview_token) patch.preview_token = null;
   } else if (next === 'unpublished'){
     patch.unpublished_at = now;
   }
@@ -702,7 +727,7 @@ async function blogPublish(id){
   var first = !p.published_at;
   if (await blogSetStatus(id, 'published', first ? 'publish' : 'republish')){
     bgToast(first ? '已發佈' : '已重新發佈');
-    blogTriggerBuild();
+    blogTriggerBuild(first ? '發佈文章' : '重新發佈文章');
   }
 }
 async function blogUnpublish(id){
@@ -710,7 +735,7 @@ async function blogUnpublish(id){
   if (note === null) return;
   if (await blogSetStatus(id, 'unpublished', 'unpublish', note)){
     bgToast('已下架。官網上這篇會顯示「維護中」提示，不是 404。');
-    blogTriggerBuild();
+    blogTriggerBuild('下架文章');
   }
 }
 async function blogArchive(id){
@@ -740,11 +765,46 @@ function blogValidate(p){
   return miss;
 }
 
-/* 觸發 Netlify 重建（Build Hook 尚未設定時安靜跳過） */
-function blogTriggerBuild(){
-  var hook = window.GC_NETLIFY_BUILD_HOOK;
-  if (!hook) return;
-  try { fetch(hook, { method:'POST', mode:'no-cors' }); } catch(e){}
+/* ── 觸發官網重新建置 ────────────────────────────────────────────
+   官網每篇文章的靜態頁是「部署當下」由 build-blog.js 產生的。文章發佈
+   之後如果沒有重新部署，那一篇就沒有自己的實體檔案，會落到 Netlify 的
+   /blog/* rewrite —— 送出去的是還沒填過的模板 meta。LINE、Facebook 的
+   預覽爬蟲不會執行 JavaScript，所以分享出去的標題與摘要會變成列表頁的
+   那一份。發佈／下架之後打這支，官網就會自己重建。
+
+   ⚠ 刻意不從前端直接打 Build Hook：後台的登入是前端擋的，這支 js 本身
+     是公開檔案，把 hook 網址寫在這裡等於公開它。別人拿到讀不到任何資料，
+     但可以連續觸發重建把每月的建置分鐘數燒完，到時候自己要部署也會被卡。
+     所以網址只放在 Netlify 的環境變數 NETLIFY_BUILD_HOOK，由
+     netlify/functions/build-hook.js 驗證登入後代打。
+
+   失敗一律不擋發佈流程 —— 大不了自己去 Netlify 手動 redeploy 一次。   */
+async function blogTriggerBuild(reason){
+  var url = window.GC_BUILD_ENDPOINT || '/.netlify/functions/build-hook';
+  var jwt = '';
+  try {
+    var ss = await sb.auth.getSession();
+    jwt = (ss && ss.data && ss.data.session && ss.data.session.access_token) || '';
+  } catch(e){}
+  if (!jwt) return;
+  try {
+    var res = await fetch(url, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + jwt },
+      body: JSON.stringify({ reason: reason || '' })
+    });
+    var d = null;
+    try { d = await res.json(); } catch(e){}
+    if (d && d.ok && !d.skipped){
+      bgToast('官網開始重新建置，約一分鐘後分享出去的預覽就會更新');
+    } else if (d && d.skipped){
+      console.info('[blog] 略過重建：' + (d.error || d.reason || ''));
+    } else if (d && d.error){
+      console.warn('[blog] 觸發重建失敗：' + d.error);
+    }
+  } catch(e){
+    console.warn('[blog] 觸發重建失敗', e);
+  }
 }
 
 /* ═══ 刪除（倒數 5 秒二次確認，比照貨盤模組） ═══════════════════════ */
@@ -1231,7 +1291,10 @@ function blogRenderEditor(){
     ? '<button class="btn btn-secondary" onclick="blogHistory(' + e.id + ')">檢視異動紀錄</button>'
       + '<button class="btn btn-secondary" onclick="blogPreview(' + e.id + ')">在官網開啟</button>'
       + '<button class="btn btn-primary" disabled>儲存變更</button>'
-    : '<button class="btn btn-secondary" onclick="blogSaveDraft()">儲存草稿</button>'
+    : '<button class="btn btn-secondary" id="blog-pvbtn" onclick="blogPreviewMenu()" title="產生一個可以給別人看的連結，文章不會出現在官網上">'
+      +   '<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8.5 11.5a3 3 0 004.2 0l2.6-2.6a3 3 0 00-4.2-4.2l-.9.9"/><path d="M11.5 8.5a3 3 0 00-4.2 0l-2.6 2.6a3 3 0 004.2 4.2l.9-.9"/></svg> '
+      +   (e.preview_token ? '預覽連結 · 已開啟' : '預覽連結') + '</button>'
+      + '<button class="btn btn-secondary" onclick="blogSaveDraft()">儲存草稿</button>'
       + (e.id ? '<button class="btn btn-secondary" onclick="blogPreview(' + e.id + ')"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 10s3.5-5.5 9-5.5S19 10 19 10s-3.5 5.5-9 5.5S1 10 1 10z"/><circle cx="10" cy="10" r="2.4"/></svg> 預覽</button>' : '')
       + '<button class="btn btn-primary" onclick="blogPublishFromEditor()"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 3v9m0-9l3 3m-3-3L7 6"/><path d="M4 13v3a1 1 0 001 1h10a1 1 0 001-1v-3"/></svg> 發佈文章</button>';
 
@@ -1761,7 +1824,9 @@ function blogCardDoc(ro){
   +     '<button class="btn btn-secondary" onclick="blogFootAdd(\'img\')">上傳圖片</button>'
   +     '<button class="btn btn-secondary" onclick="blogFootAdd(\'vid\')">貼影片連結</button>'
   +     '<button class="btn btn-secondary" onclick="blogFootAdd(\'cal\')">重點框</button>'
-  +     '<span class="blog-fh">或在文件裡按 <kbd>/</kbd></span></div>')
+  +     '<span class="blog-fk" style="margin-left:8px">匯入</span>'
+  +     '<button class="btn btn-secondary" onclick="blogOpenImport()">Notion／Markdown</button>'
+  +     '<span class="blog-fh">或在文件裡按 <kbd>/</kbd>　·　從 Notion 複製後直接貼上也會自動轉換</span></div>')
   + '</div></div>';
 }
 
@@ -2850,8 +2915,11 @@ function blogBindDoc(){
 
   doc.addEventListener('mouseup', function(){ setTimeout(blogFmtUpdate, 0); });
 
-  // 一律以純文字貼上（外部樣式不要帶進來），但換行會照樣拆成一段一段
+  // 貼上：Notion／Markdown 這種「有結構」的內容會自動轉成區塊（見檔案最後
+  // 的匯入模組）；其餘一律以純文字貼上，外部樣式不要帶進來，但換行會照樣
+  // 拆成一段一段。
   doc.addEventListener('paste', function(e){
+    if (typeof blogSmartPaste === 'function' && blogSmartPaste(e)) return;
     e.preventDefault();
     var txt = ((e.clipboardData || window.clipboardData).getData('text/plain') || '').replace(/\r\n?/g, '\n');
     txt.split('\n').forEach(function(ln, i){
@@ -3293,7 +3361,7 @@ async function blogPublishFromEditor(){
   var first = !e.published_at;
   if (await blogSetStatus(e.id, 'published', first ? 'publish' : 'republish')){
     bgToast(first ? '已發佈' : '已重新發佈');
-    blogTriggerBuild();
+    blogTriggerBuild(first ? '發佈文章' : '重新發佈文章');
     BLOG_EDIT = null;
   }
 }
@@ -3311,3 +3379,625 @@ setInterval(function(){
 window.addEventListener('beforeunload', function(e){
   if (BLOG_DIRTY){ e.preventDefault(); e.returnValue = ''; return ''; }
 });
+
+/* ═══ 匯入：Notion／Markdown ═══════════════════════════════════════
+   兩條路，資料都會轉成同一份 blocks 結構（跟手動編輯出來的完全一樣）：
+
+   1. 直接貼上：在 Notion 全選複製，貼進內文區。剪貼簿裡有 text/html，
+      直接把它的標題／清單／引言／分隔線讀出來，不再只留純文字。
+   2. 匯入 Markdown：Notion → 匯出 → Markdown & CSV，把 .md 丟進來，
+      或把內容貼進匯入視窗。可以一起選圖片檔，會自動上傳並接回文中。
+
+   ⚠ Notion 複製過來的圖片網址是它的暫時簽名網址（幾小時後就失效），
+     而且跨網域抓不下來，所以貼上時一律略過並回報張數，請改用
+     Markdown 匯入（可以一起帶圖檔）或直接上傳。                    */
+
+var BLOG_IMP = { blocks:[], files:{}, mode:'append' };
+
+/* ── 行內語法 ──────────────────────────────────────────────────── */
+function blogMdInline(s){
+  var h = bgEsc(String(s == null ? '' : s));
+  // 先把行內程式碼挖出來，避免裡面的 * _ 被當成語法
+  var code = [];
+  h = h.replace(/`([^`]+)`/g, function(m, a){ code.push(a); return '\u0000C' + (code.length - 1) + '\u0000'; });
+  h = h.replace(/!\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g, '$1');                  // 行內圖片只留說明文字
+  h = h.replace(/\[([^\]]+)\]\(([^)\s]+)[^)]*\)/g, function(m, t, u){
+    return /^https?:\/\//i.test(u) ? '<a href="' + bgEsc(u) + '" target="_blank" rel="noopener">' + t + '</a>' : t;
+  });
+  h = h.replace(/\*\*\*([^*]+)\*\*\*/g, '<b><i>$1</i></b>');
+  h = h.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  h = h.replace(/(^|[^\w*])\*([^*\n]+)\*(?![\w*])/g, '$1<i>$2</i>');
+  h = h.replace(/(^|[^\w_])__([^_\n]+)__(?![\w_])/g, '$1<b>$2</b>');
+  h = h.replace(/(^|[^\w_])_([^_\n]+)_(?![\w_])/g, '$1<i>$2</i>');
+  h = h.replace(/~~([^~]+)~~/g, '<s>$1</s>');
+  h = h.replace(/\u0000C(\d+)\u0000/g, function(m, i){ return '<code>' + code[+i] + '</code>'; });
+  return h;
+}
+
+/* ── Markdown → blocks ─────────────────────────────────────────── */
+function blogMdToBlocks(md){
+  var lines = String(md || '').replace(/\r\n?/g, '\n').split('\n');
+  var out = [], i = 0, stats = { img:0, table:0 };
+
+  function push(b){ out.push(b); }
+  function para(buf){
+    var t = buf.join('\n').trim();
+    if (!t) return;
+    push({ type:'paragraph', html: blogMdInline(t).replace(/\n/g, '<br>') });
+  }
+
+  while (i < lines.length){
+    var ln = lines[i];
+
+    // 空行
+    if (!ln.trim()){ i++; continue; }
+
+    // 程式碼區塊：本文沒有對應的區塊型別，整段轉成一個段落並保留等寬字
+    if (/^\s*```/.test(ln)){
+      var code = [];
+      i++;
+      while (i < lines.length && !/^\s*```/.test(lines[i])){ code.push(lines[i]); i++; }
+      i++;
+      if (code.length) push({ type:'paragraph', html:'<code>' + bgEsc(code.join('\n')).replace(/\n/g, '<br>') + '</code>' });
+      continue;
+    }
+
+    // 分隔線
+    if (/^\s*([-*_])\s*\1\s*\1[\s\-*_]*$/.test(ln)){ push({ type:'divider' }); i++; continue; }
+
+    // 標題（# 與 ## 都當 H2，### 以下當 H3；文章裡只有這兩級）
+    var mh = ln.match(/^\s{0,3}(#{1,6})\s+(.*)$/);
+    if (mh){
+      var lv = mh[1].length <= 2 ? 2 : 3;
+      var html = blogMdInline(mh[2].replace(/\s+#+\s*$/, ''));
+      push({ type:'heading', level:lv, text: html.replace(/<[^>]*>/g, '').trim(), html: html });
+      i++; continue;
+    }
+
+    // 整行圖片
+    var mi = ln.trim().match(/^!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)$/);
+    if (mi){
+      push({ type:'image', url: mi[2], caption: mi[3] || mi[1] || '', source:'' });
+      stats.img++;
+      i++; continue;
+    }
+
+    // 引言／Notion 的 callout（> [!NOTE] 之類）
+    if (/^\s{0,3}>/.test(ln)){
+      var q = [];
+      while (i < lines.length && /^\s{0,3}>/.test(lines[i])){ q.push(lines[i].replace(/^\s{0,3}>\s?/, '')); i++; }
+      var first = (q[0] || '').trim();
+      var mc = first.match(/^\[!(NOTE|TIP|INFO|IMPORTANT|WARNING|CAUTION)\]\s*(.*)$/i);
+      if (mc){
+        var warn = /WARNING|CAUTION|IMPORTANT/i.test(mc[1]);
+        q.shift();
+        var inner = blogMdToBlocks(q.join('\n')).blocks.filter(function(b){
+          return ['paragraph','heading','list','quote'].indexOf(b.type) >= 0;   // 框裡不放圖片與分隔線
+        });
+        push({ type:'callout', style: warn ? 'warn' : 'note',
+               title: blogMdInline(mc[2] || (warn ? '提醒' : '重點')), blocks: inner });
+      } else {
+        var qt = q.join('\n').trim();
+        if (qt) push({ type:'quote', text: qt.replace(/\n/g, ' '), html: blogMdInline(qt).replace(/\n/g, '<br>'), source:'' });
+      }
+      continue;
+    }
+
+    // 表格：沒有對應的區塊型別，每一列轉成一個段落，用「｜」隔開，內容不會掉
+    if (/^\s*\|.*\|\s*$/.test(ln) && /^\s*\|[\s:\-|]+\|\s*$/.test(lines[i + 1] || '')){
+      var rows = [];
+      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])){
+        if (!/^\s*\|[\s:\-|]+\|\s*$/.test(lines[i])){
+          rows.push(lines[i].trim().replace(/^\||\|$/g, '').split('|').map(function(c){ return c.trim(); }));
+        }
+        i++;
+      }
+      if (rows.length){
+        var head = rows.shift();
+        push({ type:'paragraph', html:'<b>' + blogMdInline(head.join('｜')) + '</b>' });
+        rows.forEach(function(r){ push({ type:'paragraph', html: blogMdInline(r.join('｜')) }); });
+        stats.table++;
+      }
+      continue;
+    }
+
+    // 清單（含 Notion 的待辦 - [ ] ）
+    var ml = ln.match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
+    if (ml){
+      var ordered = /\d/.test(ml[2]);
+      var items = [];
+      while (i < lines.length){
+        var m2 = lines[i].match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
+        if (!m2) {
+          // 同一項的續行（下一行有縮排且不是新項目）
+          if (items.length && /^\s{2,}\S/.test(lines[i])){ items[items.length - 1] += '<br>' + blogMdInline(lines[i].trim()); i++; continue; }
+          break;
+        }
+        if (/\d/.test(m2[2]) !== ordered) break;         // 換了清單型別就分成兩塊
+        items.push(blogMdInline(m2[3].replace(/^\[[ xX]\]\s*/, '')));   // 待辦的框框拿掉
+        i++;
+      }
+      push({ type:'list', style: ordered ? 'ol' : 'ul', items: items });
+      continue;
+    }
+
+    // 一般段落：連續非空行算同一段
+    var buf = [];
+    while (i < lines.length && lines[i].trim()
+           && !/^\s{0,3}(#{1,6}\s|>|```)/.test(lines[i])
+           && !/^(\s*)([-*+]|\d+[.)])\s+/.test(lines[i])
+           && !/^\s*([-*_])\s*\1\s*\1[\s\-*_]*$/.test(lines[i])
+           && !/^\s*\|.*\|\s*$/.test(lines[i])){
+      buf.push(lines[i]); i++;
+    }
+    para(buf);
+  }
+  return { blocks: out, stats: stats };
+}
+
+/* ── HTML（Notion 剪貼簿）→ blocks ─────────────────────────────── */
+function blogHtmlToBlocks(html){
+  var box = document.createElement('div');
+  box.innerHTML = String(html || '');
+  // Notion 會夾帶一堆 style/meta，先清掉
+  Array.prototype.slice.call(box.querySelectorAll('style,script,meta,link,svg,noscript')).forEach(function(x){ x.remove(); });
+  var out = [], stats = { img:0, table:0 };
+
+  function inlineOf(el){
+    var c = el.cloneNode(true);
+    Array.prototype.slice.call(c.querySelectorAll('img,figure,br+br')).forEach(function(x){ x.remove(); });
+    return blogSanitize(c.innerHTML);
+  }
+  function plain(h){ return String(h).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim(); }
+
+  function walk(node, inCal){
+    Array.prototype.slice.call(node.childNodes).forEach(function(el){
+      if (el.nodeType === 3){
+        var t = (el.nodeValue || '').trim();
+        if (t) out.push({ type:'paragraph', html: bgEsc(t) });
+        return;
+      }
+      if (el.nodeType !== 1) return;
+      var tag = el.tagName.toLowerCase();
+      var cls = (el.getAttribute('class') || '').toLowerCase();
+
+      if (tag === 'h1' || tag === 'h2'){
+        var h = inlineOf(el);
+        if (plain(h)) out.push({ type:'heading', level:2, text: plain(h), html: h });
+        return;
+      }
+      if (/^h[3-6]$/.test(tag)){
+        var h3 = inlineOf(el);
+        if (plain(h3)) out.push({ type:'heading', level:3, text: plain(h3), html: h3 });
+        return;
+      }
+      if (tag === 'hr'){ out.push({ type:'divider' }); return; }
+      if (tag === 'ul' || tag === 'ol'){
+        var items = [];
+        Array.prototype.slice.call(el.children).forEach(function(li){
+          if (li.tagName.toLowerCase() !== 'li') return;
+          var c = li.cloneNode(true);
+          Array.prototype.slice.call(c.querySelectorAll('ul,ol')).forEach(function(x){ x.remove(); });
+          var hh = blogSanitize(c.innerHTML);
+          if (plain(hh)) items.push(hh);
+          // 巢狀清單攤平到同一層，內容不會掉
+          Array.prototype.slice.call(li.querySelectorAll('li')).forEach(function(li2){
+            var c2 = li2.cloneNode(true);
+            Array.prototype.slice.call(c2.querySelectorAll('ul,ol')).forEach(function(x){ x.remove(); });
+            var h2h = blogSanitize(c2.innerHTML);
+            if (plain(h2h)) items.push(h2h);
+          });
+        });
+        if (items.length) out.push({ type:'list', style: tag, items: items });
+        return;
+      }
+      // Notion 的重點框：貼出來是 <aside> 或帶 callout 的 div
+      if (!inCal && (tag === 'aside' || /callout/.test(cls))){
+        var sub = [];
+        var save = out; out = sub;
+        walk(el, true);
+        out = save;
+        sub = sub.filter(function(b){ return ['paragraph','heading','list','quote'].indexOf(b.type) >= 0; });
+        var title = sub.length && sub[0].type === 'paragraph' ? sub.shift().html : '重點';
+        out.push({ type:'callout', style:'note', title: title, blocks: sub });
+        return;
+      }
+      if (tag === 'blockquote'){
+        var q = inlineOf(el);
+        if (plain(q)) out.push({ type:'quote', text: plain(q), html: q, source:'' });
+        return;
+      }
+      if (tag === 'pre'){
+        var pc = bgEsc(el.textContent || '').replace(/\n/g, '<br>');
+        if (pc) out.push({ type:'paragraph', html:'<code>' + pc + '</code>' });
+        return;
+      }
+      if (tag === 'table'){
+        Array.prototype.slice.call(el.querySelectorAll('tr')).forEach(function(tr, ri){
+          var cells = Array.prototype.slice.call(tr.children).map(function(td){ return blogSanitize(td.innerHTML); });
+          var line = cells.filter(function(c){ return plain(c); }).join('｜');
+          if (!plain(line)) return;
+          out.push({ type:'paragraph', html: ri === 0 ? '<b>' + line + '</b>' : line });
+        });
+        stats.table++;
+        return;
+      }
+      if (tag === 'img' || tag === 'figure'){
+        // Notion 的圖是暫時簽名網址，抓不下來也會過期 —— 只回報張數
+        stats.img += Math.max(1, el.querySelectorAll ? (el.querySelectorAll('img').length || 1) : 1);
+        return;
+      }
+      if (tag === 'p' || tag === 'div' || tag === 'section' || tag === 'article' || tag === 'body' || tag === 'main'){
+        // 有區塊子節點就繼續往下走，沒有才把自己當成一段
+        var hasBlock = !!el.querySelector('h1,h2,h3,h4,h5,h6,ul,ol,blockquote,hr,table,pre,figure,aside,p,div');
+        if (hasBlock){ walk(el, inCal); return; }
+        var ph = inlineOf(el);
+        stats.img += el.querySelectorAll('img').length;
+        if (plain(ph)) out.push({ type:'paragraph', html: ph });
+        return;
+      }
+      // 其餘行內元素：併成一段
+      var any = inlineOf(el.parentNode === node ? el : el);
+      if (plain(any)) out.push({ type:'paragraph', html: blogSanitize(el.outerHTML) });
+    });
+  }
+  walk(box, false);
+  return { blocks: out, stats: stats };
+}
+
+/* 剪貼簿裡的 HTML 到底有沒有「結構」？沒有的話就走原本的行內貼上 */
+function blogHtmlHasBlocks(html){
+  var d = document.createElement('div');
+  d.innerHTML = String(html || '');
+  if (d.querySelector('h1,h2,h3,h4,h5,h6,ul,ol,blockquote,hr,table,pre,aside')) return true;
+  return d.querySelectorAll('p,div').length > 1;
+}
+/* 純文字看起來像不像 Markdown */
+function blogLooksLikeMd(t){
+  var s = String(t || '');
+  if (/^\s{0,3}#{1,6}\s/m.test(s)) return true;
+  if (/^\s{0,3}([-*+]|\d+[.)])\s+\S/m.test(s) && /\n/.test(s)) return true;
+  if (/^\s{0,3}>\s/m.test(s)) return true;
+  if (/\*\*[^*]+\*\*/.test(s) && /\n\n/.test(s)) return true;
+  return false;
+}
+
+/* ── 把 blocks 放進文件 ────────────────────────────────────────── */
+function blogInsertBlocks(blocks, mode){
+  if (!blocks || !blocks.length){ bgToast('沒有讀到可以匯入的內容', 'err'); return 0; }
+  var cur = blogReadDoc(false);
+  var next;
+  if (mode === 'replace') next = blocks.slice();
+  else if (mode === 'top') next = blocks.concat(cur);
+  else next = cur.concat(blocks);
+  // 只有一個空段落的話不用留著
+  next = next.filter(function(b, i){
+    return !(b.type === 'paragraph' && !String(b.html || '').replace(/<[^>]*>/g, '').trim() && next.length > 1);
+  });
+  BLOG_EDIT.content = { v:1, blocks: next };
+  blogRenderEditor();
+  blogTouchNow();
+  return blocks.length;
+}
+
+/* ── 匯入視窗 ──────────────────────────────────────────────────── */
+function blogOpenImport(){
+  if (blogEditorLocked()){ bgToast('已發佈的文章不能編輯，請先下架', 'err'); return; }
+  blogCloseImport();
+  BLOG_IMP = { blocks:[], files:{}, mode:'append' };
+  var mask = document.createElement('div');
+  mask.className = 'blog-mask'; mask.id = 'blog-impmask';
+  mask.onclick = blogCloseImport;
+  var dg = document.createElement('div');
+  dg.className = 'blog-imp'; dg.id = 'blog-imp';
+  dg.innerHTML =
+    '<div class="blog-imph"><h3>匯入 Notion／Markdown</h3>'
+    + '<div class="blog-dwx" onclick="blogCloseImport()"><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5l10 10M15 5L5 15"/></svg></div></div>'
+    + '<div class="blog-impb">'
+    +   '<div class="blog-impn">'
+    +     '<b>兩種用法：</b>① 在 Notion 全選複製，直接貼進下面的框（或直接貼進內文區也可以）。'
+    +     '② Notion → 匯出 → <b>Markdown &amp; CSV</b>，把解壓出來的 <code>.md</code> 檔選進來；'
+    +     '圖片可以一起選（多選），會自動上傳並接回文中。'
+    +   '</div>'
+    +   '<div class="blog-impfile">'
+    +     '<button class="btn btn-secondary" onclick="blogImportPickMd()">選擇 .md 檔</button>'
+    +     '<button class="btn btn-secondary" onclick="blogImportPickImgs()">一起選圖片（選填）</button>'
+    +     '<span class="blog-impfn" id="blog-impfn">尚未選擇檔案</span>'
+    +   '</div>'
+    +   '<textarea id="blog-impta" class="blog-impta" placeholder="或把 Notion 的內容／Markdown 直接貼在這裡…"></textarea>'
+    +   '<div class="blog-impsum" id="blog-impsum">貼上或選檔之後，這裡會顯示會轉出幾個區塊。</div>'
+    + '</div>'
+    + '<div class="blog-impf">'
+    +   '<div class="blog-impmode">'
+    +     '<label><input type="radio" name="blogimpm" value="append" checked onchange="BLOG_IMP.mode=this.value"> 接在現有內容後面</label>'
+    +     '<label><input type="radio" name="blogimpm" value="top" onchange="BLOG_IMP.mode=this.value"> 放在最前面</label>'
+    +     '<label><input type="radio" name="blogimpm" value="replace" onchange="BLOG_IMP.mode=this.value"> 取代全部內容</label>'
+    +   '</div>'
+    +   '<div class="blog-impbtns">'
+    +     '<button class="btn btn-secondary" onclick="blogCloseImport()">取消</button>'
+    +     '<button class="btn btn-primary" id="blog-impgo" onclick="blogDoImport()" disabled>匯入</button>'
+    +   '</div>'
+    + '</div>';
+  document.body.appendChild(mask);
+  document.body.appendChild(dg);
+  var ta = document.getElementById('blog-impta');
+  ta.addEventListener('input', function(){ blogImportPreview(ta.value, null); });
+  // 貼上時如果剪貼簿有 HTML，優先用 HTML（Notion 的結構比較完整）
+  ta.addEventListener('paste', function(e){
+    var h = (e.clipboardData || window.clipboardData).getData('text/html');
+    if (!h) return;
+    e.preventDefault();
+    ta.value = '（已讀取 Notion 的格式內容，可直接按「匯入」）';
+    blogImportPreview(null, h);
+  });
+  setTimeout(function(){ ta.focus(); }, 30);
+}
+function blogCloseImport(){
+  ['blog-impmask','blog-imp'].forEach(function(id){ var e = document.getElementById(id); if (e) e.remove(); });
+}
+function blogImportPreview(text, html){
+  var r = html ? blogHtmlToBlocks(html) : blogMdToBlocks(text || '');
+  BLOG_IMP.blocks = r.blocks;
+  var n = {};
+  r.blocks.forEach(function(b){ n[b.type] = (n[b.type] || 0) + 1; });
+  var name = { heading:'標題', paragraph:'段落', list:'清單', quote:'引言', divider:'分隔線', image:'圖片', callout:'重點框' };
+  var parts = Object.keys(n).map(function(k){ return (name[k] || k) + ' ' + n[k]; });
+  var box = document.getElementById('blog-impsum');
+  var go = document.getElementById('blog-impgo');
+  if (!r.blocks.length){
+    if (box) box.textContent = '還沒有可以匯入的內容。';
+    if (go) go.disabled = true;
+    return;
+  }
+  var extra = '';
+  if (html && r.stats.img) extra += '　⚠ 有 ' + r.stats.img + ' 張圖片沒有帶進來（Notion 複製過來的圖片網址會過期），請改用 Markdown 匯入或直接上傳。';
+  if (r.stats.table) extra += '　※ 表格已轉成文字段落，用「｜」隔開。';
+  if (box) box.innerHTML = '會轉出 <b>' + r.blocks.length + '</b> 個區塊：' + bgEsc(parts.join('、')) + bgEsc(extra).replace(/&lt;b&gt;/g, '<b>');
+  if (go) go.disabled = false;
+}
+function blogImportPickMd(){
+  var inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.md,.markdown,.txt,text/markdown,text/plain';
+  inp.onchange = function(){
+    var f = (inp.files || [])[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function(){
+      var ta = document.getElementById('blog-impta');
+      if (ta) ta.value = String(rd.result || '');
+      BLOG_IMP.mdName = f.name;
+      blogImportFileLabel();
+      blogImportPreview(String(rd.result || ''), null);
+    };
+    rd.readAsText(f, 'utf-8');
+  };
+  inp.click();
+}
+function blogImportPickImgs(){
+  blogPickFiles(true, function(files){
+    if (!files.length) return;
+    files.forEach(function(f){
+      BLOG_IMP.files[f.name] = f;
+      // Notion 匯出的檔名會被 URL 編碼，兩種寫法都收
+      try { BLOG_IMP.files[decodeURIComponent(f.name)] = f; } catch(e){}
+    });
+    blogImportFileLabel();
+  });
+}
+function blogImportFileLabel(){
+  var el = document.getElementById('blog-impfn');
+  if (!el) return;
+  var n = Object.keys(BLOG_IMP.files).length;
+  var t = [];
+  if (BLOG_IMP.mdName) t.push(BLOG_IMP.mdName);
+  if (n) t.push('圖片 ' + n + ' 個');
+  el.textContent = t.length ? t.join('　·　') : '尚未選擇檔案';
+}
+
+/* 匯入：先把本機圖片上傳換成正式網址，再把區塊放進文件 */
+async function blogDoImport(){
+  var blocks = BLOG_IMP.blocks;
+  if (!blocks || !blocks.length) return;
+  var go = document.getElementById('blog-impgo');
+  if (go){ go.disabled = true; go.textContent = '匯入中…'; }
+
+  var pending = blocks.filter(function(b){ return b.type === 'image' && !/^https?:\/\//i.test(String(b.url || '')); });
+  var missing = 0;
+  for (var i = 0; i < pending.length; i++){
+    var b = pending[i];
+    var key = String(b.url || '').replace(/^\.?\//, '');
+    var f = BLOG_IMP.files[key] || BLOG_IMP.files[key.split('/').pop()];
+    if (!f){ try { f = BLOG_IMP.files[decodeURIComponent(key.split('/').pop())]; } catch(e){} }
+    if (!f){ b._drop = true; missing++; continue; }
+    var up = await blogUpload(f);
+    if (up){ b.url = up.url; b.w = up.w; b.h = up.h; } else { b._drop = true; missing++; }
+  }
+  blocks = blocks.filter(function(b){ return !b._drop; });
+
+  // Markdown 第一行的大標題通常就是文章標題；標題欄還空著就順手填進去
+  var titleUsed = '';
+  if (!String(BLOG_EDIT.title || '').trim() && blocks.length && blocks[0].type === 'heading'
+      && blocks[0].level === 2 && (BLOG_IMP.mode === 'replace' || !blogReadDoc(false).length)){
+    titleUsed = blocks[0].text || '';
+    BLOG_EDIT.title = titleUsed;
+    blocks = blocks.slice(1);
+  }
+
+  var n = blogInsertBlocks(blocks, BLOG_IMP.mode);
+  blogCloseImport();
+  var msg = '已匯入 ' + n + ' 個區塊';
+  if (titleUsed) msg += '，標題自動帶入「' + titleUsed + '」';
+  if (missing) msg += '；有 ' + missing + ' 張圖片找不到檔案，請手動補上';
+  bgToast(msg, missing ? 'err' : '');
+}
+
+/* ── 內文區的智慧貼上 ──────────────────────────────────────────
+   有結構就整段轉換；只是一小段字就沿用原本的行內貼上（保留粗體、連結）。*/
+function blogSmartPaste(e){
+  var cb = e.clipboardData || window.clipboardData;
+  if (!cb) return false;
+  var html = cb.getData('text/html') || '';
+  var text = (cb.getData('text/plain') || '').replace(/\r\n?/g, '\n');
+
+  if (html && blogHtmlHasBlocks(html)){
+    e.preventDefault();
+    var r = blogHtmlToBlocks(html);
+    if (!r.blocks.length) return false;
+    blogInsertAtCaret(r.blocks);
+    var m = '已轉成 ' + r.blocks.length + ' 個區塊';
+    if (r.stats.img) m += '；有 ' + r.stats.img + ' 張圖片沒有帶進來（Notion 的圖片網址會過期），請另外上傳';
+    bgToast(m, r.stats.img ? 'err' : '');
+    return true;
+  }
+  if (text && blogLooksLikeMd(text)){
+    e.preventDefault();
+    var r2 = blogMdToBlocks(text);
+    if (!r2.blocks.length) return false;
+    blogInsertAtCaret(r2.blocks);
+    bgToast('偵測到 Markdown，已轉成 ' + r2.blocks.length + ' 個區塊');
+    return true;
+  }
+  // 一小段有格式的字：保留粗體、斜體、連結，其餘丟掉
+  if (html && !/\n\n/.test(text)){
+    var inline = blogSanitize(html.replace(/<[^>]*>/g, function(t){
+      return /^<\/?(b|strong|i|em|u|s|a|br|span|code)\b/i.test(t) ? t : '';
+    }));
+    if (inline.replace(/<[^>]*>/g, '').trim()){
+      e.preventDefault();
+      document.execCommand('insertHTML', false, inline);
+      return true;
+    }
+  }
+  return false;
+}
+
+/* 把區塊插在游標所在那一段的後面（游標不在文件裡就接在最後） */
+function blogInsertAtCaret(blocks){
+  var doc = blogDoc();
+  var at = -1;
+  var sel = window.getSelection();
+  if (doc && sel && sel.rangeCount){
+    var top = blogTopOf(sel.getRangeAt(0).startContainer);
+    if (top && top.parentNode === doc) at = Array.prototype.indexOf.call(doc.children, top);
+  }
+  var cur = blogReadDoc(true);
+  if (at < 0 || at >= cur.length){
+    blogInsertBlocks(blocks, 'append');
+    return;
+  }
+  var head = cur.slice(0, at + 1), tail = cur.slice(at + 1);
+  // 游標那一段是空的就用匯入的內容取代它
+  var h = head[head.length - 1];
+  if (h && h.type === 'paragraph' && !String(h.html || '').replace(/<[^>]*>/g, '').trim()) head.pop();
+  BLOG_EDIT.content = { v:1, blocks: head.concat(blocks, tail) };
+  blogRenderEditor();
+  blogTouchNow();
+}
+
+/* ═══ 未發佈文章的預覽連結 ═══════════════════════════════════════
+   寫完但還不能發佈時，用這個連結請人幫忙看。
+   · 連結長這樣：https://worldoflandmark.com/blog/<網址代稱>/?preview=<token>
+   · token 是資料庫裡的一組隨機碼，只有草稿與已下架的文章讀得到
+   · 頁面會顯示「預覽連結」橫幅並帶 noindex，不會被搜尋引擎收錄
+   · 一旦正式發佈，後台會把 token 清掉 —— 舊連結自動失效，
+     之後打開會直接看到正式的文章頁
+   ⚠ 需要先在 Supabase 跑過 preview-link.sql（加欄位與 blog_preview 函式）。 */
+
+function blogNewToken(){
+  try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch(e){}
+  // 舊瀏覽器的退路：組一個符合 uuid v4 格式的字串
+  var b = new Uint8Array(16);
+  (window.crypto || {}).getRandomValues ? crypto.getRandomValues(b)
+    : b.forEach(function(_, i){ b[i] = Math.floor(Math.random() * 256); });
+  b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+  var h = Array.prototype.map.call(b, function(x){ return ('0' + x.toString(16)).slice(-2); }).join('');
+  return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
+}
+
+function blogPreviewUrl(slug, token){
+  return BLOG_SITE + '/blog/' + encodeURIComponent(slug) + '/?preview=' + token;
+}
+
+/* 複製預覽連結：會先把目前的內容存成草稿，對方看到的才是最新版本 */
+async function blogCopyPreviewLink(regen){
+  var e = BLOG_EDIT;
+  if (!e){ bgToast('請先開啟要預覽的文章', 'err'); return; }
+  if (e.status === 'published'){
+    bgToast('這篇已經發佈了，直接用正式網址就可以：' + BLOG_SITE + '/blog/' + e.slug + '/', 'err');
+    return;
+  }
+  if (!(await blogSaveDraft(true))) return;      // 先存檔，連結才會是最新內容
+
+  var token = regen ? '' : (e.preview_token || '');
+  if (!token){
+    token = blogNewToken();
+    var r = await sb.from('blog_posts').update({ preview_token: token }).eq('id', e.id);
+    if (r.error){
+      bgToast(/preview_token/.test(r.error.message)
+        ? '資料庫還沒有 preview_token 欄位，請先在 Supabase 跑過 preview-link.sql。'
+        : '產生預覽連結失敗：' + r.error.message, 'err');
+      return;
+    }
+    e.preview_token = token;
+    var i = BLOG_DB.map(function(p){ return p.id; }).indexOf(e.id);
+    if (i >= 0) BLOG_DB[i].preview_token = token;
+  }
+  var url = blogPreviewUrl(e.slug, token);
+  blogCopyText(url);
+  blogRenderEditor();
+  bgToast(regen ? '已重新產生，舊連結立刻失效。新連結已複製。' : '預覽連結已複製，可以直接貼給對方。');
+}
+
+function blogCopyText(t){
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).catch(function(){ blogCopyFallback(t); });
+  } else blogCopyFallback(t);
+}
+function blogCopyFallback(t){
+  var ta = document.createElement('textarea');
+  ta.value = t; ta.style.cssText = 'position:fixed;left:-9999px';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); } catch(e){}
+  ta.remove();
+}
+
+/* 編輯器頂欄那顆按鈕的選單：複製／重新產生／停用 */
+function blogPreviewMenu(){
+  var e = BLOG_EDIT; if (!e) return;
+  if (!e.preview_token){ blogCopyPreviewLink(false); return; }
+  blogClosePreviewMenu();
+  var btn = document.getElementById('blog-pvbtn');
+  var r = btn ? btn.getBoundingClientRect() : { left:20, bottom:60 };
+  var m = document.createElement('div');
+  m.id = 'blog-pvmenu';
+  m.className = 'blog-pvmenu';
+  m.style.left = Math.max(10, Math.min(r.left, window.innerWidth - 250)) + 'px';
+  m.style.top = (r.bottom + 6) + 'px';
+  m.innerHTML =
+    '<div class="blog-pvurl" title="' + bgEsc(blogPreviewUrl(e.slug, e.preview_token)) + '">'
+    +   bgEsc(blogPreviewUrl(e.slug, e.preview_token)) + '</div>'
+    + '<button onclick="blogClosePreviewMenu();blogCopyPreviewLink(false)">複製連結</button>'
+    + '<button onclick="blogClosePreviewMenu();blogCopyPreviewLink(true)">重新產生（舊連結失效）</button>'
+    + '<button class="blog-pvoff" onclick="blogClosePreviewMenu();blogRevokePreview()">停用預覽連結</button>';
+  document.body.appendChild(m);
+  setTimeout(function(){ document.addEventListener('click', blogPvOutside); }, 0);
+}
+function blogPvOutside(ev){
+  var m = document.getElementById('blog-pvmenu');
+  if (m && !m.contains(ev.target)) blogClosePreviewMenu();
+}
+function blogClosePreviewMenu(){
+  document.removeEventListener('click', blogPvOutside);
+  var m = document.getElementById('blog-pvmenu'); if (m) m.remove();
+}
+async function blogRevokePreview(){
+  var e = BLOG_EDIT; if (!e || !e.id) return;
+  var r = await sb.from('blog_posts').update({ preview_token: null }).eq('id', e.id);
+  if (r.error){ bgToast('停用失敗：' + r.error.message, 'err'); return; }
+  e.preview_token = null;
+  var i = BLOG_DB.map(function(p){ return p.id; }).indexOf(e.id);
+  if (i >= 0) BLOG_DB[i].preview_token = null;
+  blogRenderEditor();
+  bgToast('預覽連結已停用');
+}
