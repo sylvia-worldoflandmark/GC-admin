@@ -1445,7 +1445,7 @@ var VIEW_STATE = {
   commission_records:        { vars:['crecPage','crecSearch','crecFilterUnpaid'], ms:[] },
   financial_records:         { vars:['finPage'], ms:[], objs:['finFilter'] },
   payout_docs:               { vars:['lfdPage','lfdSearch','lfdYear','lfdStatus','lfdIncome','lfdSummary'], ms:[] },
-  products:                  { vars:['hpProdPage','hpFSearch'], ms:['hp-reg','hp-cat','hp-brand','hp-win','hp-pub'] },
+  products:                  { vars:['hpProdPage','hpFSearch'], ms:['hp-reg','hp-cat','hp-brand','hp-win','hp-con','hp-pub'] },
   suppliers:                 { vars:['hpSupPage','hpSupSearch'], ms:[] },
   export_logs:               { vars:['hpExpLogPage'], ms:[] },
   shelf_life:                { vars:['slPage','slSearch'], ms:['sl-cat'] },
@@ -12479,8 +12479,8 @@ function goFinPage(p){ finPage=p; updateFinTable(); }
 
 <script>
 /* ===================== 貨盤管理模組 (products / 品牌方) ===================== */
-var HP_CATS=["一般食品","素食食品","生鮮食品(冷藏冷凍)","保健食品","美妝與保養品","寵物用品","母嬰用品","服裝與配件","運動用品","戶外、園藝","家電3C","廚房用品、家居裝飾"];
-var HP_CAT_CODE={"一般食品":"FOO","素食食品":"VEG","生鮮食品(冷藏冷凍)":"FRS","保健食品":"SUP","美妝與保養品":"BEA","寵物用品":"PET","母嬰用品":"MOM","服裝與配件":"APP","運動用品":"SPT","戶外、園藝":"OUT","家電3C":"ELE","廚房用品、家居裝飾":"HOM"};
+var HP_CATS=["一般食品","一般食品・酒類","素食食品","生鮮食品(冷藏冷凍)","保健食品","美妝與保養品","寵物用品","母嬰用品","服裝與配件","運動用品","戶外、園藝","家電3C","廚房用品、家居裝飾"];
+var HP_CAT_CODE={"一般食品":"FOO","一般食品・酒類":"ALC","素食食品":"VEG","生鮮食品(冷藏冷凍)":"FRS","保健食品":"SUP","美妝與保養品":"BEA","寵物用品":"PET","母嬰用品":"MOM","服裝與配件":"APP","運動用品":"SPT","戶外、園藝":"OUT","家電3C":"ELE","廚房用品、家居裝飾":"HOM"};
 var HP_REGIONS=["台灣","中國","香港","日本","韓國","馬來西亞","新加坡","泰國","越南","印尼","菲律賓","美國","歐洲"];
 var HP_CUR=["TWD","JPY","KRW","MYR","HKD","USD","EUR","CNY","THB","VND","SGD"];
 var HP_ORIGIN_CODE={"台灣":"TW","中國":"CN","香港":"HK","日本":"JP","韓國":"KR","南韓":"KR","馬來西亞":"MY","新加坡":"SG","泰國":"TH","越南":"VN","印尼":"ID","菲律賓":"PH","美國":"US","西班牙":"ES","歐洲":"EU","法國":"FR","義大利":"IT","德國":"DE","英國":"GB","澳洲":"AU","加拿大":"CA"};
@@ -12788,7 +12788,7 @@ async function refDelete(id){
 
 /* ---------- 效期標準 shelf_life_rules ---------- */
 var slPage=1, slSearch='';
-var HP_CAT_BADGE={"一般食品":"amber","素食食品":"green","生鮮食品(冷藏冷凍)":"teal","保健食品":"blue","美妝與保養品":"purple","寵物用品":"indigo","母嬰用品":"red","服裝與配件":"gray","運動用品":"blue","戶外、園藝":"green","家電3C":"indigo","廚房用品、家居裝飾":"amber"};
+var HP_CAT_BADGE={"一般食品":"amber","一般食品・酒類":"purple","素食食品":"green","生鮮食品(冷藏冷凍)":"teal","保健食品":"blue","美妝與保養品":"purple","寵物用品":"indigo","母嬰用品":"red","服裝與配件":"gray","運動用品":"blue","戶外、園藝":"green","家電3C":"indigo","廚房用品、家居裝飾":"amber"};
 // 數值格式化（月數 / 比例%）
 function slFmtMonths(v){ if(v==null||v==='') return null; var n=Number(v); if(isNaN(n)) return null; var s=Math.round(n*10)/10; return (s===Math.round(s)?String(Math.round(s)):String(s))+' 個月'; }
 function slFmtRatio(v){ if(v==null||v==='') return null; var n=Number(v); if(isNaN(n)) return null; var s=Math.round(n*10)/10; return (s===Math.round(s)?String(Math.round(s)):String(s))+'%'; }
@@ -13032,12 +13032,14 @@ function hpImgPreview(url){ if(!url) return;
 }
 function hpFilteredProducts(){
   var rows=(DB.products||[]).slice();
-  var fReg=msSel('hp-reg'), fCat=msSel('hp-cat'), fBrand=msSel('hp-brand'), fWin=msSel('hp-win'), fPub=msSel('hp-pub');
+  var fReg=msSel('hp-reg'), fCat=msSel('hp-cat'), fBrand=msSel('hp-brand'), fWin=msSel('hp-win'), fCon=msSel('hp-con'), fPub=msSel('hp-pub');
   if(fReg.length) rows=rows.filter(function(p){ return (p.stock_regions||[]).some(function(r){return fReg.indexOf(r)>=0;}); });
   if(fCat.length) rows=rows.filter(function(p){ return fCat.indexOf(p.category)>=0; });
   if(fBrand.length) rows=rows.filter(function(p){ return fBrand.indexOf(p.brand)>=0; });
-  // 品牌窗口＝商品的 source_supplier；未填的用 '' 代表「未指定」
+  // 品牌方＝商品的 source_supplier；未填的用 '' 代表「未指定」
   if(fWin.length) rows=rows.filter(function(p){ return fWin.indexOf(String(p.source_supplier||''))>=0; });
+  // 窗口＝由品牌方名稱回查 suppliers 得到的聯絡人；與表格「品牌窗口」欄同源（見 hpContactOf）
+  if(fCon.length) rows=rows.filter(function(p){ return fCon.indexOf(String(hpContactOf(p)||''))>=0; });
   // 官網上架狀態：is_public 為 NULL 的舊資料一律視為已上架（資料庫預設就是 true）
   // 兩個都選（或都不選）＝不過濾
   if(fPub.length===1) rows=(fPub[0]==='1')? rows.filter(hpIsPub) : rows.filter(function(p){ return !hpIsPub(p); });
@@ -13107,10 +13109,19 @@ function hpRowsHtml(rows){
       '</td></tr>';
   }).join('') : '<tr><td colspan="14" style="text-align:center;color:var(--text-dim);padding:40px;">尚無商品，點右上「新增商品」或「批量匯入」</td></tr>';
 }
-// 品牌窗口：商品的 source_supplier（＝品牌窗口），若品牌方有聯絡人一併顯示
+// 商品 → 窗口（聯絡人）：用商品的 source_supplier（＝品牌方名稱）回查 suppliers 的 contact_name。
+// 表格「品牌窗口」欄與篩選列的「全部窗口」都走這一支 —— 看到的跟篩出來的才不會兜不起來。
+// ⚠️ 同一個品牌方名稱在 suppliers 有多列、聯絡人不同時一律取第一筆（維持既有行為，不是新的取捨）。
+function hpContactOf(p){
+  var sn=p&&p.source_supplier; if(!sn) return '';
+  var list=DB.suppliers||[];
+  for(var i=0;i<list.length;i++){ if(list[i].supplier_name===sn && list[i].contact_name) return list[i].contact_name; }
+  return '';
+}
+// 品牌窗口欄：品牌方名稱，查得到窗口就一併顯示
 function hpWindowCell(p){
   var sn=p.source_supplier; if(!sn) return '<span style="color:#c0c4cc;">—</span>';
-  var contact=''; (DB.suppliers||[]).forEach(function(s){ if(!contact && s.supplier_name===sn && s.contact_name) contact=s.contact_name; });
+  var contact=hpContactOf(p);
   return hpEsc(sn)+(contact?'<span style="color:#9ca3af;"> · '+hpEsc(contact)+'</span>':'');
 }
 function hpRenderProdBody(){
@@ -13126,10 +13137,14 @@ function hpRenderProdBody(){
 function hpApplyFilter(){ hpProdPage=1; hpRenderProdBody(); }
 function renderProducts(){
   var brands=Array.from(new Set((DB.products||[]).map(function(p){return p.brand;}).filter(Boolean)));
-  // 品牌窗口選項＝商品 source_supplier 的相異值；有未填的就補一個「未指定」
+  // 品牌方選項＝商品 source_supplier 的相異值；有未填的就補一個「未指定」
   var winVals=Array.from(new Set((DB.products||[]).map(function(p){return String(p.source_supplier||'');})));
   var winOpts=winVals.filter(Boolean).sort(function(a,b){ return a.localeCompare(b,'zh-Hant'); }).map(function(w){ return {v:w,l:w}; });
-  if(winVals.indexOf('')>=0) winOpts.push({v:'',l:'（未指定窗口）'});
+  if(winVals.indexOf('')>=0) winOpts.push({v:'',l:'（未指定品牌方）'});
+  // 窗口選項＝各商品實際帶得出來的聯絡人（手上沒有商品的聯絡人不列），來源同 hpContactOf
+  var conVals=Array.from(new Set((DB.products||[]).map(function(p){return String(hpContactOf(p)||'');})));
+  var conOpts=conVals.filter(Boolean).sort(function(a,b){ return a.localeCompare(b,'zh-Hant'); }).map(function(c){ return {v:c,l:c}; });
+  if(conVals.indexOf('')>=0) conOpts.push({v:'',l:'（未指定窗口）'});
   hpMain().innerHTML=
     '<div class="page-header"><div class="breadcrumb"><span>貨盤管理</span><span class="sep">›</span><span>商品清單</span></div><h1>商品清單</h1>'+
       '<p>貨盤商品主檔　共 '+(DB.products||[]).length+' 筆</p></div>'+
@@ -13139,11 +13154,13 @@ function renderProducts(){
       msDropdown('hp-reg','全部存貨地區',HP_REGIONS.map(function(r){return {v:r,l:r};}),'hpApplyFilter')+
       msDropdown('hp-cat','全部類別',HP_CATS.map(function(c){return {v:c,l:c};}),'hpApplyFilter')+
       msDropdown('hp-brand','全部品牌',brands.map(function(b){return {v:b,l:b};}),'hpApplyFilter','品牌')+
-      msDropdown('hp-win','全部品牌窗口',winOpts,'hpApplyFilter','窗口')+
+      msDropdown('hp-win','全部品牌方',winOpts,'hpApplyFilter','品牌方')+
+      msDropdown('hp-con','全部窗口',conOpts,'hpApplyFilter','窗口')+
       msDropdown('hp-pub','全部上架狀態',[{v:'1',l:'已上架'},{v:'0',l:'未上架'}],'hpApplyFilter')+
-    '</div><div class="toolbar-right" style="gap:8px;">'+
-      '<button class="btn btn-secondary" onclick="openProductModal(null,true)">＋ 新增商品</button>'+
-      '<button class="btn btn-secondary" onclick="openImportDialog()">⭳ 批量匯入</button>'+
+    // margin-left:auto —— 篩選變多之後這排會換行，沒有它換行後會靠左貼齊
+    '</div><div class="toolbar-right" style="gap:8px;margin-left:auto;">'+
+      '<button class="btn btn-secondary" onclick="openProductModal(null,true)">新增商品</button>'+
+      '<button class="btn btn-secondary" onclick="openImportDialog()">批量匯入</button>'+
       '<button class="btn btn-secondary" onclick="openBatchImageDialog()">批次配圖</button>'+
       '<button class="btn btn-primary" onclick="openExportDialog(\'filtered\')">匯出貨盤表</button>'+
     '</div></div>'+
