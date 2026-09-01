@@ -13792,10 +13792,12 @@ var HP_EXP_COLS=[
   {k:'brand',      w:14, def:1, zh:'品牌',             en:'Brand',                        ja:'ブランド',         ko:'브랜드'},
   {k:'name',       w:34, def:1, zh:'商品名稱',         en:'Product Name',                 ja:'商品名',           ko:'상품명'},
   {k:'currency',   w:10, def:1, zh:'幣別',             en:'Currency',                     ja:'通貨',             ko:'통화'},
-  {k:'gc_price',   w:15, def:1, zh:'GC 報價',          en:'Quoted Price',                 ja:'見積価格',         ko:'견적가'},
+  {k:'gc_price',   w:18, def:1, zh:'GC 報價(含稅)',    en:'Quoted Price (incl. tax)',     ja:'見積価格(税込)',   ko:'견적가(세금 포함)'},
   {k:'min_price',  w:16, def:1, zh:'最低販售價',       en:'Min. Selling Price',           ja:'最低販売価格',     ko:'최저 판매가'},
   {k:'suggested',  w:16, def:1, zh:'建議售價(含稅)',   en:'Suggested Retail (incl. tax)', ja:'希望小売価格(税込)', ko:'권장가(세금 포함)'},
   {k:'moq',        w:18, def:1, zh:'最低訂購量(MOQ)',  en:'MOQ (Min. order qty)',         ja:'最低発注数量(MOQ)', ko:'최소 주문 수량(MOQ)'},
+  {k:'order_qty',  w:13, def:1, zh:'訂購數量',         en:'Order Qty',                    ja:'発注数量',         ko:'주문 수량'},
+  {k:'subtotal',   w:16, def:1, zh:'小計金額',         en:'Subtotal',                     ja:'小計金額',         ko:'소계 금액'},
   {k:'desc',       w:34, def:1, zh:'產品敘述',         en:'Description',                  ja:'商品説明',         ko:'상품 설명'},
   {k:'selling',    w:34, def:1, zh:'產品賣點',         en:'Selling Points',               ja:'セールスポイント', ko:'판매 포인트'},
   {k:'shelf',      w:14, def:1, zh:'有效期限(月數)',   en:'Shelf life (mo)',              ja:'賞味期限(月)',     ko:'유통기한(개월)'},
@@ -13806,6 +13808,25 @@ var HP_EXP_COLS=[
   {k:'hscode',     w:13, def:1, zh:'HSCODE',           en:'HSCODE',                       ja:'HSコード',         ko:'HS코드'},
   {k:'units',      w:11, def:1, zh:'箱入數',           en:'PCS / Box',                    ja:'入数',             ko:'박스당 수량'}
 ];
+// 套樣式一律走這裡：ExcelJS 從檔案讀進來時，樣式索引相同的儲存格會共用同一個
+// style 物件；直接寫 cell.numFmt / cell.fill 會連帶改到所有共用的儲存格
+// （踩過一次：整張表都變成 "KRW "#,##0）。先淺複製再覆寫才安全。
+function hpExpStyle(cell, patch){
+  var st={}, cur=cell.style||{};
+  for(var k in cur){ if(Object.prototype.hasOwnProperty.call(cur,k)) st[k]=cur[k]; }
+  for(var k2 in patch){ if(Object.prototype.hasOwnProperty.call(patch,k2)) st[k2]=patch[k2]; }
+  cell.style=st;
+}
+// 欄號(1-based)→ Excel 欄名（A、B…AA）
+function hpExpColLetter(n){ var t=''; while(n>0){ var m=(n-1)%26; t=String.fromCharCode(65+m)+t; n=(n-m-1)/26; } return t; }
+// 原幣模式的金額格式：數值＋幣別前綴（顯示同以往的「JPY 1,260」，但儲存格是「數字」，公式才算得動）
+function hpExpNumFmt(cur){
+  var c=String(cur||'').toUpperCase();
+  var d=(HP_ZERO_DEC.indexOf(c)>=0)?'#,##0':'#,##0.00';
+  return c?('"'+c+' "'+d):d;
+}
+// 舊匯出檔用過、後來改掉的表頭；補欄位時要認得出來（key → 四語舊表頭）
+var HP_EXP_OLD_HEADS={ gc_price:['GC 報價','Quoted Price','見積価格','견적가'] };
 function hpExpColDef(k){ for(var i=0;i<HP_EXP_COLS.length;i++){ if(HP_EXP_COLS[i].k===k) return HP_EXP_COLS[i]; } return null; }
 function hpExpLabel(k,lang){ var d=hpExpColDef(k); return d?(d[lang]||d.zh):k; }
 // 固定匯出欄位（HP_EXP_COLS 中 def 為真者，依原始順序）；不再讓使用者勾選
@@ -13850,7 +13871,7 @@ function openExportDialog(scope){
       '</div>'+
       '<div id="exp-fx" style="margin-bottom:14px;"></div>'+
       '<div style="margin-bottom:14px;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">備註（會存進匯出紀錄，例：給哪家經紀公司／用途）</label><textarea class="cm-input" id="exp-note" rows="2" style="resize:vertical;" placeholder="選填"></textarea></div>'+
-      '<div style="background:#f9fafb;border-radius:7px;padding:9px 12px;font-size:12px;color:#6b7280;line-height:1.7;">將依<b id="exp-scope-desc"></b>匯出，欄位固定（<b>成本／供貨價不會匯出</b>）。<b>售價國別複選</b>時每國一個分頁，各分頁只列有該國售價的商品。<br><b>GC 報價</b> ＝ 該國供貨價(含稅，無則未稅) ×(1＋利潤率)。<b>原幣</b>模式：GC 報價用成本幣、最低／建議售價用當地幣，各金額旁標幣別、不換算；<b>統一換成</b>模式才會依匯率換成同一幣別。圖片內嵌儲存格。</div>'+
+      '<div style="background:#f9fafb;border-radius:7px;padding:9px 12px;font-size:12px;color:#6b7280;line-height:1.7;">將依<b id="exp-scope-desc"></b>匯出，欄位固定（<b>成本／供貨價不會匯出</b>）。<b>售價國別複選</b>時每國一個分頁，各分頁只列有該國售價的商品。<br><b>GC 報價(含稅)</b> ＝ 該國供貨價(含稅，無則未稅) ×(1＋利潤率)，<b>報出去的價本來就是含稅價</b>。<b>原幣</b>模式：GC 報價用成本幣、最低／建議售價用當地幣，<b>幣別欄＝GC 報價的幣別</b>，另外兩欄各自把幣別寫在數字前面（例：報價 TWD、建議售價 EUR 9.40），不換算；<b>統一換成</b>模式才會依匯率換成同一幣別。圖片內嵌儲存格。<br>表尾固定附上<b>訂購數量</b>與<b>小計金額</b>兩欄（藍底）給直播經紀公司回填，<b>小計金額是公式</b>（訂購數量 × GC 報價），對方填完數量就會自動算出金額。</div>'+
       '<div id="exp-status" style="font-size:12px;color:var(--text-dim);margin-top:10px;"></div>'+
     '</div>'+
     '<div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;">'+
@@ -13970,6 +13991,22 @@ async function hpExpFillSheet(wb, ws, rows, country, lang, margin, mode, targetC
   ws.columns=cols.map(function(k){ var d=hpExpColDef(k); return {header:hpExpLabel(k,lang), width:(d?d.w:14)}; });
   ws.getRow(1).font={bold:true}; ws.getRow(1).height=22;
   var photoIdx=cols.indexOf('photo');
+  // 訂購數量／小計金額：留給直播經紀公司回填的兩欄，用底色標出來
+  var qtyIdx=cols.indexOf('order_qty'), subIdx=cols.indexOf('subtotal'), gcIdx=cols.indexOf('gc_price'), moqIdx=cols.indexOf('moq');
+  [qtyIdx,subIdx].forEach(function(ci){
+    if(ci<0) return;
+    hpExpStyle(ws.getRow(1).getCell(ci+1),{
+      fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFDBEAFE'}},
+      font:{bold:true,color:{argb:'FF1D4ED8'}},
+      alignment:{vertical:'middle',horizontal:'center',wrapText:true}});
+  });
+  if(qtyIdx>=0) hpExpStyle(ws.getRow(1).getCell(qtyIdx+1),{border:{left:{style:'medium',color:{argb:'FF2563EB'}}}});
+  // MOQ 有填的那一格標琥珀色，填數量時看得到。純提醒，系統不判斷有沒有達標
+  if(moqIdx>=0){
+    hpExpStyle(ws.getRow(1).getCell(moqIdx+1),{
+      fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFEF3C7'}},
+      font:{bold:true,color:{argb:'FFB45309'}}});
+  }
   var skipped=0, used=0;
   for(var i=0;i<rows.length;i++){
     var p=rows[i];
@@ -13983,22 +14020,28 @@ async function hpExpFillSheet(wb, ws, rows, country, lang, margin, mode, targetC
     var gcRaw=(base!=null)?base*(1+margin/100):null;
     var mnRaw=(e.min_price_incl!=null?e.min_price_incl:e.min_price_excl);
     var suggRaw=(e.suggested_incl!=null?e.suggested_incl:null);
-    var gcCell,mnCell,suggCell,curCell;
+    var gcCell,mnCell,suggCell,curCell,gcFmt='',mnFmt='',suggFmt='';
     if(unified){
       // 統一換成目標幣：全部換算，單一幣別，數字型
       function conv(v,from){ if(v==null) return null; if(!from||from===targetCur) return v; var r=hpConvFx(v,from,targetCur,fx); if(r==null){ fxMiss[from+' → '+targetCur]=1; return null; } return r; }
       var gc=hpRoundUpPrice(conv(gcRaw,supCur),targetCur), mn=hpRoundUpPrice(conv(mnRaw,locCur),targetCur), sugg=hpRoundUpPrice(conv(suggRaw,locCur),targetCur);
       curCell=targetCur; gcCell=(gc==null?'':gc); mnCell=(mn==null?'':mn); suggCell=(sugg==null?'':sugg);
     } else {
-      // 原幣（不換算）：GC 報價用成本幣、最低／建議售價用當地幣；金額旁標幣別（文字型）
-      function tag(v,c){ var r=hpRoundUpPrice(v,c); return (r==null)?'':((c?c+' ':'')+r); }
-      curCell=locCur;  // 幣別欄以「當地幣＝該市場幣別」為參考
+      // 原幣（不換算）：GC 報價用成本幣、最低／建議售價用當地幣。
+      // 儲存格寫「數字」，幣別靠數值格式（"JPY "#,##0）顯示 —— 看起來跟以前一樣，
+      // 但小計公式（訂購數量 × GC 報價）才算得出來，對方手動改價後小計也會跟著動。
+      function tag(v,c){ var r=hpRoundUpPrice(v,c); return (r==null)?'':r; }
+      // 幣別欄＝GC 報價的幣別（也就是小計金額的幣別，收錢看這個）。
+      // 最低販售價／建議售價是當地幣，可能跟它不同 —— 那兩欄各自把幣別寫在數字前面。
+      curCell=supCur||locCur;
       gcCell=tag(gcRaw,supCur); mnCell=tag(mnRaw,locCur); suggCell=tag(suggRaw,locCur);
+      gcFmt=hpExpNumFmt(supCur); mnFmt=hpExpNumFmt(locCur); suggFmt=hpExpNumFmt(locCur);
     }
     var vals={
       sku:p.sku||'', photo:'', category:p.category||'', brand:p.brand||'',
       name:(p['name_'+lang]||p.name_zh||p.name_en||p.name_ja||p.name_ko||''),
       currency:curCell||'', gc_price:gcCell, min_price:mnCell, suggested:suggCell, moq:(p.moq||''),
+      order_qty:null, subtotal:null,   // 留白給經紀公司回填；小計在下面寫成公式
       desc:(p['desc_'+lang]||''), selling:(p['selling_'+lang]||''),
       shelf:(p.shelf_life_months==null?'':p.shelf_life_months),
       shelf_std:hpShelfStdText(p, lang),
@@ -14007,6 +14050,38 @@ async function hpExpFillSheet(wb, ws, rows, country, lang, margin, mode, targetC
     };
     var row=ws.addRow(cols.map(function(k){ return vals[k]; }));
     row.height=48; row.alignment={vertical:'middle',wrapText:true}; used++;
+    // 原幣模式：金額欄套上「幣別＋千分位」的數值格式
+    if(!unified){
+      [['gc_price',gcFmt],['min_price',mnFmt],['suggested',suggFmt]].forEach(function(pr){
+        var ci=cols.indexOf(pr[0]); if(ci<0||!pr[1]) return;
+        var c=row.getCell(ci+1); if(typeof c.value==='number') hpExpStyle(c,{numFmt:pr[1]});
+      });
+    }
+    // 小計金額 ＝ 訂購數量 × GC 報價（Excel 公式，對方一填數量就跳出金額；
+    // 寄出前若手動調過報價，小計也會跟著變）
+    if(moqIdx>=0 && vals.moq){
+      hpExpStyle(row.getCell(moqIdx+1),{
+        fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFBEB'}},
+        font:{color:{argb:'FFB45309'},bold:true}});
+    }
+    if(qtyIdx>=0){
+      hpExpStyle(row.getCell(qtyIdx+1),{
+        fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFF2F8FF'}},
+        alignment:{vertical:'middle',horizontal:'right'},
+        numFmt:'#,##0',
+        border:{left:{style:'medium',color:{argb:'FF2563EB'}}}});
+    }
+    if(subIdx>=0){
+      var sc=row.getCell(subIdx+1);
+      if(qtyIdx>=0 && gcIdx>=0){
+        var qa=hpExpColLetter(qtyIdx+1)+row.number, ga=hpExpColLetter(gcIdx+1)+row.number;
+        sc.value={formula:'IF(OR('+qa+'="",'+ga+'=""),"",'+qa+'*'+ga+')'};
+      }
+      hpExpStyle(sc,{
+        fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFF2F8FF'}},
+        alignment:{vertical:'middle',horizontal:'right'},
+        numFmt:unified?'#,##0':(gcFmt||'#,##0')});
+    }
     if(photoIdx>=0 && p.photo_url){
       try{
         if(st) st.textContent='處理圖片…';
@@ -14616,13 +14691,165 @@ async function _expSignedUrl(fileUrlOrPath){
     return (r&&r.data)?r.data.signedUrl:null;
   }catch(e){ return null; }
 }
-// 預覽/下載：按下時才產生簽署網址，避免把長效網址存進資料庫
+
+/* ---------- 舊匯出檔：預覽／重新下載時即時補上訂購欄位 ---------- */
+/* 舊的貨盤表沒有「訂購數量／小計金額」，而且原幣模式的金額是文字（JPY 1260）。
+   這裡在讀出來之後、給人看之前補一份，Storage 裡的原檔完全不動 ——
+   萬一這段有 bug，原始留底還在。 */
+function _expHeadTxt(v){
+  if(v==null) return '';
+  if(typeof v==='object'){
+    if(v.richText) return v.richText.map(function(x){return x.text||'';}).join('');
+    if(v.text!=null) return String(v.text);
+    if(v.result!=null) return String(v.result);
+    return '';
+  }
+  return String(v);
+}
+function _expNorm(t){ return _expHeadTxt(t).replace(/\s/g,''); }
+// 表頭文字 → 欄位 key（四語都認，也認舊表頭）
+function hpExpHeaderKey(txt){
+  var t=_expNorm(txt); if(!t) return null;
+  var L=['zh','en','ja','ko'];
+  for(var i=0;i<HP_EXP_COLS.length;i++){
+    var d=HP_EXP_COLS[i];
+    for(var j=0;j<L.length;j++){ if(_expNorm(d[L[j]])===t) return d.k; }
+    var old=HP_EXP_OLD_HEADS[d.k]||[];
+    for(var m=0;m<old.length;m++){ if(_expNorm(old[m])===t) return d.k; }
+  }
+  return null;
+}
+// 這張表是用哪一語匯出的（哪一語命中最多表頭），新欄位的表頭就跟著它
+function hpExpGuessLang(heads){
+  var L=['zh','en','ja','ko'], best='zh', bestN=-1;
+  L.forEach(function(lang){
+    var n=0;
+    heads.forEach(function(h){
+      var t=_expNorm(h); if(!t) return;
+      for(var i=0;i<HP_EXP_COLS.length;i++){
+        var d=HP_EXP_COLS[i], old=HP_EXP_OLD_HEADS[d.k]||[];
+        if(_expNorm(d[lang])===t || _expNorm(old[L.indexOf(lang)])===t){ n++; return; }
+      }
+    });
+    if(n>bestN){ bestN=n; best=lang; }
+  });
+  return best;
+}
+// 舊的原幣模式把金額寫成「JPY 1260」這種文字 → 拆成數字＋幣別
+function hpExpTextMoney(v){
+  if(typeof v==='number') return null;
+  var m=_expHeadTxt(v).trim().match(/^([A-Za-z]{3})\s*([0-9][0-9,]*(?:\.[0-9]+)?)$/);
+  if(!m) return null;
+  var n=Number(m[2].replace(/,/g,''));
+  return isNaN(n)?null:{n:n, cur:m[1].toUpperCase()};
+}
+// 在一張工作表補上兩欄。回傳 true＝有動過
+function hpExpAddOrderColsTo(ws){
+  var last=ws.columnCount||0, rowN=ws.rowCount||0;
+  if(last<2 || rowN<1) return false;
+  var hdr=ws.getRow(1), heads=[], keys=[];
+  for(var c=1;c<=last;c++){ var v=hdr.getCell(c).value; heads.push(v); keys.push(hpExpHeaderKey(v)); }
+  if(keys.indexOf('order_qty')>=0) return false;                 // 新版匯出，已經有了
+  var gcIdx=keys.indexOf('gc_price'), moqIdx=keys.indexOf('moq');
+  var lang=hpExpGuessLang(heads);
+  var at=(moqIdx>=0?moqIdx+2:last+1);                            // 插在 MOQ 後面；沒有 MOQ 就接在最後
+  if(at<=last){ ws.spliceColumns(at,0,[],[]); }                  // 往右擠兩欄
+  var qi=at, si=at+1, gi=(gcIdx>=0?gcIdx+1:0);                   // gc 一定在 MOQ 左邊，位置不會被擠到
+  // 表頭
+  [[qi,'order_qty'],[si,'subtotal']].forEach(function(pr){
+    var hc=ws.getRow(1).getCell(pr[0]);
+    hc.value=hpExpLabel(pr[1],lang);
+    hpExpStyle(hc,{
+      font:{bold:true,color:{argb:'FF1D4ED8'}},
+      fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFDBEAFE'}},
+      alignment:{vertical:'middle',horizontal:'center',wrapText:true}});
+  });
+  hpExpStyle(ws.getRow(1).getCell(qi),{border:{left:{style:'medium',color:{argb:'FF2563EB'}}}});
+  ws.getColumn(qi).width=13; ws.getColumn(si).width=16;
+  // 舊檔的表頭是「GC 報價」，順手換成現在的「GC 報價(含稅)」，
+  // 免得同一批寄出去的檔案兩種寫法混著。價格本身沒動，本來就是含稅價。
+  if(gcIdx>=0){ ws.getRow(1).getCell(gi).value=hpExpLabel('gc_price',lang); ws.getColumn(gi).width=18; }
+  // 資料列
+  for(var r=2;r<=ws.rowCount;r++){
+    var row=ws.getRow(r);
+    if(!row || row.cellCount===0) continue;
+    // 這一列真的有東西嗎（避免在空白列上寫公式）
+    var hasData=false;
+    for(var c2=1;c2<=last+2;c2++){ if(c2===qi||c2===si) continue; var vv=row.getCell(c2).value; if(vv!=null&&vv!==''){ hasData=true; break; } }
+    if(!hasData) continue;
+    // 舊的文字金額 → 數字＋數值格式（公式才算得動，畫面看起來一樣）
+    var gcCur='';
+    ['gc_price','min_price','suggested'].forEach(function(k){
+      var ki=keys.indexOf(k); if(ki<0) return;
+      var ci=ki+1, cell=row.getCell(ci), mm=hpExpTextMoney(cell.value);
+      if(mm){ cell.value=mm.n; hpExpStyle(cell,{numFmt:hpExpNumFmt(mm.cur)}); if(k==='gc_price') gcCur=mm.cur; }
+      else if(k==='gc_price' && typeof cell.value==='number'){ gcCur=''; }
+    });
+    // 舊檔的幣別欄填的是「當地幣」，可能跟 GC 報價的幣別不同（報價台幣、建議售價歐元）。
+    // 既然金額文字裡就帶著幣別，順手把幣別欄校正成 GC 報價的幣別，跟現在的匯出一致。
+    if(gcCur){ var ci2=keys.indexOf('currency'); if(ci2>=0) row.getCell(ci2+1).value=gcCur; }
+    var qc=row.getCell(qi);
+    qc.value=null;
+    hpExpStyle(qc,{
+      numFmt:'#,##0',
+      fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFF2F8FF'}},
+      alignment:{vertical:'middle',horizontal:'right'},
+      border:{left:{style:'medium',color:{argb:'FF2563EB'}}}});
+    var sc=row.getCell(si);
+    if(gi){
+      var qa=hpExpColLetter(qi)+r, ga=hpExpColLetter(gi)+r;
+      sc.value={formula:'IF(OR('+qa+'="",'+ga+'=""),"",'+qa+'*'+ga+')'};
+    }
+    hpExpStyle(sc,{
+      numFmt:gcCur?hpExpNumFmt(gcCur):'#,##0',
+      fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFF2F8FF'}},
+      alignment:{vertical:'middle',horizontal:'right'}});
+    // MOQ 有值就標琥珀色，跟新版匯出一致
+    var mi=keys.indexOf('moq');
+    if(mi>=0){ var mc=row.getCell(mi+1); if(_expHeadTxt(mc.value)!==''){ hpExpStyle(mc,{fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFBEB'}},font:{color:{argb:'FFB45309'},bold:true}}); } }
+  }
+  var mh=keys.indexOf('moq');
+  if(mh>=0){ hpExpStyle(ws.getRow(1).getCell(mh+1),{fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFEF3C7'}},font:{bold:true,color:{argb:'FFB45309'}}}); }
+  return true;
+}
+// 整本活頁簿。沒東西要補就回 null（呼叫端就用原檔）
+async function hpExpUpgradeBuf(buf){
+  if(typeof ExcelJS==='undefined' || !buf) return null;
+  try{
+    var wb=new ExcelJS.Workbook();
+    await wb.xlsx.load(buf);
+    var changed=false;
+    wb.eachSheet(function(ws){ try{ if(hpExpAddOrderColsTo(ws)) changed=true; }catch(e){} });
+    if(!changed) return null;
+    return await wb.xlsx.writeBuffer();
+  }catch(e){ return null; }   // 補不成功就給原檔，不要擋住下載
+}
+
+var HP_XLSX_MIME='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+function _expSaveBlob(blob,name){
+  var bu=URL.createObjectURL(blob);
+  var a=document.createElement('a'); a.href=bu; a.download=name||'貨盤表.xlsx'; a.rel='noopener';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(bu); },60000);
+}
+// 預覽/下載：按下時才產生簽署網址，避免把長效網址存進資料庫。
+// 讀出來之後先過一次 hpExpUpgradeBuf()，舊檔就會多出訂購數量與小計金額兩欄。
 async function hpExpOpen(pathOrUrl,name,mode){
   var u=await _expSignedUrl(pathOrUrl);
   if(!u){ alert('無法取得檔案連結。可能檔案已被刪除，或此帳號沒有讀取權限。'); return; }
-  if(mode==='preview'){ hpExpPreview(u,name); return; }
-  var a=document.createElement('a'); a.href=u; a.download=name||'貨盤表.xlsx'; a.rel='noopener';
-  document.body.appendChild(a); a.click(); a.remove();
+  var buf=null, up=null;
+  // 檔案大（內嵌圖片）時補欄位要跑幾秒，超過 0.7 秒才提示，免得每次都閃一下
+  var slow=setTimeout(function(){ _toast('讀取檔案中…'); },700);
+  try{
+    var resp=await fetch(u); if(!resp.ok) throw new Error('HTTP '+resp.status);
+    buf=await resp.arrayBuffer();
+    up=await hpExpUpgradeBuf(buf);
+  }catch(e){ buf=null; up=null; }
+  clearTimeout(slow);
+  if(mode==='preview'){ hpExpPreview(buf,name,u,!!up,up); return; }
+  if(!buf){ var a=document.createElement('a'); a.href=u; a.download=name||'貨盤表.xlsx'; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove(); return; }
+  if(up) _toast('這份是舊的匯出檔，已補上訂購數量與小計金額兩欄');
+  _expSaveBlob(new Blob([up||buf],{type:HP_XLSX_MIME}), name);
 }
 async function hpExpDelete(id){
   if(!confirm('確定刪除這筆匯出紀錄？連同雲端檔案一併刪除，無法復原。')) return;
@@ -14643,15 +14870,18 @@ async function hpExpClearAll(){
   if(r.error){ alert('清空失敗：'+r.error.message); return; }
   await loadExportLogs();
 }
-async function hpExpPreview(url, name){
-  if(typeof XLSX==='undefined'){ window.open(url,'_blank'); return; }
+async function hpExpPreview(buf, name, url, upgraded, upBuf){
+  if(typeof XLSX==='undefined' || !buf){ window.open(url,'_blank'); return; }
+  window._expPrevBlob=new Blob([upBuf||buf],{type:HP_XLSX_MIME});
+  window._expPrevName=name||'貨盤表.xlsx';
   var ov=document.createElement('div'); ov.id='exp-prev';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:250;display:flex;align-items:center;justify-content:center;';
   ov.innerHTML='<div style="background:#fff;border-radius:12px;width:92vw;max-width:1100px;height:84vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.2);">'+
     '<div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;">'+
-      '<div style="font-family:Syne,sans-serif;font-weight:700;">預覽：'+hpEsc(name||'')+'</div>'+
+      '<div style="font-family:Syne,sans-serif;font-weight:700;display:flex;align-items:center;gap:9px;">預覽：'+hpEsc(name||'')+
+        (upgraded?'<span class="badge badge-blue">已補上訂購欄位</span>':'')+'</div>'+
       '<div style="display:flex;gap:8px;align-items:center;">'+
-        '<a class="btn btn-secondary" style="padding:4px 12px;" href="'+hpEsc(url)+'" download="'+hpEsc(name||'貨盤表.xlsx')+'" target="_blank" rel="noopener">下載</a>'+
+        '<button class="btn btn-secondary" style="padding:4px 12px;" onclick="_expSaveBlob(window._expPrevBlob,window._expPrevName)">下載</button>'+
         '<button onclick="document.getElementById(\'exp-prev\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:18px;">✕</button>'+
       '</div></div>'+
     '<div id="exp-prev-tabs" style="padding:8px 20px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;"></div>'+
@@ -14659,8 +14889,7 @@ async function hpExpPreview(url, name){
   '</div>';
   document.body.appendChild(ov);
   try{
-    var resp=await fetch(url); var buf=await resp.arrayBuffer();
-    window._expPrevWB=XLSX.read(new Uint8Array(buf),{type:'array'});
+    window._expPrevWB=XLSX.read(new Uint8Array(upBuf||buf),{type:'array'});
     var wb=window._expPrevWB;
     document.getElementById('exp-prev-tabs').innerHTML=wb.SheetNames.map(function(sn,i){
       return '<button class="btn btn-secondary" style="padding:3px 12px;'+(i===0?'background:#eff6ff;border-color:#93c5fd;':'')+'" onclick="hpExpPrevSheet('+i+',this)">'+hpEsc(sn)+'</button>'; }).join('');
@@ -14671,13 +14900,17 @@ function hpExpPrevSheet(i, btn){
   var wb=window._expPrevWB; if(!wb) return;
   if(btn){ document.querySelectorAll('#exp-prev-tabs button').forEach(function(b){ b.style.background=''; b.style.borderColor=''; }); btn.style.background='#eff6ff'; btn.style.borderColor='#93c5fd'; }
   var ws=wb.Sheets[wb.SheetNames[i]];
-  var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  // raw:false ＝ 用 Excel 的數值格式算出來的顯示文字，
+  // 「EUR 9.40」這種幣別前綴才會出現在預覽裡（raw:true 只會拿到 9.4）
+  var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
   var max=Math.min(rows.length,200);
   var html='<table style="border-collapse:collapse;font-size:12px;width:100%;">';
   for(var r=0;r<max;r++){
     var cells=rows[r]||[]; html+='<tr>';
     for(var c=0;c<cells.length;c++){ var tag=(r===0?'th':'td');
-      html+='<'+tag+' style="border:1px solid #e5e7eb;padding:4px 8px;text-align:left;white-space:pre-wrap;vertical-align:top;max-width:260px;'+(r===0?'background:#f9fafb;font-weight:600;position:sticky;top:0;':'')+'">'+hpEsc(String(cells[c]==null?'':cells[c])).slice(0,300)+'</'+tag+'>'; }
+      var k=hpExpHeaderKey((rows[0]||[])[c]);
+      var mark=(k==='order_qty'||k==='subtotal')?(r===0?'background:#dbeafe;color:#1d4ed8;':'background:#f2f8ff;'):(k==='moq'?(r===0?'background:#fef3c7;color:#b45309;':(String(cells[c]||'')?'background:#fffbeb;color:#b45309;':'')):'');
+      html+='<'+tag+' style="border:1px solid #e5e7eb;padding:4px 8px;text-align:left;white-space:pre-wrap;vertical-align:top;max-width:260px;'+(r===0?'background:#f9fafb;font-weight:600;position:sticky;top:0;':'')+mark+'">'+hpEsc(String(cells[c]==null?'':cells[c])).slice(0,300)+'</'+tag+'>'; }
     html+='</tr>';
   }
   html+='</table>'+(rows.length>max?'<div style="padding:8px;color:var(--text-dim);">僅預覽前 '+max+' 列；完整內容與商品圖片請下載檔案查看。</div>':'<div style="padding:8px;color:var(--text-dim);">＊預覽為文字表格，商品圖片請下載檔案查看。</div>');
