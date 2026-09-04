@@ -12523,14 +12523,15 @@ async function loadSuppliers(){
   DB.suppliers=r.data||[]; _restoreView('suppliers'); renderSuppliers();
 }
 function renderSuppliers(){
-  var brandOpts=[], _seenBrand={}; (DB.suppliers||[]).forEach(function(s){ var n=s.supplier_name; if(n&&!_seenBrand[n]){ _seenBrand[n]=1; brandOpts.push({v:n,l:n}); } }); brandOpts.sort(function(a,b){ return String(a.l).localeCompare(String(b.l)); });
+  // 篩選＝聯絡窗口（suppliers.contact_name）。同一個窗口可能負責多個品牌方，這裡去重後排序；沒填窗口的列不列入選項。
+  var conOpts=[], _seenCon={}; (DB.suppliers||[]).forEach(function(s){ var n=String(s.contact_name||'').trim(); if(n&&!_seenCon[n]){ _seenCon[n]=1; conOpts.push({v:n,l:n}); } }); conOpts.sort(function(a,b){ return String(a.l).localeCompare(String(b.l)); });
   hpMain().innerHTML=
     '<div class="page-header"><div class="breadcrumb"><span>貨盤管理</span><span class="sep">›</span><span>品牌方</span></div><h1>品牌方</h1>'+
       '<p>叫貨對接表：同一品牌方代理多品牌會分多列、共用同一 UID</p></div>'+
     '<div class="toolbar"><div class="toolbar-left">'+
       '<div class="search-box"><svg class="search-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M15 15l3 3" stroke-linecap="round"/></svg>'+
-      '<input type="text" placeholder="搜尋品牌方 / 聯絡人 / 地區" value="'+hpEsc(hpSupSearch)+'" oninput="hpSupSearch=this.value;hpSupPage=1;renderSupResults()"></div>'+
-      '　'+msDropdown('supBrand','全部品牌方',brandOpts,'hpSupFilterChange')+
+      '<input type="text" placeholder="搜尋品牌方 / 聯絡窗口 / 地區" value="'+hpEsc(hpSupSearch)+'" oninput="hpSupSearch=this.value;hpSupPage=1;renderSupResults()"></div>'+
+      '　'+msDropdown('sup-con','全部聯絡窗口',conOpts,'hpSupFilterChange')+
     '</div><div class="toolbar-right" style="gap:8px;">'+
       '<button class="btn btn-secondary" onclick="openSupplierImportDialog()">⭳ 批量匯入</button>'+
       '<button class="btn btn-primary" onclick="openSupplierModal(null,true)">＋ 新增品牌方</button>'+
@@ -12544,8 +12545,8 @@ function renderSupResults(){
   var rows=(DB.suppliers||[]).slice();
   var q=hpSupSearch.trim().toLowerCase();
   if(q) rows=rows.filter(function(s){ return (String(s.supplier_name||'')+String(s.contact_name||'')+String(s.region||'')).toLowerCase().indexOf(q)>=0; });
-  var selBrands=msSel('supBrand');
-  if(selBrands.length) rows=rows.filter(function(s){ return selBrands.indexOf(String(s.supplier_name))>=0; });
+  var selCons=msSel('sup-con');
+  if(selCons.length) rows=rows.filter(function(s){ return selCons.indexOf(String(s.contact_name||'').trim())>=0; });
   var total=rows.length, pages=Math.max(1,Math.ceil(total/HP_PAGE));
   if(hpSupPage>pages) hpSupPage=pages; if(hpSupPage<1) hpSupPage=1;
   _persistView('suppliers');
@@ -12569,7 +12570,7 @@ function renderSupResults(){
   }).join('') : '<tr><td colspan="11" style="text-align:center;color:var(--text-dim);padding:40px;">尚無品牌方資料</td></tr>';
   box.innerHTML=
     '<div class="table-card"><div class="table-wrap"><table><thead><tr>'+
-      '<th>UID</th><th>品牌方名稱</th><th>地區</th><th>聯絡人</th><th>電話</th><th>Email</th><th>品牌連結</th><th>收款幣別</th><th>付款/帳期</th><th>最後操作人</th><th style="text-align:right;">操作</th>'+
+      '<th>UID</th><th>品牌方名稱</th><th>地區</th><th>聯絡窗口</th><th>電話</th><th>Email</th><th>品牌連結</th><th>收款幣別</th><th>付款/帳期</th><th>最後操作人</th><th style="text-align:right;">操作</th>'+
     '</tr></thead><tbody>'+body+'</tbody></table></div>'+
     '<div class="pagination"><span>共 '+total+' 筆　第 '+hpSupPage+' / '+pages+' 頁</span>'+hpPager(hpSupPage,pages,'hpGoSup')+'</div></div>';
 }
@@ -12578,17 +12579,17 @@ function exportSuppliers(){
   var rows=(DB.suppliers||[]).slice();
   var q=hpSupSearch.trim().toLowerCase();
   if(q) rows=rows.filter(function(s){ return (String(s.supplier_name||'')+String(s.contact_name||'')+String(s.region||'')).toLowerCase().indexOf(q)>=0; });
-  var sel=msSel('supBrand');
-  if(sel.length) rows=rows.filter(function(s){ return sel.indexOf(String(s.supplier_name))>=0; });
+  var sel=msSel('sup-con');
+  if(sel.length) rows=rows.filter(function(s){ return sel.indexOf(String(s.contact_name||'').trim())>=0; });
   if(!rows.length){ _toast('目前篩選沒有資料可匯出','err'); return; }
-  var header=['UID','品牌方名稱','負責地區/國家','聯絡人','職稱','電話','Email','通訊軟體','品牌連結','收款幣別','付款方式/帳期','最低起訂量MOQ','最低起訂金額','備註','最後操作人'];
+  var header=['UID','品牌方名稱','負責地區/國家','聯絡窗口','職稱','電話','Email','通訊軟體','品牌連結','收款幣別','付款方式/帳期','最低起訂量MOQ','最低起訂金額','備註','最後操作人'];
   var data=rows.map(function(s){ return [s.supplier_uid,s.supplier_name,s.region,s.contact_name,s.contact_title,s.phone,s.email,s.messenger,s.brand_link,s.payment_currency,s.payment_terms,s.moq,s.min_order_amount,s.note,(s.updated_by||s.created_by||'')]; });
   _downloadCsv('品牌方',header,data);
 }
 var HP_SUP_FIELDS=[
   {k:'supplier_name',l:'品牌方名稱',req:true},
   {k:'region',l:'負責地區/國家',sel:HP_REGIONS},
-  {k:'contact_name',l:'聯絡人',req:true},
+  {k:'contact_name',l:'聯絡窗口',req:true},
   {k:'contact_title',l:'職稱'},
   {k:'phone',l:'電話'},
   {k:'email',l:'Email'},
@@ -13500,8 +13501,16 @@ function _impMergeRegions(exArr, inArr){
   (Array.isArray(inArr)?inArr:[]).forEach(function(x){ if(!seen[_impKey(x)]){ out.push(x); seen[_impKey(x)]=1; } });
   return out;
 }
+// 這張圖是不是「後台上傳的配圖」？——批次配圖與單筆上傳都存進 Supabase Storage 的
+// product-images bucket，公開網址一定含這一段；外部連結（品牌官網的圖）不會有。
+// 用途：匯入檔的「照片(網址)」不得覆蓋已上傳的配圖（配圖優先，見 hpImpMergePayload）。
+function _hpIsUploadedImg(u){ return /\/storage\/v1\/object\/public\/product-images\//.test(String(u||'')); }
+function _hpHasUploadedImg(p){
+  if(!p) return false;
+  if(_hpIsUploadedImg(p.photo_url)) return true;
+  return Array.isArray(p.photos) && p.photos.some(_hpIsUploadedImg);
+}
 function hpImpMergePayload(existing, pl){
-  if(!existing) return pl;                       // 找不到既有資料 → 維持原行為
   var out={};
   for(var k in pl){
     if(!Object.prototype.hasOwnProperty.call(pl,k)) continue;
@@ -13509,6 +13518,11 @@ function hpImpMergePayload(existing, pl){
     if(_impIsBlank(pl[k])) continue;             // ★ 空白＝不變更
     out[k]=pl[k];
   }
+  // 找不到既有資料時，仍然只送有填的欄位（不可整筆覆寫，否則 photo_url 等空欄會寫成 null）
+  if(!existing) return out;
+  // ★ 圖片：匯入檔的「照片(網址)」不得蓋掉已經上傳的配圖。
+  //   既有沒有圖、或既有只是外部連結 → 照舊可以更新；既有有配圖 → 整個不送 photo_url。
+  if(out.photo_url && _hpHasUploadedImg(existing)) delete out.photo_url;
   // 陣列欄位改為合併
   if(!_impIsBlank(pl.country_prices)) out.country_prices=_impMergeByRegion(existing.country_prices, pl.country_prices);
   if(!_impIsBlank(pl.local_codes))    out.local_codes   =_impMergeByRegion(existing.local_codes,    pl.local_codes);
@@ -13638,7 +13652,7 @@ function openImportDialog(){
       '<div style="font-family:Syne,sans-serif;font-weight:700;">批量匯入商品</div>'+
       '<button onclick="document.getElementById(\'imp-modal\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:18px;">✕</button></div>'+
     '<div style="padding:20px 24px;overflow-y:auto;flex:1;">'+
-      '<div style="font-size:13px;color:var(--text-mid);margin-bottom:12px;line-height:1.7;">上傳範本 .xlsx：<b>商品資料</b>分頁（一商品一列、內容）＋<b>各國售價</b>分頁（一國一列、價格），兩分頁以<b>商品代號</b>對應。各國售價分頁分成<b>成本</b>（成本幣別＋供貨價）與<b>對外售價</b>（當地幣別＋建議售價＋最低販售價）兩組，幣別可不同。系統依<b>當地商品編號</b>比對新增/更新（缺則用 品牌＋中文名＋原產地），新品自動配 SKU。</div>'+
+      '<div style="font-size:13px;color:var(--text-mid);margin-bottom:12px;line-height:1.7;">上傳範本 .xlsx：<b>商品資料</b>分頁（一商品一列、內容）＋<b>各國售價</b>分頁（一國一列、價格），兩分頁以<b>商品代號</b>對應。各國售價分頁分成<b>成本</b>（成本幣別＋供貨價）與<b>對外售價</b>（當地幣別＋建議售價＋最低販售價）兩組，幣別可不同。系統依<b>當地商品編號</b>比對新增/更新（缺則用 品牌＋中文名＋原產地），新品自動配 SKU。<br><b>圖片不會被匯入清空</b>：照片欄留空＝維持原圖；已用「批次配圖」上傳的圖也<b>不會被匯入檔的連結覆蓋</b>。</div>'+
       '<div style="margin-bottom:12px;"><button class="btn btn-secondary" onclick="hpDownloadProductTemplate()" style="display:inline-flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>下載空白範本</button></div>'+
       '<input type="file" accept=".xlsx" id="hp-imp-file" onchange="hpImpParse(this)">'+
       '<div id="hp-imp-status" style="font-size:12px;color:var(--text-dim);margin-top:8px;"></div>'+
@@ -14977,6 +14991,11 @@ function openBatchImageDialog(){
     '<div style="padding:20px 24px;overflow-y:auto;flex:1;font-size:13px;">'+
       '<div style="color:var(--text-mid);line-height:1.7;margin-bottom:12px;">選擇多張圖片<b>或直接丟一個 ZIP 圖包</b>上傳（免進 Supabase，只要後台登入即可）。系統依<b>檔名</b>比對商品：檔名用商品的 <b>SKU</b> 或 <b>當地商品編號</b>（例 <code>GC-TW-BEA-001.jpg</code>、<code>4713008375044.png</code>）。同商品多張圖加 <code>_1</code>、<code>_2</code>（第一張為主圖、其餘為附圖）。<b>重新配圖會覆蓋該商品原有圖片</b>（沒配到的商品不受影響）。</div>'+
       '<input type="file" accept=".zip,image/*" multiple id="hp-img-files">'+
+      '<label style="display:flex;align-items:flex-start;gap:8px;margin-top:12px;font-size:12.5px;color:var(--text-mid);cursor:pointer;">'+
+        '<input type="checkbox" id="hp-img-del-old" checked style="margin-top:2px;">'+
+        '<span><b>同時刪除被取代的舊圖檔</b>（建議勾選）<br>'+
+        '<span style="color:var(--text-dim);">每次配圖都會產生新檔名，舊檔留在 Storage 不會自己消失。勾這個會在寫入成功後，把「這次被換掉、而且沒有別的商品在用」的舊檔刪掉。<b>只刪本次重新配圖的那些商品</b>，其他商品完全不動。</span></span>'+
+      '</label>'+
       '<div id="hp-img-status" style="font-size:12px;color:var(--text-dim);margin-top:10px;"></div>'+
       '<div id="hp-img-result" style="margin-top:10px;"></div>'+
     '</div>'+
@@ -14984,6 +15003,22 @@ function openBatchImageDialog(){
       '<button class="btn btn-secondary" onclick="document.getElementById(\'img-modal\').remove()">關閉</button>'+
       '<button class="btn btn-primary" onclick="hpBatchImgRun()">開始上傳</button></div></div>';
   document.body.appendChild(ov);
+}
+// 圖片檔都放在這個 bucket；從商品的 photo_url／photos 取出 bucket 內的相對路徑
+// （外部連結不會含 /product-images/，自然被濾掉，永遠不會被當成可刪的舊檔）
+var HP_IMG_BUCKET='product-images';
+function hpImgPathsOf(p){
+  var out=[]; if(!p) return out;
+  var arr=[p.photo_url].concat(Array.isArray(p.photos)?p.photos:[]);
+  arr.forEach(function(u){
+    if(!u) return;
+    var i=String(u).indexOf('/'+HP_IMG_BUCKET+'/');
+    if(i<0) return;
+    var path=String(u).slice(i+HP_IMG_BUCKET.length+2);
+    try{ path=decodeURIComponent(path); }catch(e){}
+    if(path && out.indexOf(path)<0) out.push(path);
+  });
+  return out;
 }
 function hpImgKey(fname){ var d=fname.lastIndexOf('.'); var base=(d>=0?fname.slice(0,d):fname); return base.replace(/_\d+$/,'').trim(); }
 function hpNorm(s){ return String(s==null?'':s).replace(/[\s_\-\/\\:*?"<>|()（）＊*]/g,'').toLowerCase(); }
@@ -15037,10 +15072,54 @@ async function hpBatchImgRun(){
   var who=(currentUser?currentUser.full_name:'admin'), now=new Date().toISOString();
   // 商品寫入逐筆檢查 error：失敗的納入計數並回報，不得無聲成功
   var updFailProds=0, updFailImgs=0;
+  // 這次要重新配圖的商品，先把「現在的圖」記下來，寫入成功後才拿它去刪舊檔
+  var _delOld=(document.getElementById('hp-img-del-old')||{}).checked;
+  var _oldByProd={};
+  if(_delOld){
+    var _ids=Object.keys(acc);
+    var _q=await sb.from('products').select('id,photo_url,photos').in('id',_ids);
+    if(_q && !_q.error) (_q.data||[]).forEach(function(p){ _oldByProd[p.id]=hpImgPathsOf(p); });
+  }
   for(var id in acc){
     var _a=acc[id]; var _nImgs=(_a.photo_url?1:0)+_a.photos.length;
     var ur=await sb.from('products').update({photo_url:_a.photo_url, photos:_a.photos, updated_time:now, updated_by:who}).eq('id',id);
-    if(ur.error){ updFailProds++; updFailImgs+=_nImgs; log.push('<div style="color:#dc2626;">商品 #'+hpEsc(id)+' 圖片寫入失敗：'+hpEsc(ur.error.message)+'</div>'); }
+    if(ur.error){
+      updFailProds++; updFailImgs+=_nImgs;
+      log.push('<div style="color:#dc2626;">商品 #'+hpEsc(id)+' 圖片寫入失敗：'+hpEsc(ur.error.message)+'</div>');
+      delete _oldByProd[id];                         // 寫入失敗的商品，舊檔一律不能刪
+    }
+  }
+  // ── 刪掉被取代的舊圖檔（寫入成功之後才做）──────────────────
+  // 三道保險：① 只看這次重新配圖的商品 ② 只刪 product-images 這個 bucket 裡的檔
+  // ③ 刪之前重新確認「沒有任何商品（含這次寫入的新圖）還指著它」
+  var delOk=0, delFail=0;
+  if(_delOld){
+    var _new={};   // 這次寫進去的新圖，絕對不能刪
+    for(var id2 in acc){ hpImgPathsOf(acc[id2]).forEach(function(x){ _new[x]=1; }); }
+    var _cand=[];
+    for(var id3 in _oldByProd){ (_oldByProd[id3]||[]).forEach(function(x){ if(x && !_new[x] && _cand.indexOf(x)<0) _cand.push(x); }); }
+    if(_cand.length){
+      // 全站再查一次：只要還有任何商品在用，就不刪（例如同一張圖被別的商品共用）
+      // 單次查詢上限 1000 筆，所以要分頁抓完；抓失敗就整個放棄刪除（寧可留著也不能誤刪）
+      var _still={}, _from=0, _SZ=1000, _scanOk=true;
+      for(;;){
+        var _u=await sb.from('products').select('photo_url,photos').range(_from,_from+_SZ-1);
+        if(!_u || _u.error){ _scanOk=false; break; }
+        var _rows=_u.data||[];
+        _rows.forEach(function(p){ hpImgPathsOf(p).forEach(function(x){ _still[x]=1; }); });
+        if(_rows.length<_SZ) break;
+        _from+=_SZ;
+      }
+      var _targets=_scanOk? _cand.filter(function(x){ return !_still[x]; }) : [];
+      if(!_scanOk) log.push('<div style="color:#b45309;">舊圖檔比對時讀取商品失敗，這次不刪任何舊檔。</div>');
+      for(var i2=0;i2<_targets.length;i2+=50){
+        var _batch=_targets.slice(i2,i2+50);
+        var _rm=await sb.storage.from(HP_IMG_BUCKET).remove(_batch);
+        if(_rm && _rm.error){ delFail+=_batch.length; log.push('<div style="color:#b45309;">舊圖檔刪除失敗：'+hpEsc(_rm.error.message)+'（不影響配圖結果）</div>'); }
+        else delOk+=_batch.length;
+      }
+      if(delOk) log.push('<div style="color:#6b7280;">已清掉 '+delOk+' 個被取代的舊圖檔</div>');
+    }
   }
   document.getElementById('hp-img-result').innerHTML='<div style="max-height:200px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;">'+log.join('')+'</div>';
   if(st) st.textContent='完成：成功 '+(matched-updFailImgs)+' 張 / 失敗 '+updFailImgs+' 張'+(updFailProds?('（'+updFailProds+' 筆商品寫入失敗）'):'')+'，未對應 '+unmatched+' 張。';
@@ -15053,9 +15132,11 @@ var hpSupImpRows=[];
 function hpSupMapRow(row){
   function g(sub){ return hpImpGet(row,sub); }
   var name=hpImpVal(g('品牌方名稱')) || hpImpVal(g('名稱'));
-  if(!name && !hpImpVal(g('聯絡人')) && !hpImpVal(g('Email'))) return null;
+  // 表頭 2026-09-03 由「聯絡人」改名為「聯絡窗口」；舊範本仍要吃得下，兩個都試。
+  var contact=hpImpVal(g('聯絡窗口')) || hpImpVal(g('聯絡人'));
+  if(!name && !contact && !hpImpVal(g('Email'))) return null;
   var errs=[]; if(!name) errs.push('缺品牌方名稱');
-  var payload={ supplier_name:name, region:hpImpVal(g('負責地區')), contact_name:hpImpVal(g('聯絡人')),
+  var payload={ supplier_name:name, region:hpImpVal(g('負責地區')), contact_name:contact,
     contact_title:hpImpVal(g('職稱')), phone:hpImpVal(g('電話')), email:hpImpVal(g('Email')),
     messenger:hpImpVal(g('通訊軟體')), brand_link:hpImpVal(g('品牌連結')), payment_currency:hpImpVal(g('收款幣別')), payment_terms:hpImpVal(g('付款方式')),
     moq:hpImpVal(g('最低起訂量')), min_order_amount:hpImpNum(g('最低起訂金額')), note:hpImpVal(g('備註')) };
@@ -15065,7 +15146,7 @@ function hpSupMapRow(row){
 function hpSupDownloadTemplate(){
   if(typeof XLSX==='undefined'){ alert('Excel 函式庫尚未載入，請重新整理頁面再試。'); return; }
   var note=['品牌方批量匯入範本：第 2 列為欄位標題（請勿刪除或更名），第 3 列起填資料'];
-  var headers=['品牌方名稱','負責地區/國家','聯絡人','職稱','電話','Email','通訊軟體(LINE/WeChat/WhatsApp)','品牌連結','收款幣別','付款方式/帳期','最低起訂量MOQ','最低起訂金額','備註'];
+  var headers=['品牌方名稱','負責地區/國家','聯絡窗口','職稱','電話','Email','通訊軟體(LINE/WeChat/WhatsApp)','品牌連結','收款幣別','付款方式/帳期','最低起訂量MOQ','最低起訂金額','備註'];
   var example=['（範例）ABC Foods','日本','山田太郎','業務課長','+81-3-1234-5678','sales@abcfoods.jp','LINE: abcfoods','https://abcfoods.jp','JPY','T/T 月結30天','100','50000','此列為範例，上傳前請刪除'];
   var ws=XLSX.utils.aoa_to_sheet([note, headers, example]);
   var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '品牌方資料');
@@ -15118,7 +15199,7 @@ function hpRenderSupImp(){
     var s=r.errors.length?'<span style="color:#dc2626;">錯誤</span>':(r.mode==='new'?'<span style="color:#16a34a;">新增</span>':'<span style="color:#2563eb;">更新</span>');
     return '<tr style="border-top:1px solid #f1f2f4;"><td style="padding:5px 8px;color:#9ca3af;">'+r.rowNum+'</td><td style="padding:5px 8px;">'+hpEsc(r.name)+'</td><td style="padding:5px 8px;">'+hpEsc(r.payload.contact_name)+'</td><td style="padding:5px 8px;">'+s+'</td><td style="padding:5px 8px;color:#dc2626;font-size:12px;">'+hpEsc(r.errors.join('、'))+'</td></tr>';
   }).join('');
-  document.getElementById('hp-supimp-result').innerHTML='<div style="border:1px solid var(--border);border-radius:8px;overflow:auto;max-height:300px;"><table style="width:100%;border-collapse:collapse;font-size:12.5px;"><thead><tr style="background:#f9fafb;color:#6b7280;text-align:left;"><th style="padding:6px 8px;">列</th><th style="padding:6px 8px;">品牌方</th><th style="padding:6px 8px;">聯絡人</th><th style="padding:6px 8px;">狀態</th><th style="padding:6px 8px;">訊息</th></tr></thead><tbody>'+body+'</tbody></table></div>';
+  document.getElementById('hp-supimp-result').innerHTML='<div style="border:1px solid var(--border);border-radius:8px;overflow:auto;max-height:300px;"><table style="width:100%;border-collapse:collapse;font-size:12.5px;"><thead><tr style="background:#f9fafb;color:#6b7280;text-align:left;"><th style="padding:6px 8px;">列</th><th style="padding:6px 8px;">品牌方</th><th style="padding:6px 8px;">聯絡窗口</th><th style="padding:6px 8px;">狀態</th><th style="padding:6px 8px;">訊息</th></tr></thead><tbody>'+body+'</tbody></table></div>';
   var btn=document.getElementById('hp-supimp-run'); if(btn) btn.disabled=(ok.length===0);
 }
 async function hpSupImpRun(){
