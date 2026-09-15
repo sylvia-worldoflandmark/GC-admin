@@ -2,8 +2,12 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GC 後台管理系統 v1.6.0</title>
+<!-- maximum-scale=1：停掉 iOS 點輸入框時「整頁自動放大、放開又不會縮回去」的行為。
+     iOS 10 起 Safari 只在「自動縮放」時聽 maximum-scale，使用者自己捏合縮放仍然可以，
+     所以無障礙沒有被關掉（要連捏合都停才要加 user-scalable=no，刻意不加）。
+     ⚠️ 有了這行，輸入框就不必再被逼到 16px —— 手機字級才能調回正常大小。 -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>GC 後台管理系統 v1.6.2</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2306080e'/%3E%3Ctext x='16' y='23' font-family='Arial Black,sans-serif' font-weight='900' font-size='18' fill='%23ffffff' text-anchor='middle'%3EG%3Ctspan fill='%23BFC3C9'%3EC%3C/tspan%3E%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,6 +25,7 @@
   --text-dim:  rgba(17,24,39,0.45);
   --text-mid:  rgba(17,24,39,0.68);
   --sidebar-w: 240px;
+  --sidebar-mini-w: 60px;   /* 側欄收合後的圖示軌寬度 */
   --topbar-h:  60px;
   --success:   #16a34a;
   --warning:   #d97706;
@@ -119,6 +124,8 @@ body {
 /* ─── LAYOUT ─── */
 .layout {
   display: flex;
+  /* 側欄收合後的浮出標籤 #nav-tip 以這裡為定位基準 */
+  position: relative;
   margin-top: var(--topbar-h);
   height: calc(100% - var(--topbar-h));   /* 用 100%（相對 body）而非 100vh，才會跟著 zoom 正確縮放、底部不留縫 */
 }
@@ -129,13 +136,17 @@ body {
   min-width: var(--sidebar-w);
   background: var(--sidebar-bg);
   border-right: 1px solid var(--border);
-  overflow-y: auto;
-  padding: 16px 0 24px;
+  /* 收合鈕要固定在最上面、不跟著選單捲，所以捲動交給裡面的 .nav-scroll */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   flex-shrink: 0;
+  transition: width 0.18s ease, min-width 0.18s ease;
 }
-.sidebar::-webkit-scrollbar { width: 4px; }
-.sidebar::-webkit-scrollbar-track { background: transparent; }
-.sidebar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
+.nav-scroll { flex: 1; overflow-y: auto; padding: 16px 0 24px; }
+.nav-scroll::-webkit-scrollbar { width: 4px; }
+.nav-scroll::-webkit-scrollbar-track { background: transparent; }
+.nav-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
 
 .nav-group { margin-bottom: 6px; }
 .nav-group-label {
@@ -243,6 +254,70 @@ body {
   gap: 10px;
   flex-wrap: wrap;
 }
+
+/* ─── 篩選收合面板（sylvia 2026-09-15）──────────────────────────────────────
+   商品清單加了「直播地區」之後篩選變 7 個：篩選列 935px ＋ 操作按鈕 354px
+   ＝ 1301px，但 1440 螢幕的內容區只有 1151px（1280 只有 991px），
+   整排操作按鈕被擠到第二行。要不換行螢幕得寬到 1590px 以上，筆電都不到。
+   改成：工具列只留「搜尋 ＋ 篩選⌄ ＋ 操作按鈕」一排，7 個篩選收進面板，
+   面板外用晶片列顯示目前條件（點 ✕ 清掉那一組）。
+   🔑 面板裡放的就是原本那 7 個 msDropdown，沒有另外複製一套狀態 ——
+      MS[] / msSel() / hpFilteredProducts() 完全不用動，以後加篩選只要
+      在 renderProducts() 多一行 hpFiltCell() ＋ HP_FILT_DEFS 多一筆。
+   🔑 桌機是 position:absolute 掛在 #hp-filt（relative）底下；手機的
+      .toolbar-left 是 overflow 橫向捲動容器會把它裁掉，所以 media query
+      裡改成跟 ms-panel 一樣的底部彈出面板。 */
+.filt { position: relative; display: inline-block; }
+.filt-btn { display: inline-flex; align-items: center; gap: 7px; }
+.filt-btn.has { background: #eff6ff; border-color: #93c5fd; color: var(--accent); }
+.filt-badge {
+  background: var(--accent); color: #fff; border-radius: 99px;
+  font-size: 11px; line-height: 1; padding: 3px 6px; min-width: 16px; text-align: center;
+}
+.filt-caret { font-size: 9px; opacity: 0.5; }
+.filt-panel {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 210;
+  background: #fff; border: 1px solid var(--border); border-radius: 11px;
+  box-shadow: 0 10px 34px rgba(0,0,0,0.14); padding: 16px; width: 520px;
+}
+.filt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+.filt-lb { font-size: 11.5px; color: var(--text-dim); margin-bottom: 5px; }
+/* msDropdown 的外層與按鈕寬度是寫在 inline style 上的，這裡要 !important 才蓋得掉 */
+.filt-f > [id^="ms-wrap-"] { display: block !important; }
+.filt-f .cm-input { width: 100% !important; justify-content: space-between; padding: 8px 11px !important; }
+.filt-ft {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 16px; padding-top: 13px; border-top: 1px solid var(--border);
+}
+.filt-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: -4px 0 14px; }
+.filt-chips:empty { display: none; }
+.filt-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #eff6ff; color: var(--accent-2); border: 1px solid #bfdbfe;
+  border-radius: 99px; font-size: 12px; padding: 4px 10px;
+}
+.filt-chip b { font-weight: 600; }
+.filt-x { opacity: 0.55; font-size: 11px; cursor: pointer; }
+.filt-x:hover { opacity: 1; }
+.filt-clear {
+  font-size: 12px; color: var(--text-dim); cursor: pointer; text-decoration: underline;
+  background: none; border: none; padding: 0; margin-left: 2px; font-family: inherit;
+}
+.filt-clear:hover { color: var(--text-mid); }
+
+/* msDropdown 的群組標題（目前只有「直播地區」用到，見 msDropdown 的 groupOf） */
+.ms-grp {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 7px 14px 4px;
+  font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em; color: var(--text-dim);
+}
+.ms-grp ~ .ms-grp { border-top: 1px solid var(--border); margin-top: 3px; padding-top: 9px; }
+.ms-grp button {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-family: inherit; font-size: 11.5px; color: var(--accent); text-decoration: underline;
+  flex: 0 0 auto;
+}
+.ms-grp button:hover { color: var(--accent-2); }
 .search-box {
   display: flex;
   align-items: center;
@@ -339,6 +414,25 @@ tbody td {
   color: var(--text-mid);
   vertical-align: middle;
 }
+/* ─── 列表一律不折行（sylvia 2026-09-14）─────────────────────────
+   以前只有 thead th 是 nowrap，tbody td 沒有，所以每個模組都要自己補，
+   漏補的那一欄就會像品牌方的 UID／地區／電話那樣被折成兩行。
+   這裡一次補在 .table-card 底下 —— 後台所有索引頁的列表都包在 .table-card
+   裡，放不下時由外層 .table-wrap 橫向捲動，不折行。
+   ⚠️ 刻意只掛在 .table-card 底下：報價單／合約／勞報單的 A4 預覽（.a4、
+      #doc-paper）與批量匯入的預覽表都不在 .table-card 裡，那些需要折行，
+      不要把這條放寬成全域的 `tbody td`。
+   兩個逃生門：
+     .cell-clip —— 本來就長的欄位（備註、描述…）單行 + 省略號，配 title 看全文
+     .cell-wrap —— 真的需要折行的儲存格
+     .cell-clip-in —— 儲存格裡刻意分兩行時，套在裡面的 <div> 上（省略號才出得來，
+                      套在 td 上只會裁掉、不會顯示「…」） */
+.table-card tbody td { white-space: nowrap; }
+.table-card tbody td.cell-clip, td.cell-clip {
+  max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.table-card tbody td.cell-wrap, td.cell-wrap { white-space: normal; }
+.cell-clip-in { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 td.id-cell {
   font-family: var(--font);
   font-variant-numeric: tabular-nums;
@@ -694,6 +788,51 @@ select.cm-input {
    RWD 手機／平板適配層（≤768px 生效，桌機不受影響）
    ════════════════════════════════════════════════════════════ */
 /* 漢堡鈕與抽屜遮罩：桌機隱藏 */
+/* ─── 側欄收合（桌機）───────────────────────────────────────────
+   sylvia 2026-09-14：左邊索引列表要可以收合。
+   收合＝body 加 .nav-mini，側欄縮成 --sidebar-mini-w 的圖示軌，
+   項目名稱改成滑鼠移上去才浮出的 #nav-tip 標籤。狀態存 localStorage。
+   ⚠️ 手機是抽屜模式，不吃這一套；下面的 @media 會把這段整個還原掉，
+      所以這裡一律不要用 !important，否則手機版會被卡死。 */
+.nav-collapse {
+  /* .topbar 是 position:fixed，所以這顆用絕對定位就能自己決定要站在哪：
+     展開時收進側欄那一格的右緣（跟 Claude 一樣），收合時貼著窄軌右邊。
+     用絕對定位而不是排在 flex 裡，.topbar-right 才不會被 space-between 拉歪。 */
+  position: absolute;
+  top: 50%;
+  left: calc(var(--sidebar-w) - 44px);
+  transform: translateY(-50%);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px;
+  border: none; background: transparent;
+  color: var(--text-dim); cursor: pointer; border-radius: 8px;
+  transition: background 0.15s, color 0.15s, left 0.18s ease;
+}
+body.nav-mini .nav-collapse { left: calc(var(--sidebar-mini-w) + 14px); }
+.nav-collapse:hover { background: rgba(0,0,0,0.05); color: var(--text); }
+
+.topbar-left { transition: width 0.18s ease, padding 0.18s ease; }
+body.nav-mini .sidebar { width: var(--sidebar-mini-w); min-width: var(--sidebar-mini-w); }
+body.nav-mini .topbar-left { width: var(--sidebar-mini-w); padding: 0; justify-content: center; }
+body.nav-mini .topbar-badge { display: none; }
+body.nav-mini .nav-group-label { display: none; }
+body.nav-mini .nav-item { justify-content: center; padding: 10px 0; gap: 0; }
+body.nav-mini .nav-label { display: none; }
+body.nav-mini .nav-divider { margin: 6px 12px; }
+
+/* 浮出標籤：.nav-scroll 是捲動容器，會把超出側欄的東西裁掉，
+   所以標籤不放在 .nav-item 裡，改掛在 .layout 上由 JS 定位。
+   位置用 offsetTop 算，不要用 getBoundingClientRect ——
+   body 有 zoom:0.95，rect 回傳的是縮放後的座標，會對不準。 */
+#nav-tip {
+  position: absolute; z-index: 200; pointer-events: none;
+  background: #111827; color: #fff; font-size: 12.5px; line-height: 1;
+  padding: 7px 10px; border-radius: 7px; white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  opacity: 0; transition: opacity 0.12s;
+}
+#nav-tip.on { opacity: 1; }
+
 .nav-toggle { display: none; }
 .nav-backdrop { display: none; }
 /* 直向手機(寬≤768) 或 橫放手機(橫向且高度很矮，電腦/平板不會這麼矮) 都套用手機版 */
@@ -751,7 +890,7 @@ select.cm-input {
   /* 主內容：側欄脫離文件流後自動滿版；縮小內距 */
   .main { padding: 16px 14px; }
   .page-header { margin-bottom: 16px; }
-  .page-header h1 { font-size: 1.25rem; }
+  .page-header h1 { font-size: 1.375rem; }   /* 22px：跟控制項 13px 拉開到 1.7 倍 */
 
   /* 表單／卡片格線改單欄 */
   .cm-section { grid-template-columns: 1fr; gap: 10px; }
@@ -776,6 +915,95 @@ select.cm-input {
   /* 表格維持左右滑動、加順滑滾動 */
   .table-wrap { -webkit-overflow-scrolling: touch; }
 
+  /* ─── 手機的工具列與篩選（sylvia 2026-09-14：篩選按鈕 UI 要優化）────────
+     原本整排 flex-wrap:wrap，商品清單有 6 個篩選時會排成三四行，
+     把表格整個推到螢幕外。改成：
+       搜尋框＋篩選 = 一條「不換行、用手指左右滑」的橫向捲動列
+       操作按鈕     = 自己一行
+     ⚠️ 篩選面板必須跟著改成底部彈出（見下面 [id^="ms-panel-"]）——
+        橫向捲動列是 overflow 容器，原本 position:absolute 的面板會被它裁掉。 */
+  .toolbar { flex-direction: row; align-items: center; flex-wrap: nowrap; gap: 8px; }
+  .toolbar-left {
+    display: flex;
+    flex-wrap: nowrap !important;      /* 商品清單的 toolbar-left 是 inline style 寫死 wrap */
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .toolbar-left::-webkit-scrollbar { display: none; }
+  /* 真的有東西可滑時，右緣淡出一小段 —— 讓被裁掉的那顆篩選看起來是「還有、往右滑」，
+     而不是「破圖」。class 由 _tbSync() 依 scrollWidth 判斷後掛上，篩選少的頁不會有。 */
+  .toolbar-left.tl-scroll {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent);
+            mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent);
+  }
+  /* ⚠️ mask-image 會把「整個子樹」一起遮掉，包含 position:fixed 的子孫 ——
+     底部彈出的篩選面板會變成「元素在、座標也對，就是畫不出來」（實測 2026-09-15：
+     elementFromPoint 打不到面板，點進去點到後面的表格）。所以只要有面板開著，
+     就先把這段淡出關掉；面板本來就蓋住整個畫面，看不出來少了淡出。 */
+  body.ms-open .toolbar-left.tl-scroll {
+    -webkit-mask-image: none !important;
+            mask-image: none !important;
+  }
+  .toolbar-left > * { flex: 0 0 auto; }
+  /* 搜尋框自動伸縮（sylvia 2026-09-14）：
+       篩選少的頁（品牌方只有 1 個）→ 有多餘空間，搜尋框 grow 撐開、不截字
+       篩選多的頁（商品清單 6 個）  → 空間不夠，搜尋框 shrink 到 150px，其餘往右滑
+     固定成 58% 的話，篩選少的頁會平白被截字、右邊卻又滑不動。 */
+  .toolbar-left .search-box { flex: 1 1 220px; width: auto; min-width: 150px; }
+  /* 操作按鈕釘在最右邊、不跟著左邊那段滑走 */
+  .toolbar-right { flex: 0 0 auto; justify-content: flex-start; gap: 8px; margin-left: 0 !important; }
+  /* 收起來之後只露出「⋯」那一顆（哪些頁會收、收哪些，由 _tbSync() 決定） */
+  .toolbar-right.tb-collapsed > *:not(.tb-more) { display: none !important; }
+  .tb-more { font-size: 17px !important; line-height: 1; padding: 8px 13px !important; letter-spacing: 2px; }
+
+  /* 篩選面板改成從螢幕底部彈出的面板：不會被橫向捲動列裁掉，選項也點得到。
+     面板的樣式是 msDropdown() 用 inline style 寫的，所以這裡只能用 !important。
+     （上面已經把 body 的 zoom 拿掉，position:fixed 的座標才會是真的滿版。） */
+  [id^="ms-panel-"] {
+    position: fixed !important;
+    left: 0 !important; right: 0 !important;
+    top: auto !important; bottom: 0 !important;
+    min-width: 0 !important;
+    max-height: 62vh !important;
+    border-radius: 16px 16px 0 0 !important;
+    border-width: 1px 0 0 0 !important;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.22) !important;
+    z-index: 300 !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+  /* 選項列加大成好點的高度 */
+  .ms-item { padding: 11px 18px !important; font-size: 14px !important; }   /* 底部面板的選項留 14px：手指要點 */
+  .ms-grp { padding: 12px 18px 6px; font-size: 12.5px; }
+  .ms-grp button { font-size: 13px; padding: 4px 0; }
+  .ms-item input[type="checkbox"] { width: 18px !important; height: 18px !important; }
+  /* 篩選鈕本身：字小一點、留白給手指 */
+  .toolbar-left .cm-input { padding: 7px 12px !important; height: auto !important; }
+
+  /* 篩選面板：桌機是 absolute，手機的 .toolbar-left 是 overflow 捲動容器會裁掉它，
+     所以改成底部彈出。z-index 要低於 ms-panel 的 300 —— 點面板裡的某個篩選時，
+     選項面板要疊在這張面板「上面」。 */
+  .filt-panel {
+    position: fixed !important;
+    left: 0 !important; right: 0 !important;
+    top: auto !important; bottom: 0 !important;
+    width: auto !important;
+    max-height: 76vh; overflow-y: auto;
+    border-radius: 16px 16px 0 0 !important;
+    border-width: 1px 0 0 0 !important;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.22) !important;
+    z-index: 280 !important;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .filt-grid { grid-template-columns: 1fr; gap: 11px; }
+  .filt-lb { font-size: 12px; }
+  .filt-chips { margin: 0 0 12px; }
+  .filt-chip { font-size: 12.5px; padding: 5px 11px; }
+
   /* 以 style.cssText 建立的彈窗：瀏覽器會序列化成「position: fixed; inset: 0px」
      （含空格），原本的選擇器比對不到，這裡補上有空格的版本 */
   [style*="position: fixed"][style*="inset: 0px"] > div { max-width: 94vw !important; }
@@ -787,21 +1015,100 @@ select.cm-input {
   .login-card { width: 100%; max-width: 360px; padding: 32px 24px; }
   #login-screen { padding: 16px; }
 
-  /* 只有「會叫出鍵盤」的文字輸入框才會被 iOS focus 放大，故只對這些
-     設 16px；下拉選單(select/按鈕)與日期欄位開的是原生選擇器、不會放大，
-     維持原本較小的字級，避免篩選列文字過大 */
+  /* ─── 手機字級：同一層級用同一個大小（sylvia 2026-09-14）──────────────
+     桌機的字級是一個元件一個訂的（10 / 11.5 / 12 / 12.5 / 13 / 13.5 都有），
+     在 390px 上同一排就會冒出三種大小 —— 例如品牌方的工具列：
+     搜尋框 16px、篩選下拉 12.5px、按鈕 13px。手機統一成四級：
+
+         標題 20px ／ 控制項 16px ／ 內容 14px ／ 標籤 12px
+
+     ⚠️ 控制項只能往上對齊到 16px，不能往下：**低於 16px 的輸入框一 focus
+        就會被 iOS 自動放大整頁**，這是原本那條 iOS 規則的用意，不要拿掉。
+     ⚠️ 一定要 !important —— 按鈕與 msDropdown 的字級是寫在 inline style 上的，
+        沒有 !important 蓋不過去。
+     ⚠️ 刻意不碰 .a4 與 #doc-paper：勞報單、報價單、合約是照紙本刻的版面，
+        字級一動就跑版（要印出來的東西，不該跟著螢幕寬度變）。 */
+
+  /* 手機不要 body 的 zoom:0.95。
+     一來 0.95 會讓所有字級都不是它宣告的數字（16px 其實只畫 15.2px），
+     二來 zoom 會把 position:fixed 的座標一起縮放，下面的篩選底部面板
+     用 left/right:0 會變成只有 95% 寬、離底部還有一截。桌機維持 0.95 不動。 */
+  body { zoom: 1; }
+
+  /* ① 控制項 13px —— 輸入框、下拉、工具列按鈕、表單欄位
+     （原本被逼到 16px 是為了躲 iOS 自動放大；viewport 加了 maximum-scale=1
+       之後不需要了。16 → 14 → 13 調了兩次：sylvia 第二次回「篩選的文字看起來
+       都比標題還大」，真正的問題是標題 20px 對內容 14px 只有 1.4 倍、層級被壓扁，
+       所以同時把標題拉到 22px、控制項降到 13px，比例回到 1.7 倍。） */
   input[type="text"], input[type="search"], input[type="email"],
   input[type="password"], input[type="tel"], input[type="url"],
-  input[type="number"], input:not([type]), textarea {
-    font-size: 16px !important;
+  input[type="number"], input:not([type]), textarea,
+  .toolbar .btn, .toolbar button, .toolbar select,
+  .cm-input, .edit-input, .edit-select {
+    font-size: 13px !important;
   }
 
-  /* 選單項目加大點擊區 */
-  .nav-item { padding: 12px 20px; font-size: 14.5px; }
+  /* ② 內容 13px —— 表格儲存格、列內按鈕、分頁、頁面說明 */
+  .table-card tbody td, .pagination, .page-btn,
+  .page-header p, .empty-state p, .section-placeholder {
+    font-size: 13px !important;
+  }
+  .table-card tbody .btn { font-size: 13px !important; }
+
+  /* ③ 標籤 12px —— 表頭、徽章、麵包屑、序號、欄位標題 */
+  .table-card thead th, .badge, .breadcrumb,
+  td.id-cell, .cm-field label, .cm-sec-desc, .nav-group-label {
+    font-size: 12px !important;
+  }
+
+  /* 選單項目加大點擊區；字級歸到「控制項」那一級（14px） */
+  .nav-item { padding: 13px 20px; font-size: 14px; }   /* 抽屜選單留 14px：是導覽不是內容，要好點 */
+
+  /* 手機是抽屜模式，桌機的圖示軌不適用 —— body 還留著 .nav-mini 也要整個還原 */
+  .nav-collapse { display: none; }
+  #nav-tip { display: none; }
+  body.nav-mini .sidebar { width: 264px; min-width: 264px; }
+  body.nav-mini .topbar-left { width: auto; padding: 0 12px; justify-content: flex-start; }
+  body.nav-mini .topbar-badge { display: none; }
+  body.nav-mini .nav-group-label { display: block; }
+  body.nav-mini .nav-item { justify-content: flex-start; padding: 12px 20px; gap: 10px; }
+  body.nav-mini .nav-label { display: inline; }
 
   /* 可點擊元件關閉「連點兩下放大」與點擊延遲 */
   button, a, .btn, .nav-item, .nav-toggle, [onclick] { touch-action: manipulation; }
 }
+
+/* ─── 手機：工具列操作收成一顆「⋯」的底部面板（sylvia 2026-09-14）──────
+   只有手機會建出 .tb-more，桌機永遠不會用到這一段。
+   語彙刻意跟篩選面板一樣：都從螢幕底部滑出、都點外面關。 */
+#tb-sheet {
+  position: fixed; inset: 0; z-index: 320;
+  background: rgba(0,0,0,0.32);
+  display: flex; align-items: flex-end;
+  opacity: 0; pointer-events: none; transition: opacity 0.16s;
+}
+#tb-sheet.on { opacity: 1; pointer-events: auto; }
+#tb-sheet .tb-panel {
+  width: 100%; background: #fff;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.22);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  max-height: 76vh; overflow-y: auto;
+  transform: translateY(14px); transition: transform 0.16s;
+}
+#tb-sheet.on .tb-panel { transform: none; }
+#tb-sheet .tb-hd {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--text-dim); padding: 15px 18px 7px;
+}
+#tb-sheet .tb-act {
+  display: block; width: 100%; text-align: left;
+  background: none; border: none; border-top: 1px solid var(--border);
+  font-family: inherit; font-size: 15px; color: var(--text);
+  padding: 15px 18px; cursor: pointer;
+}
+#tb-sheet .tb-act:active { background: #f4f5f7; }
+#tb-sheet .tb-act-p { color: var(--accent); font-weight: 600; }
 
 /* ─── 勞務報酬單 A4 版型（照紙本重刻，供螢幕預覽與 html2pdf 輸出）─── */
 .a4{background:#fff;width:794px;margin:0 auto;padding:40px 44px;font-size:11px;color:#000;line-height:1.5;}
@@ -989,7 +1296,7 @@ body.gc-viewer #main-topbar::after {
 <div id="login-screen">
   <div class="login-card">
     <div class="login-logo"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIIAAACCCAYAAACKAxD9AAAd5ElEQVR42u2dd5Rd1Xn2f6fcfqePCuoajQpCSEJCElUSYJlm08HY2MQmy/aX2MsEF2wI+APbSWwcOsRZyzYhJM76kjiOk5hig2UhyRLFFPUuoTYz0jDl9tP398cpc+7MSEFoRhL4vGvdde/cO3dmn72f/fb9HGnBggWCSP7oRY6mIJIICJFEQIgkAkIkERAiiYAQSQSESCIgRBIBIZIICJFEQIgkAkIkERAiiYAQSQSESCIgRBIBIZIICJFEQIgkAkIkERAiiYAQSQSESCIgRBIBIZIICJFEQIgkAkIkERAiiYAQSQSESCIgRBIBIZIICJFEQIgkAkIkH0BRPwiDlCQJSZKC14OJEAKEQPivPwjj9sZ7Koz7lASCLElIsqusbNvGNE0sy8K2bYQQ1RMmSUhIyLKMoiqoioLiPQAcxzlhEyxJ7jj8/2tZFqZl4dg2jiMQCBDBsF2gyDKK0jdu//sDrvOPBQj+JNq2TUXXMQwDCYlMJs3IESNoHtFEc1MT6VSa2toaYvE4juOQz+fRNJ1cLkdXdzc93T3k8nkKxSISEE8kSMTjyLI8LKDwxy2EwDAMNF1HCEEqmaShoYERI5ppbmokm82SzWZJxOMIIShXKhQKBYrFEl1dXfT09NKby1MqlZEkiMfjxGIxJEk6IaA46UDwd4Cm6ei6RjqdprWlhTNnzWT27DNpndLCaaNHU1OTJZFIuJrC+w6Sq1YRAtu0qGgahUKBjkOH2bFjJ+vXb2D9xk3s27cfXddJplIkEwmEEDiOMyQAME2TQqGArCiMGzOGWbNmMmf2mUyfPo0xp42mrq6WRDzhgsUzA44QOLaNZdtYpkmpXCZfKNDe3sHOXbvZvHkL27btoL2jA9u2SSaTqKo6rICQThbhpixLgES5XMa2baZMaWHpksUsufB8pk2bSk1NDUgSVtgsOE4wmX1mwX2WpbB5UJFiMRAOue5etmzdyvIVK1m16vfs3bcfRVXIpNOBCj9WURQFwzAol8s0Nzdx3rnncMlFS5k7dzbNzc3IsoxlmuiGgWVZOI4TaCPHcRCOg+Mtqv+QZRlZlpEkCcuy6OrqZtPmLbzy6mu8+dY6enp6SCQSxGKxYQHESQGCoihUKhVMy+KsObO58fprWbz4AhoaG90J1HVs2wYhAjsqIbkawFcEBD+6BjcEEMfTEkgSqqqSTCRAUeju7GTl6jX85y//mzffehuQyGbSwaK8F+3lOA6FQoHRo0dz9VVXcvXHP8bkyZNACCqVCoZp4jjOAOdQCBEAIAwGx3GwbQch3GfbtnAc97pVVUEIwf79B1ixcjUrV63mcOe7pJJJFEU5bq120oAQnshp06Zy2+duZdklF5NKJSmXK1iWFXjaUnhxfc+7WjcPfM9/P6QxfFUshCAWi5FMpzE0jdW/X8M/PvMzXn/jTZKJBIlEwgXfUcBbLJZIxOPccP013PqZWxgzfhxmpUJF0xA+aCXf0at2+AIt4GkH97XAFg6ObXu/72BZrkNsWRaW5YJKVVUkWeJQx2GWr3iZ361YRaFYJJ1K9WnJDwoQfC2gKAqf/tTNfPZPPk19fT3FYhHbtpFlhfAm8p2ko4WMg70/QFuEd6VnCmRZJpPJYBgGzz73Aj/6+x9z4OBBamtrB+wy/3/k83nmz5/H1+/4CnPnz8OsVNA0zf28yqGrBoF/Df21gG8m+psNHwi23RclWZaFYZooskIsFuOdvfv4xS//i3XrNhD3HOHjXp+xY8fedyJAkM/nmTRxIg98/3vccMN12JZFpVIJ7OKRFvtIix+AJGwajgCK8M/+93VNRziC2XNn89Fll9DT08OmzVuIx+NVGsy2bTRN5wufv43v3v9txo0ZQyGfx3FE4AD2B4Gvkao0QkgzCUfgCCf43HHc77qg8J6F06c9HMfVHpY7ltraGubPO4tEIs7effuHxEQMOxAURaG3N8fSJYt5+MHvM2XKFPK5XChiEINq9bBWCC++CO0of5uLqr8x0DRUPXvmRpJlkEArV0inklx+5cfIpBKsXL2GWCyGoijoukE8rvJX372PT996K6auoes6ivddqna99yw8H8VPFIV2u+sDONihBXYX3g4A4Th2oDXCv2PbNo5wF9wwDAzdYO6cM+nq7mbnzl3EvbD0lAwfXRD0ct01V3HvPd/CcQSFQh5FUQL16S+wu+jV3/cnQpIkFEVGVd2kiyTJ3ppK3gTa3iTbwd+SZRnJy9hJoYXxTYTkA0MCWVHoPNTOK6++jizJgRnLZrM88tADzF+wgGJvd+DZ+3Z5oDnocwwdx7X94P59VVVRVXcMPhBs28I0LWxbYFk2tuM6jT6A7P4mxN8Itk0qleQ3Ly1nzdpXSSQSx60V1OEGwSdvvom7vvk1NE3Htq0ABAxwcUSwVq4dl0gkEsS9xFG5XKanp5d8oUC5VA78gEQiQW1tDdlslpoaN9HkRx6+8zmYDRWAbVmkUil6czn+4o5v8MZbb9PU2IimaWQyGZ549EHmzDuLQk+3G8f7i181+j5z4Np2G1VRSKXTSLKMrmkUCkVyhTz5fAFN0xBeljGVTJLJZEgmk6TSKRzbpqJVMHTT1QCOCAHB8yFsi1Qyye/Xvsq///w/3ZBZUY47nFSH0xxcd+3V3PXNr1OpVBDCCTJw7k4Om3aBEBKO46DIMrU1WUzTYs87e3nrrXWsW7eBPXv30t3dQ6lUwjCMvgtQVVKpFHV1tYwbO5aZp89g7pzZzJw5g4aGBnRdD5w6//9LkoRt26RSKXp6evjKHd9g48ZNNDc1YhgmkiTxwx/8FXPmzaPQ64HAM0H97b6HDizbJhaLUZPN0tPby7r1G3jzrXVs2bqNtvZ28vlCAE7fbCViMdKZNA0NDUycMJ7p06YyY/pUmpubMQyTcrkcaALbsbEti3Q6xZtvrePffv6LICU9FDmFIY8afMfwgvPP45GHfhAkVCRJHmDvfTPuOK4Dla3JUimXWfHyKn713Ats2LiJXC4HkkRMVVFUFcVzLsPxuatm7SDxlEgkmDhxAksXX8gVl1/KtGlTMQwjiFps2yadTtPV1cXtd3yDTZu3UlfnRgz5QoH77r2bm26+mWJvN4qX0Qv8gX5OoG3bSJJENpuhra2DZ597nhdfWs7uPe+gGwaKorhj9xYtHA2FIwXbtpAkmabGBmbNOoNzz1nItKmtAJTKZSzTJJ1OsW79Rp5+5mfYtj0kmmBYgCDLMrquM3r0KJ768Y+or69D13VPNfuOX5W5drWAopBKpXh55Sp+8tOn2bBxE5Ikk0q5qdWwozjYhYcrfJLkahZdN9B0jYb6epZ95GJu+eQnmD59GoVCgXg8Tmfnu9x+x9fZtn0HtTU1CKC3N8eNN1zLd757H6V8DllWBgVAAALLIpFMYNsO//GLX/LP//KvHDx4kISXl/B3a5UGGbRC2ZcRsSwLTdeJx2LMOmMml126jJbJkxBCsGnzFn7y1NNY1tCCYMiBIEkSmqbz2MMPcOGF55PL5YIqoF94C4d0fh5d13Uef/JH/PvPf4kkuYWm460H+KbAsiyKxRL19XV86uabuO1zt5LPF/jzL9/Ojp27qK2txbZtdMNg3Ngx/NPTPyGTSXv+hYwQTp8PEAKDZVnUZLO8s3cf33/gQdasfYVUKk0iET+u4pYPZuFlKmOxGMsuuZjp06fyD0//E8VSKfCbTskUs6Io9OZyfPITN3LP3XeSy+VRFLk6Egg5BrZtk06lONzZyV/eez+v/eENGurr33f+/38bm2VZ5HJ5zjvvHAzDYN269QEIZFmmWCzy4AN/w6VXXEYx14siK329AoOAoK62htdef4O7772fw4c7qa2tGfLqpp/HME0zWPyh1gRD6ixKkoRuGIwdM4Y//dytVCoasjwwHAzCQtshmUzS3tHB7Xfcya7du2lqbOxzpIZY/MVuamrkzTffRpYlampqXDsryxSKRS644Dw+suwSyvn8ABA4IdVuWxa1NVlWrV7DnXfdi2ma1NbWHDU9/X7FD50TXsV0uEAAQ9SqJssylXKFm2+6gTFjTsMw9OpaQShkE46DqioUi0W+ede97Nq9h7q6umEDQdipdJ3EFMlkMtA6jhCoqspnP3OLWwvp3zXU7/uZTIaNm7Zw1z33YVkWyWRiWEDQf+xH8jFOGSBIkoSu64wfP44rr7iUUqnsOVlHuig39n/w4cdYv2ETdXW1ww6CwZJUPoBLpTKLFi5gwcIFVEqlvg6hfs6hX7Tq7unh2/d/j1K57BWqHD4MIg+JNqhoLPvIxYweNSqI8UX/1fdUdDab4dcvvsSvnnuBhob6EwqCI+22a6+5CkVVq1LD/ZwbhHBIxOM88tiTbN+xk2wmM+ya4AMFBFddprnkoiUYplFdPAqpV+Gp4Fw+z0+feoaYH5+fJPE12eTJEzn3nIUYlTKyV5MIjxkEtu2QzWZZsXIVzz73AvUnwJR9oIDg5w1aW6fQ2joFTdOPWEV0HId0Os2LLy1n+46dpFKpIY8OjnXsmqZx3jmLqGt0M4qD5SuEEMheWPyPz/zsPVdJ/6iAIEkShmEy76y5gaqUQqo17Gi5OQaN51/4TdB5c7JNgqwozJ93Fo5lYfvZSe/hZyoNwySVSrFq9RrWrd9AOp0+qQAeLlGPdzJVVWHWGTOPPDne7komk2zfsYNt27ZXee0nyyyYpsnIEc2cffY8ZDVOXW2Nm+6SJMIlZduxUeNxnv/1b4IWsg+jHBcQXOcvy6SJEzBMt1gzWE1RCEE8FmPjxs0UiiXq6mqH3NE6UpXxiBeuqkiSzAM/fBhJlpAlmVg8RiadRo2pSJJEjVfRlCR4++31pFLJD5WDOCRAcHeVxYgRzTQ2NmB7Jd8jag8E23fsBIbeJPi+SqWiHUOnE/TmcuzcuatqjH2NLlLQ7pZMJmloqB+SlrAPJRBs26autpZ0KoV9FFUvSTKmYdLW1j7k2TFVVcjlCsyYPpXrr782aAYJVzoHtD710yJHc3BTqSRvv72e//qfZ4MMXwSEARNlU19fTyweR6tUgmNqA3eshKbr9OZyyIoCQzSZqqqQzxeYPq2Vxx59iLHjJwMm1a2rgxircGOM6Pu5qmFGgGVbxJK1lEplNF0nlUpFpuFIzmIymfBSs6D8L85ZpVxBHsSPeD+iKAr5QpHWKS383ZOPMmrUKAq9nX3NJ8GSChBSX19jODQknLYVXudQX4XUtm3q6gRtbe0hQxGZhurF7fe6Oo8khvXMnn/GYPKkiTz5xKOMGjmScrFILKb22XgR0gfeOQNCCaNwziAAiCwG6BFJksgXCkgfbhy8fyD4zeRud62oAkF/yPhHuvzjWscLglKpxLixY3jy8YcZM+Y0ysUiSpCbCFU9w4vum4F+WsA3FUIIRD9t50ZG7kFbaYhawj6UpkFWZHK5PKYfOoYOpIRb0fw8Qo1Xsw9/fqwgKJfLjBo1iscfe4gJ48dTLBZQFBXhiJDnL46y+P3AKhgAgHDHk2EY9PT0ui3sH2J531cnhEBVFLp7eoKDKv39grD3HY/HGT1qpNfjx/sGQXNzE08+9hCtrS0BCKoWvm+fV9cN+iv9cPZzMG0gCBpW3u3qdsH2IdYI7x/mXhGpu7ubrq7u4Nj2ANvr/awoMq2tU7xTPceGBFmWKZZKNDTU8/ijDzJ1aiu53hyS5Hbw+Olh/+H4r0PvB+/Z7nkDO3TUTAyiKRzhoCoKXV3d9Pb2nhJp8VPWR1AUmUKhxMG2NlpaJvedBRwkarAsmzNmnk4yeWyHMXz1PG7MGJ584mFaWk/H0grU1tZ6OznkGAoBQcpAhNS+qDoZ5RoQ1zxpmnZkjRdT2fPOOxSKRbKZzIeyxjAkPoIkuUQRW7duZ+mSC4+4Y/yC07RpU5kwfjx79+0nkXhvR7T88vUtn/oEmqbz6pqVrprGCxFDR9pESFsNyCCETznhdibFYipTWloGtJj7vy9JEps3bw1a3SIgHHWRFN56ex26bhwxBeuTPzTU17Nk8QX8+KdPH1PeXpZlHn/y79E03W2IDYWtx25oXH8jl8tz9VVX8r3v/F+KxeKAgyKSLKNVNDZv2UpMVTEM40OdYj6uKxOO24S6Zes29u7bd9Rd7tcDLr/8o0Fn0nt1Gv32smTSZQyJe49Y6PlYHoqiUFOT5cbrr63SAOHrisfjHDh4kN173iEWizGlZXIEhKP5Caqq0tPTy9q1r5JIHLm87JuH1iktXHH5pRSKRdfjPwZfoX8P4ft5yLJMPl/goqWLmTtnNqVSqbpq6nUtJ+Jx3nzrbbq7u4nFYnz5S/+HKZ4fdDIAMdzl7+O+IiEEsXiMl5avoOSpWAZJzPgXU6lofPbWW5g4YfygYedwT6ZpWtTX1/Gnn7sV02s361+Z8NvzV61ei2GYzJgxjblzZnPTDdcN0B7DLX5eYzA6nlMKCI7jkE6l2LRpM6+89jqZUFNnfwfMjwBGjBjB1+74iscddOKaPfy8wBe/cButra1UKpUB2sBPfm3bvoN16zeQTCa47KPL0DSNRYsWcO3VHyeXL6CqyrCOVZFlSqUSF15wHrd88qaqI/+nJBDCyP3Xf/sPTNMcmFzq56gVCgWWLlnMl/78C+Ry+WNiTHnfXrGq0t3dw7XXfJybbriefD5fPc4QxU0sFuM3L/6Wzs53Of30GZx37iJKpTKVisaf3HoL8+fNJZfLDxsYZO/QzaKFZ3PFZR9l9pmzuPLyS9F1Y8B8DhnwhoIxRQhBIpFgzzt7aZk8iTNmnk4lZEulfurZdxwXLjgbIRzWrHk14AIaDkJMVVXo6u7hoosWc9+9dw+6u4JOqnicgwcP8ujjP6JS0fji529jxozpaJoWHDmbP+8sNm/ZyoGDbaRSqaE7kextiFKpxKKFZ3PzTTdgOw6lUplx48ciSRI7d+7yuqukUw8I7kW4u2nXnj0s+8jFVSwe0hGcHtM0Of+8c8lms6x95VUsy/IijyG6OI+Crrc3x1Ufu5L7v/2X7nlCy6rqnQgTXmUzGZ56+hleWv47llx4Abd99jOUy+WqMadSaRYtWsiBAwfZtXvPcYM4fGDXNE0uuXgp1159FbZjY5kWtmO7rfeTJiIBu3bv8ZhjpFMPCEK4tLFtbe1YlsVFFy2mXK4M0Ar9B28YBgsWzGfmzBls3LSZtrYO1JhKzEP9sU6uS7PjquxCsYiqKPzZFz/PX9z+pYAfWZblAfUFx+NM2LJ1Kz988FGymQx33fk1GhsbgkM7LrBdPyeRSHDBBeciSbB12/bg5PJ7dX793R/QDlcqNDY2cP1113Dx0sVomoZpmjjCo9mxbAzDYMKE8S6z2jt7gyjolAKCv7OSyQTr1m+gZdIkZp4+IyCnGMxf8CejUqkwZcpkll1yMbF4jL1799HV1Y0jHBRFRVXkKva1gNBakoPJ9CfENM2Az/j8887l3ru/yRWXX0qpVOqbuDAjm49iSUKWJf76b/6W9Rs38uU/+yJLLjyffL7gee0ioLIBt3tJCMH8s+ZwxhkzKZfLtHccCrSHP6bqcff5Qv4pZ103qK3NsviC87nxhmuZNHGix0bbR6ZlWRa25ZJpmabJ2DFjSKdSHDjYNmTRxJAzpvhZxGwmw9898TAtkydTLJWCopQUssn9o49YLEY6nWLfvgO8+NJyXl61mt2791AsFnGEQJFlj4+x76/4jGMCN/YfNXIk8+fN5YorLmPeWXNBCErlclBGHuxi/aznU08/ww9++DA3XH8NX7vjKxQKxT5GF4/1TOB4Je8+ppZEIgEItm/fySuv/YFNm7dw+HAnFU1zyTSrNKKMqqpksxlGjx7J6TNmcOasmYwYMYJyuewSi0gyls+z6AiP5d30DuI6GLpOKp1iy9Zt/Hb5y0OiFYaFcFOWZcqVCpMmTuCJRx6kqamRckgz9Oc/DBw3j3EskUiQSiYplUrs3befLVu3sXPXbjo6DtHd3Y1pmt4mlsjWZDht1CgmTJjAjOnTmNo6hebmJhzHoVQuu5VPWT5ie5xlWdTV1bL692v51t3fxjRNzlm0kG/d+VUcR2Ca4RNQTsCQGqb6sx2XCc03DcViiY5Dh+joOERPTw+abgT+UjaboamxkaamRurr6tyzo5rmck57VLz+yWvbZ2G1Xd9BOC6XkuMINK3C71as4mBb+6kLhCBMLBY54/QZPPS336e+vo5SqeyeeaS6SBBoijCfouMgKwrxeIxEPOGqfcvCMAyPl9AFQiwWIxGPu5rItjB0wz1j4QFSHMmhASzbpqYmy/btO7n9q3dSKBRIJpP09vayZPGFfP2rt2PbtldncJM6/tH+MBCcEKOaYzsB05mPeiHAti3wiDZNy6XV851D9/qlQAv4jbN+nsWn47Vtl21O13SWr3iZ3Xv2kUwOTWf1sBFu+omZAwcP8sYbb3HOooWMaG4OpWiraNX6gOCBQvJsuWlZ6JqGFmYkw7O33mL6n5uGGWQGB3A596tI2pZFbW0tu3bt4c677uHdrm6SHh9zMplkx45d7Nu/n/nzzyIRj6PrelCHCKesfeo7v5nFf88wTDSPoFPXdXRNQzcM96G7rO1hIjBHuA6h7bjmwOeN9D83TdPLwRR5afkK9h84OKTt9cPKvOqDoa29nZWr1zBj+lRaWiajh0isB3Mi+8elsvfoH/f735NCn0uD1EOqC2WutmloaGDd+g3c+a17OHy4s+pMoxCCVCrJzl272bp1G2fOOoP6+jqXI9G/34L/8OhxReBMehoiODYnqojBXcJMpxoEPsWuRxwqPDLOPmJOlzyrvb2dl367gsOdncfNtHpCgRAGQ28ux4svLSeRiDNn9pmoXmnXJ7UOg0H08+gDSr73mlULU/CGxuG2zMVIp9P896+e477v/DWFQmHQ8wr+XVja2tt5/Q9v0NzYxPjx44LdHnApO2GS7RDHsuOzrvfdqMPnVnbtvLf4njlxfL/Advoo9ywbWXYbhDds3MyqVWsolctD0gR8woEQFKZiMRzH4eWVq9m6bQctLZMZN24sjhCYXpw+aBgkHfuJgv6OqE/kWVNbw+HOTh565HF+/NTTyJJ0VIYyP9NYLJZY+8prvNvVxbixYwOqH9N07bbjaYGASDuk0m2Pld32TUiIV9lxbCzLDvwMl2/RDjG6SBw6dJiVq9eyYcMm8HIkw9Eyd0Lv1+Cr8EKxSDab5aqPXcGNN17H+LFjXV9A14O4OEwzNxhABrzv8y57lTrhTWYsHiOVTJHL5Xj+1y/yz//y/2hr66C2tuY9n7vw/0+pXKa5qYmLli5m4YL5NDY2YJm+A9t3PwY3HBaBvRce2YYfefTR67o5Asd2EBI4lo3kkZAd7jzMli3b2LptB7quD7kpOKlACFfWLNumWCoxauRILlq6mMsuXcaM6dNIJhKYlund2c0ekDAZ7M4o1Ukhl7w7HnPp9ts7Oljx8ir+59nn2b5j53u6ScfRwmLTtDAMnebmJs6aO4c5Z87itNNGByl1wzSrGml9IDie5hDezg8zugdAK5Vpb29nx85d7N6ztypbOdyNsyftnk6SBLKsYBgmlUqZTCbDGTNPZ9GiBcydfSbjx4+jvq7OZV6VpKqbXvhdqf5tftzbA0oIR6DpOocPd7J123bWrH2F1//wBh0dh4jH4wFLy/FMqq+pTNPEMAySySSnnTaa1pYWxo8fR2NjA5lMhlhMDfIlIuRUutlBC9u7GUc+n6e7u4eOQ4c4cOAgne92YVnWCQPASQdC/4KLbdtUNC1gTB81ciQTJ05gwvhxjB0zhubmJlLpFDXZrNdD4NrbYrFIT28vhw93cuBgG3v37mPf/gN0d3djOw6pZDLwA4aUsjZE92t6WkBRFNLpFDU1Ne4jmyUej5FKpVzb7giKpRKaVqFUrlAqlsgXClQqleDOMur7rLF84IHQX/X6x+1N03PGHJf0WpHdezXE47Eqs+DfHNQvCKmqQjwe9yaUqvrAcILZX7yqkFD0v38MQf7E95fCN/2sMnUnWE6pO8GGvfd4PEYiEffs58CbZfkLkEgkSCaTg97l5URJeFx+trPanxH0b70e9CDuSZRT9t7Q73WCTpWJHMyBHXRcp+hhqehu8ZFEQIgkAkIkERAiiYAQSQSESCIgRBIBIZIICJFEQIgkAkIkERAiiYAQSQSESCIgRBIBIZIICJFEQIgkAkIkERAiiYAQSQSESCIgRBIBIZIICJFEQIgkAkIkERAiiYAQSQSESCIgRBIBIZJTXf4/zZwatqz68awAAAAASUVORK5CYII=" alt="GC" style="height:48px;width:48px;border-radius:10px;display:block;"></div>
-    <div class="login-subtitle">後台管理系統 v1.6.0</div>
+    <div class="login-subtitle">後台管理系統 v1.6.2</div>
     <div class="form-group">
       <label>電子信箱</label>
       <input type="email" id="login-email" placeholder="請輸入 Email" autocomplete="email">
@@ -1010,8 +1317,13 @@ body.gc-viewer #main-topbar::after {
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
     </button>
     <div class="topbar-logo"><img src="data:image/png;base64,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" alt="GC"></div>
-    <div class="topbar-badge">後台 v1.6.0</div>
+    <div class="topbar-badge">後台 v1.6.2</div>
   </div>
+  <!-- 收合鈕放在頂欄（sylvia 2026-09-14：要像 Claude 放上面那條）。
+       絕對定位：展開時站在側欄那一格的右緣，收合時貼著窄軌右邊。 -->
+  <button class="nav-collapse" id="nav-collapse" type="button" aria-label="收合選單" title="收合選單" onclick="toggleMini()">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9.5 4v16"/></svg>
+  </button>
   <div class="topbar-right">
     <div class="topbar-user" onclick="doLogout()">
       <div class="user-avatar" id="topbar-avatar">S</div>
@@ -1030,24 +1342,26 @@ body.gc-viewer #main-topbar::after {
   <!-- SIDEBAR -->
   <aside class="sidebar">
 
+    <div class="nav-scroll">
+
     <!-- 資料管理 -->
     <div class="nav-group">
       <div class="nav-group-label">資料管理</div>
-      <div class="nav-item active" onclick="navigate(this, 'customers')">
+      <div class="nav-item active" onclick="navigate(this, 'customers')" data-label="客戶資料">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="7" r="3"/><path d="M3 17c0-3.314 3.134-6 7-6s7 2.686 7 6"/></svg>
-        客戶資料
+        <span class="nav-label">客戶資料</span>
       </div>
-      <div class="nav-item" onclick="navigate(this, 'service_providers')">
+      <div class="nav-item" onclick="navigate(this, 'service_providers')" data-label="服務商資料">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="7" width="14" height="11" rx="2"/><path d="M7 7V5a3 3 0 016 0v2"/></svg>
-        服務商資料
+        <span class="nav-label">服務商資料</span>
       </div>
-      <div class="nav-item" onclick="navigate(this, 'service_provider_services')">
+      <div class="nav-item" onclick="navigate(this, 'service_provider_services')" data-label="服務商項目庫">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M4 10h12M4 15h8"/><circle cx="17" cy="15" r="1.5" fill="currentColor" stroke="none"/></svg>
-        服務商項目庫
+        <span class="nav-label">服務商項目庫</span>
       </div>
-      <div class="nav-item" onclick="navigate(this, 'business_partners')">
+      <div class="nav-item" onclick="navigate(this, 'business_partners')" data-label="商務夥伴資料">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M17 20a5 5 0 00-10 0"/><path d="M19 13a3 3 0 11-6 0"/><path d="M21 20a3 3 0 00-6 0"/></svg>
-        商務夥伴資料
+        <span class="nav-label">商務夥伴資料</span>
       </div>
     </div>
 
@@ -1056,13 +1370,13 @@ body.gc-viewer #main-topbar::after {
     <!-- 專案管理 -->
     <div class="nav-group">
       <div class="nav-group-label">專案管理</div>
-      <div class="nav-item" onclick="navigate(this, 'projects')">
+      <div class="nav-item" onclick="navigate(this, 'projects')" data-label="專案管理">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/></svg>
-        專案管理
+        <span class="nav-label">專案管理</span>
       </div>
-      <div class="nav-item" onclick="navigate(this, 'project_matches')">
+      <div class="nav-item" onclick="navigate(this, 'project_matches')" data-label="合作紀錄">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v14M3 10h14"/><circle cx="10" cy="10" r="7"/></svg>
-        合作紀錄
+        <span class="nav-label">合作紀錄</span>
       </div>
     </div>
 
@@ -1071,25 +1385,25 @@ body.gc-viewer #main-topbar::after {
     <!-- 貨盤管理 -->
     <div class="nav-group">
       <div class="nav-group-label">貨盤管理</div>
-      <div class="nav-item" onclick="navigate(this, 'suppliers')">
+      <div class="nav-item" onclick="navigate(this, 'suppliers')" data-label="品牌方">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7l7-4 7 4v6l-7 4-7-4z"/><path d="M3 7l7 4 7-4"/></svg>
-        品牌方
+        <span class="nav-label">品牌方</span>
       </div>
-      <div class="nav-item" onclick="navigate(this, 'products')">
+      <div class="nav-item" onclick="navigate(this, 'products')" data-label="商品清單">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="14" height="12" rx="2"/><path d="M3 8h14M8 4v12"/></svg>
-        商品清單
+        <span class="nav-label">商品清單</span>
       </div>
-      <div class="nav-item" onclick="navigate(this, 'shelf_life')">
+      <div class="nav-item" onclick="navigate(this, 'shelf_life')" data-label="效期標準">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14"/><path d="M7 2v3M13 2v3"/><path d="M8.5 12l1.4 1.4L13.5 10" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        效期標準
+        <span class="nav-label">效期標準</span>
       </div>
-      <div class="nav-item" onclick="navigate(this, 'export_logs')">
+      <div class="nav-item" onclick="navigate(this, 'export_logs')" data-label="匯出紀錄">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v9m0 0l-3-3m3 3l3-3"/><path d="M4 14v2a1 1 0 001 1h10a1 1 0 001-1v-2"/></svg>
-        匯出紀錄
+        <span class="nav-label">匯出紀錄</span>
       </div>
-      <div class="nav-item" onclick="navigate(this, 'orders')">
+      <div class="nav-item" onclick="navigate(this, 'orders')" data-label="訂購管理">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 4h8a1 1 0 011 1v11l-5-2.5L5 16V5a1 1 0 011-1z"/><path d="M8 8h4"/></svg>
-        訂購管理
+        <span class="nav-label">訂購管理</span>
       </div>
     </div>
 
@@ -1098,21 +1412,21 @@ body.gc-viewer #main-topbar::after {
     <!-- 財務管理 -->
     <div class="nav-group">
       <div class="nav-group-label">財務管理</div>
-      <div class="nav-item" onclick="navigate(this, 'financial_records')">
+      <div class="nav-item" onclick="navigate(this, 'financial_records')" data-label="帳務紀錄">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="16" height="12" rx="2"/><path d="M2 9h16"/><circle cx="7" cy="13" r="1" fill="currentColor" stroke="none"/></svg>
-        帳務紀錄
+        <span class="nav-label">帳務紀錄</span>
       </div>
-      <div class="nav-item" onclick="navigate(this, 'commission_records')">
+      <div class="nav-item" onclick="navigate(this, 'commission_records')" data-label="商務分潤紀錄">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2v4m0 8v4M4.93 4.93l2.83 2.83m4.48 4.48l2.83 2.83M2 10h4m8 0h4M4.93 15.07l2.83-2.83M12.24 7.76l2.83-2.83"/></svg>
-        商務分潤紀錄
+        <span class="nav-label">商務分潤紀錄</span>
       </div>
-      <div class="nav-item" onclick="navigate(this, 'payout_docs')">
+      <div class="nav-item" onclick="navigate(this, 'payout_docs')" data-label="勞務報酬單">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 2h7l3 3v13a1 1 0 01-1 1H5a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M12 2v4h3"/><path d="M7 11h6M7 14h4"/></svg>
-        勞務報酬單
+        <span class="nav-label">勞務報酬單</span>
       </div>
-      <div class="nav-item" onclick="navigate(this, 'commission_rules')">
+      <div class="nav-item" onclick="navigate(this, 'commission_rules')" data-label="分潤規則">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 10h10M5 6h6M5 14h8"/><rect x="1" y="2" width="18" height="16" rx="2"/></svg>
-        分潤規則
+        <span class="nav-label">分潤規則</span>
       </div>
     </div>
 
@@ -1121,21 +1435,21 @@ body.gc-viewer #main-topbar::after {
     <!-- 官網管理：官網（02 GC 產品版本）表單收進來的資料 -->
     <div class="nav-group">
       <div class="nav-group-label">官網管理</div>
-      <div class="nav-item" onclick="navigate(this, 'web_inquiries')">
+      <div class="nav-item" onclick="navigate(this, 'web_inquiries')" data-label="詢價管理">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h14v9H7l-4 4z" stroke-linejoin="round"/><path d="M7 8h6M7 10.5h4" stroke-linecap="round"/></svg>
-        詢價管理
+        <span class="nav-label">詢價管理</span>
       </div>
-      <div class="nav-item" onclick="navigate(this, 'web_partner_apps')">
+      <div class="nav-item" onclick="navigate(this, 'web_partner_apps')" data-label="服務商申請">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="7" r="3"/><path d="M2.5 17a5.5 5.5 0 0111 0"/><path d="M15 6v6M12 9h6" stroke-linecap="round"/></svg>
-        服務商申請
+        <span class="nav-label">服務商申請</span>
       </div>
-      <div class="nav-item" onclick="navigate(this, 'web_forms')">
+      <div class="nav-item" onclick="navigate(this, 'web_forms')" data-label="需求診斷表">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="12" height="15" rx="2"/><path d="M8 2h4v3H8z"/><path d="M7 9h6M7 12h6M7 15h3" stroke-linecap="round"/></svg>
-        需求診斷表
+        <span class="nav-label">需求診斷表</span>
       </div>
-      <div class="nav-item" onclick="navigate(this, 'blog_posts')">
+      <div class="nav-item" onclick="navigate(this, 'blog_posts')" data-label="部落格文章">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h9l3 3v11a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M12 3v4h4M6 11h8M6 14h5" stroke-linecap="round"/></svg>
-        部落格文章
+        <span class="nav-label">部落格文章</span>
       </div>
     </div>
 
@@ -1144,15 +1458,17 @@ body.gc-viewer #main-topbar::after {
     <!-- 平台管理 -->
     <div class="nav-group" id="platform-nav-group">
       <div class="nav-group-label">平台管理</div>
-      <div class="nav-item" onclick="navigate(this, 'admin_users')">
+      <div class="nav-item" onclick="navigate(this, 'admin_users')" data-label="帳號管理">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="8" r="3"/><path d="M3.5 18a7 7 0 0113 0"/><path d="M15 5l1.5 1.5L19 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        帳號管理
+        <span class="nav-label">帳號管理</span>
       </div>
-      <div class="nav-item" onclick="navigate(this, 'referrers')">
+      <div class="nav-item" onclick="navigate(this, 'referrers')" data-label="介紹人管理">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="2.6"/><path d="M2.5 17a5 5 0 019 0"/><path d="M13 5.5h5M13 9h5M13 12.5h3.5" stroke-linecap="round"/></svg>
-        介紹人管理
+        <span class="nav-label">介紹人管理</span>
       </div>
     </div>
+
+    </div><!-- /.nav-scroll -->
 
   </aside>
 
@@ -1327,6 +1643,7 @@ function enterApp(user) {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('main-topbar').style.display = 'flex';
   document.getElementById('main-layout').style.display = 'flex';
+  restoreMini();   // 還原上次的側欄收合狀態
 
   // 依身份組顯示 / 隱藏平台管理
   document.getElementById('platform-nav-group').style.display = (user.role === '0') ? '' : 'none';
@@ -1530,6 +1847,152 @@ var adminSearch = '';
 function toggleNav() { document.body.classList.toggle('nav-open'); }
 function closeNav() { document.body.classList.remove('nav-open'); }
 
+// ─── 桌機側欄收合（sylvia 2026-09-14）───────────────────────────
+// 收合＝body 加 .nav-mini，側欄縮成 60px 的圖示軌。狀態存 localStorage，
+// 重新整理後維持；手機的抽屜模式由 CSS @media 整個還原，這裡不用特別判斷。
+function applyMini(on) {
+  document.body.classList.toggle('nav-mini', !!on);
+  var b = document.getElementById('nav-collapse');
+  if (b) { var t = on ? '展開選單' : '收合選單'; b.title = t; b.setAttribute('aria-label', t); }
+  _navTipHide();
+}
+function toggleMini() {
+  var on = !document.body.classList.contains('nav-mini');
+  applyMini(on);
+  try { localStorage.setItem('gc_admin_navmini', on ? '1' : '0'); } catch (e) {}
+}
+function restoreMini() {
+  var v = null;
+  try { v = localStorage.getItem('gc_admin_navmini'); } catch (e) {}
+  applyMini(v === '1');
+  // 浮出標籤的 hover 綁定只要做一次（側欄是靜態 HTML，不會重建）
+  if (!restoreMini._bound) {
+    restoreMini._bound = true;
+    document.querySelectorAll('.nav-item').forEach(function (it) {
+      it.addEventListener('mouseenter', function () { _navTipShow(it); });
+      it.addEventListener('mouseleave', _navTipHide);
+    });
+    var sc = document.querySelector('.nav-scroll');
+    if (sc) sc.addEventListener('scroll', _navTipHide);
+    _tbStart();   // 手機：工具列操作收成「⋯」
+  }
+}
+// 收合後的浮出標籤。.nav-scroll 是捲動容器會把側欄外的東西裁掉，所以標籤
+// 掛在 .layout（position:relative）上。位置用 offsetTop 算 —— body 有
+// zoom:0.95，getBoundingClientRect 回傳的是縮放後座標，拿來定位會偏掉。
+function _navTipShow(el) {
+  if (!document.body.classList.contains('nav-mini')) return;
+  var lay = document.getElementById('main-layout'); if (!lay || !el) return;
+  var tip = document.getElementById('nav-tip');
+  if (!tip) { tip = document.createElement('div'); tip.id = 'nav-tip'; lay.appendChild(tip); }
+  tip.textContent = el.getAttribute('data-label') || el.textContent.trim();
+  var sc = el.parentNode && el.parentNode.parentNode;   // .nav-item → .nav-group → .nav-scroll
+  var scTop = (sc && sc.classList && sc.classList.contains('nav-scroll')) ? sc.scrollTop : 0;
+  tip.style.left = 'calc(var(--sidebar-mini-w) + 8px)';
+  tip.style.top = (el.offsetTop - scTop + el.offsetHeight / 2 - tip.offsetHeight / 2) + 'px';
+  tip.classList.add('on');
+}
+function _navTipHide() { var t = document.getElementById('nav-tip'); if (t) t.classList.remove('on'); }
+
+// ─── 手機：工具列的操作按鈕收成一顆「⋯」（sylvia 2026-09-14）──────────────
+// 桌機完全不動。手機把 .toolbar-right 裡的按鈕整批藏起來、只露出一顆 ⋯，
+// 點下去從螢幕底部彈出清單。工具列因此只剩一列：左邊搜尋＋篩選可左右滑、
+// 右邊 ⋯ 釘住不動。
+//
+// 🔑 面板裡的每一項是「叫原本那顆按鈕 .click()」，不是複製它的 onclick ——
+//    所以之後任何頁面新增工具列按鈕都會自動被收進來，不用再回來改這裡。
+//    （display:none 的元素用 .click() 一樣會觸發，實測過。）
+// 🔑 用 MutationObserver 而不是在 renderPage() 裡呼叫：renderPage() 只是把工作
+//    丟給非同步的 load*()，畫面是之後才畫出來的，在那裡呼叫會抓不到工具列。
+var TB_MQ = '(max-width: 768px), (orientation: landscape) and (max-height: 500px)';
+function _tbMobile() { return window.matchMedia(TB_MQ).matches; }
+
+function _tbActs(tr) {
+  return [].slice.call(tr.children).filter(function (el) {
+    return el.nodeType === 1 && !el.classList.contains('tb-more') &&
+           (el.classList.contains('btn') || el.tagName === 'BUTTON' || el.tagName === 'A');
+  });
+}
+
+function _tbSync() {
+  var mob = _tbMobile();
+  // 篩選列：有超出才掛淡出（見 .toolbar-left.tl-scroll）
+  document.querySelectorAll('.toolbar-left').forEach(function (tl) {
+    tl.classList.toggle('tl-scroll', mob && tl.scrollWidth > tl.clientWidth + 1);
+  });
+  document.querySelectorAll('.toolbar-right').forEach(function (tr) {
+    var more = tr.querySelector('.tb-more');
+    var acts = _tbActs(tr);
+    // 只有兩顆以上才值得收；一顆就直接露出來，收進 ⋯ 反而多一步
+    if (mob && acts.length >= 2) {
+      if (!tr.classList.contains('tb-collapsed')) {
+        // ⚠️ 一定要在加 .tb-collapsed 之前記下可見狀態 ——
+        //    檢視者（body.gc-viewer）的寫入按鈕本來就被 CSS 藏著，
+        //    收起來之後就分不出「誰是被我藏的」「誰是本來就不該出現的」。
+        acts.forEach(function (el) {
+          el.setAttribute('data-tb-vis', getComputedStyle(el).display === 'none' ? '0' : '1');
+        });
+        tr.classList.add('tb-collapsed');
+      }
+      if (!more) {
+        more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'btn btn-secondary tb-more';
+        more.title = '更多操作';
+        more.setAttribute('aria-label', '更多操作');
+        more.textContent = '\u22ef';
+        more.onclick = function (e) { e.stopPropagation(); _tbOpen(tr); };
+        tr.appendChild(more);
+      }
+    } else {
+      tr.classList.remove('tb-collapsed');
+      if (more) more.remove();
+    }
+  });
+}
+
+function _tbOpen(tr) {
+  var ov = document.getElementById('tb-sheet');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'tb-sheet';
+    ov.innerHTML = '<div class="tb-panel"><div class="tb-hd">操作</div><div class="tb-body"></div></div>';
+    ov.addEventListener('click', function (e) { if (e.target === ov) _tbClose(); });
+    document.body.appendChild(ov);
+  }
+  var body = ov.querySelector('.tb-body');
+  body.innerHTML = '';
+  _tbActs(tr).forEach(function (el) {
+    if (el.getAttribute('data-tb-vis') === '0') return;          // 檢視者看不到的就別列出來
+    var txt = (el.textContent || '').trim();
+    if (!txt) return;
+    var row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'tb-act' + (el.classList.contains('btn-primary') ? ' tb-act-p' : '');
+    row.textContent = txt;
+    row.onclick = function () { _tbClose(); setTimeout(function () { el.click(); }, 0); };
+    body.appendChild(row);
+  });
+  ov.classList.add('on');
+}
+function _tbClose() { var ov = document.getElementById('tb-sheet'); if (ov) ov.classList.remove('on'); }
+
+function _tbStart() {
+  if (_tbStart._on) return;
+  _tbStart._on = true;
+  var main = document.getElementById('main-content');
+  if (main) {
+    var t = null;
+    new MutationObserver(function () {
+      clearTimeout(t);
+      t = setTimeout(_tbSync, 60);   // 一次渲染會有很多次變動，收斂成一次
+    }).observe(main, { childList: true, subtree: true });
+  }
+  try { window.matchMedia(TB_MQ).addEventListener('change', _tbSync); }
+  catch (e) { window.addEventListener('resize', _tbSync); }   // 舊 Safari 沒有 addEventListener
+  _tbSync();
+}
+
 // ─── 導覽 ───────────────────────────────────────────────
 function navigate(el, pageKey) {
   document.querySelectorAll('.nav-item').forEach(function(i){ i.classList.remove('active'); });
@@ -1552,7 +2015,7 @@ var VIEW_STATE = {
   commission_records:        { vars:['crecPage','crecSearch','crecFilterUnpaid'], ms:[] },
   financial_records:         { vars:['finPage'], ms:[], objs:['finFilter'] },
   payout_docs:               { vars:['lfdPage','lfdSearch','lfdYear','lfdStatus','lfdIncome','lfdSummary'], ms:[] },
-  products:                  { vars:['hpProdPage','hpFSearch'], ms:['hp-reg','hp-cat','hp-brand','hp-win','hp-con','hp-pub'] },
+  products:                  { vars:['hpProdPage','hpFSearch'], ms:['hp-reg','hp-cat','hp-brand','hp-win','hp-con','hp-pub','hp-live'] },
   suppliers:                 { vars:['hpSupPage','hpSupSearch'], ms:[] },
   export_logs:               { vars:['hpExpLogPage'], ms:[] },
   orders:                    { vars:['ordLedgerPage','ordLedgerSearch','ordFilterFrom','ordFilterTo'], ms:['ord-status','ord-cust','ord-contact'] },
@@ -1640,7 +2103,7 @@ function renderPage(pageKey) {
     '<div class="toolbar"><div class="toolbar-left">' +
       '<div class="search-box"><svg class="search-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M15 15l3 3" stroke-linecap="round"/></svg><input type="text" placeholder="搜尋…"></div>' +
     '</div><div class="toolbar-right">' +
-      '<button class="btn btn-primary"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg> 新增資料</button>' +
+      '<button class="btn btn-primary">新增資料</button>' +
     '</div></div>' +
     '<div class="table-card"><div class="table-wrap"><table>' +
       '<thead><tr><th>ID</th><th>欄位待定</th><th>狀態</th><th>建立時間</th><th style="width:80px;text-align:right;">操作</th></tr></thead>' +
@@ -1714,7 +2177,7 @@ function renderCustomers() {
 
   if (!document.getElementById('customer-table')) {
     var addBtn = isAdmin
-      ? '<button class="btn btn-primary" onclick="addCustomer()"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg> 新增客戶</button>'
+      ? '<button class="btn btn-primary" onclick="addCustomer()">新增客戶</button>'
       : '';
 
     main.innerHTML =
@@ -2089,7 +2552,7 @@ function renderServiceProviders() {
 
   if (!document.getElementById('sp-table')) {
     var addBtn = isAdmin
-      ? '<button class="btn btn-primary" onclick="addServiceProvider()"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg> 新增服務商</button>'
+      ? '<button class="btn btn-primary" onclick="addServiceProvider()">新增服務商</button>'
       : '';
 
     main.innerHTML =
@@ -2520,7 +2983,7 @@ function renderBusinessPartners() {
 
   if (!document.getElementById('bp-table')) {
     var addBtn = isAdmin
-      ? '<button class="btn btn-primary" onclick="addBusinessPartner()"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg> 新增夥伴</button>'
+      ? '<button class="btn btn-primary" onclick="addBusinessPartner()">新增夥伴</button>'
       : '';
 
     main.innerHTML =
@@ -3369,7 +3832,7 @@ function renderAdminUsers() {
     '<div class="toolbar"><div class="toolbar-left">' +
       '<div class="search-box"><svg class="search-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M15 15l3 3" stroke-linecap="round"/></svg><input id="admin-search-input" type="text" placeholder="搜尋名稱／Email…" value="' + _esc(adminSearch) + '" oninput="adminDoSearch(this.value)"></div>' +
     '</div><div class="toolbar-right">' +
-      '<button class="btn btn-primary" onclick="addAdminUser()"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg> 新增帳號</button>' +
+      '<button class="btn btn-primary" onclick="addAdminUser()">新增帳號</button>' +
     '</div></div>' +
     '<div class="table-card"><div class="table-wrap"><table>' +
       '<thead><tr>' +
@@ -3567,7 +4030,7 @@ function _downloadCsv(filename,header,rows){
 // 共用「匯出 CSV」按鈕 HTML
 function _exportBtn(fnName){
   return '<button class="btn btn-secondary" onclick="'+fnName+'()" style="display:inline-flex;align-items:center;gap:6px;">'+
-    '<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>匯出 CSV</button>';
+    '匯出 CSV</button>';
 }
 
 // ════════════ 通用多選下拉篩選元件 ════════════
@@ -3578,12 +4041,25 @@ function msReset(){ for(var i=0;i<arguments.length;i++) MS[arguments[i]]=[]; }
 function _msLabelOf(id,v){ var o=(_msMeta[id]&&_msMeta[id].opts)||[]; for(var i=0;i<o.length;i++) if(String(o[i].v)===String(v)) return o[i].l; return v; }
 function _msText(id){ var a=msSel(id); var meta=_msMeta[id]||{}; return a.length===0?(meta.allLabel||'全部'):(a.length===1?_msLabelOf(id,a[0]):a.length+' 項'); }
 // 渲染一個多選下拉。opts:[{v,l}]；updateFn：選取變動後呼叫的全域函式名
-function msDropdown(id, allLabel, opts, updateFn, searchable){
-  _msMeta[id]={allLabel:allLabel, opts:opts};
+/* groupOf（選填）：v => 群組名稱。給了就依 opts 的原始順序插入群組標題，
+   每組右邊一個「全選／取消」。選項的索引不變，msToggleIdx 照舊。
+   目前只有「直播地區」在用（71 個選項、13 個國家），其他頁不傳＝完全不受影響。 */
+function msDropdown(id, allLabel, opts, updateFn, searchable, groupOf){
+  _msMeta[id]={allLabel:allLabel, opts:opts, groupOf:(typeof groupOf==='function'?groupOf:null)};
   var a=msSel(id);
+  var gf=_msMeta[id].groupOf, lastG=null;
   var items=opts.length? opts.map(function(o,i){
-    var checked=a.indexOf(String(o.v))>=0;
-    return '<label class="ms-item" data-l="'+_esc(String(o.l).toLowerCase())+'" style="display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;font-size:12.5px;white-space:nowrap;" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">'+
+    var checked=a.indexOf(String(o.v))>=0, head='';
+    if(gf){
+      var gname=gf(o.v)||'其他';
+      if(gname!==lastG){
+        lastG=gname;
+        head='<div class="ms-grp" data-g="'+_esc(gname)+'"><span>'+_esc(gname)+'</span>'+
+          '<button type="button" onclick="event.stopPropagation();msGroupToggle(\''+id+'\',\''+_esc(gname)+'\',\''+(updateFn||'')+'\')">'+
+          (_msGroupAllOn(id,gname)?'取消':'全選')+'</button></div>';
+      }
+    }
+    return head+'<label class="ms-item" data-l="'+_esc(String(o.l).toLowerCase())+'" style="display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;font-size:12.5px;white-space:nowrap;" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">'+
       '<input type="checkbox" '+(checked?'checked':'')+' onchange="msToggleIdx(\''+id+'\','+i+',\''+(updateFn||'')+'\')" style="width:14px;height:14px;cursor:pointer;flex-shrink:0;">'+_esc(o.l)+'</label>';
   }).join('') : '<div style="padding:10px 14px;font-size:12px;color:var(--text-dim);">無資料</div>';
   var _msClearBtn='<button class="btn btn-secondary" onclick="msClear(\''+id+'\',\''+(updateFn||'')+'\')" style="font-size:11.5px;padding:3px 10px;flex-shrink:0;">清除</button>';
@@ -3601,6 +4077,45 @@ function msDropdown(id, allLabel, opts, updateFn, searchable){
     '</div>'+
   '</div>';
 }
+// 某一組是不是全勾了（決定按鈕要寫「全選」還是「取消」）
+function _msGroupValues(id,g){
+  var meta=_msMeta[id]; if(!meta||!meta.groupOf) return [];
+  var gf=meta.groupOf;
+  return meta.opts.filter(function(o){ return (gf(o.v)||'其他')===g; }).map(function(o){ return String(o.v); });
+}
+function _msGroupAllOn(id,g){
+  var vs=_msGroupValues(id,g); if(!vs.length) return false;
+  var a=msSel(id);
+  return vs.every(function(v){ return a.indexOf(v)>=0; });
+}
+// 整組全選／取消。不重畫整個面板（會把捲動位置與搜尋字丟掉），只改勾勾與按鈕字樣。
+function msGroupToggle(id,g,updateFn){
+  var vs=_msGroupValues(id,g); if(!vs.length) return;
+  var a=msSel(id), allOn=_msGroupAllOn(id,g);
+  vs.forEach(function(v){
+    var i=a.indexOf(v);
+    if(allOn){ if(i>=0) a.splice(i,1); }
+    else if(i<0) a.push(v);
+  });
+  _msRepaint(id); _msSync(id);
+  if(updateFn&&window[updateFn]) window[updateFn]();
+}
+// 把面板裡的勾勾與群組按鈕字樣重新對齊 MS[]（不動 DOM 結構）
+function _msRepaint(id){
+  var meta=_msMeta[id]; if(!meta) return;
+  var box=document.getElementById('ms-items-'+id); if(!box) return;
+  var a=msSel(id);
+  box.querySelectorAll('.ms-item').forEach(function(el,i){
+    var o=meta.opts[i]; if(!o) return;
+    var cb=el.querySelector('input[type=checkbox]');
+    if(cb) cb.checked=a.indexOf(String(o.v))>=0;
+  });
+  if(!meta.groupOf) return;
+  box.querySelectorAll('.ms-grp').forEach(function(h){
+    var b=h.querySelector('button'); if(!b) return;
+    b.textContent=_msGroupAllOn(id,h.getAttribute('data-g'))?'取消':'全選';
+  });
+}
 // 面板內即時過濾選項（依標籤關鍵字）
 function msFilter(id,q){
   q=(q||'').trim().toLowerCase();
@@ -3610,9 +4125,27 @@ function msFilter(id,q){
     var l=el.getAttribute('data-l')||''; var show=(!q||l.indexOf(q)>=0);
     el.style.display=show?'':'none'; if(show) any=true;
   });
+  // 群組標題：底下一個可見選項都沒有就一起藏，不然會剩一排孤兒標題
+  box.querySelectorAll('.ms-grp').forEach(function(h){
+    var vis=false, el=h.nextElementSibling;
+    while(el && el.classList && el.classList.contains('ms-item')){
+      if(el.style.display!=='none'){ vis=true; break; }
+      el=el.nextElementSibling;
+    }
+    h.style.display=vis?'':'none';
+  });
   var none=document.getElementById('ms-none-'+id);
   if(!any){ if(!none){ none=document.createElement('div'); none.id='ms-none-'+id; none.style.cssText='padding:10px 14px;font-size:12px;color:var(--text-dim);'; none.textContent='無符合項目'; box.appendChild(none); } none.style.display=''; }
   else if(none){ none.style.display='none'; }
+}
+// 有沒有任何底部面板開著 → body.ms-open。
+// 用途見上面那條 CSS：手機的篩選列淡出（mask-image）會把 fixed 的面板一起遮掉。
+function _msFlag(){
+  var any=false;
+  document.querySelectorAll('[id^="ms-panel-"]').forEach(function(p){ if(p.style.display==='block') any=true; });
+  var f=document.getElementById('hp-filt-panel');
+  if(f && f.style.display==='block') any=true;
+  document.body.classList.toggle('ms-open', any);
 }
 function msOpen(id){
   var panel=document.getElementById('ms-panel-'+id); if(!panel) return;
@@ -3620,23 +4153,27 @@ function msOpen(id){
   document.querySelectorAll('[id^="ms-panel-"]').forEach(function(p){ p.style.display='none'; });
   if(!open){ panel.style.display='block'; setTimeout(function(){ document.addEventListener('click',_msOutside); var s=document.getElementById('ms-search-'+id); if(s) s.focus(); },0); }
   else { document.removeEventListener('click',_msOutside); }
+  _msFlag();
 }
 function _msOutside(e){
   var inside=false;
   document.querySelectorAll('[id^="ms-wrap-"]').forEach(function(w){ if(w.contains(e.target)) inside=true; });
   if(!inside){ document.querySelectorAll('[id^="ms-panel-"]').forEach(function(p){ p.style.display='none'; }); document.removeEventListener('click',_msOutside); }
+  _msFlag();
 }
 function msToggleIdx(id,idx,updateFn){
   var meta=_msMeta[id]; if(!meta) return;
   var o=meta.opts[idx]; if(!o) return;
   var v=String(o.v); var a=msSel(id); var i=a.indexOf(v);
   if(i<0) a.push(v); else a.splice(i,1);
+  if(meta.groupOf) _msRepaint(id);   // 勾到滿／取消時，該組按鈕要在「全選」「取消」之間切換
   _msSync(id); if(updateFn&&window[updateFn]) window[updateFn]();
 }
 function msClear(id,updateFn){
   MS[id]=[];
   var panel=document.getElementById('ms-panel-'+id);
   if(panel) panel.querySelectorAll('input[type=checkbox]').forEach(function(cb){ cb.checked=false; });
+  if(_msMeta[id]&&_msMeta[id].groupOf) _msRepaint(id);
   _msSync(id); if(updateFn&&window[updateFn]) window[updateFn]();
 }
 function _msSync(id){
@@ -3901,7 +4438,7 @@ function renderSvcCatalog(){
       msDropdown('svc-status','全部狀態',[{v:'active',l:'啟用'},{v:'inactive',l:'停用'}],'_svcApply')+
       msDropdown('svc-cur','全部幣別',MS_CUR_OPTS,'_svcApply')+
     '</div>'+
-    '<div class="toolbar-right" style="display:flex;gap:8px;">'+_exportBtn('exportSvcCatalog')+'<button class="btn btn-primary" onclick="openSvcModal(null,true)"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg> 新增項目</button></div></div>'+
+    '<div class="toolbar-right" style="display:flex;gap:8px;">'+_exportBtn('exportSvcCatalog')+'<button class="btn btn-primary" onclick="openSvcModal(null,true)">新增項目</button></div></div>'+
     '<div class="table-card"><div class="table-wrap"><table id="svc-table"></table></div><div id="svc-pager" class="pagination"></div></div>';
   updateSvcTable();
 }
@@ -4185,7 +4722,7 @@ function renderProjects(){
       '<span style="color:var(--text-dim);font-size:12px;align-self:center;">~</span>'+
       '<input type="date" '+ds+' value="'+_esc(projFilterTo)+'" title="建立迄日" onchange="projSetFilter(\'to\',this.value)">'+
     '</div>'+
-    '<div class="toolbar-right" style="display:flex;gap:8px;">'+_exportBtn('exportProjects')+'<button class="btn btn-primary" onclick="openProjectWizard(null)"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg> 新增專案</button></div></div>'+
+    '<div class="toolbar-right" style="display:flex;gap:8px;">'+_exportBtn('exportProjects')+'<button class="btn btn-primary" onclick="openProjectWizard(null)">新增專案</button></div></div>'+
     '<div class="table-card"><div class="table-wrap"><table id="proj-table" style="min-width:max-content;width:100%;"></table></div><div id="proj-pager" class="pagination"></div></div>';
   updateProjTable();
 }
@@ -7864,7 +8401,7 @@ function _wizFinHtml(){
   var sorted=fr.slice().sort(function(a,b){ return (typeOrder[a.record_type]||9)-(typeOrder[b.record_type]||9); });
   var rows=sorted.map(function(f){
     var cpName=_finCp(f);
-    return '<tr><td>'+_badge(typeLabel[f.record_type]||f.record_type, _finBadgeColor(f))+'</td><td>'+_esc(cpName)+'</td><td style="text-align:right;">'+_money(f.amount_untaxed)+'</td><td style="text-align:right;">'+_money(f.tax)+'</td><td style="text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">'+_money(f.amount)+'</td><td style="color:var(--text-mid);">'+_esc(f.note||'')+'</td></tr>';
+    return '<tr><td>'+_badge(typeLabel[f.record_type]||f.record_type, _finBadgeColor(f))+'</td><td>'+_esc(cpName)+'</td><td style="text-align:right;">'+_money(f.amount_untaxed)+'</td><td style="text-align:right;">'+_money(f.tax)+'</td><td style="text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">'+_money(f.amount)+'</td><td class="cell-clip" style="color:var(--text-mid);" title="'+_esc(f.note||'')+'">'+_esc(f.note||'')+'</td></tr>';
   }).join('');
   return '<div style="font-weight:700;font-size:13px;margin:22px 0 8px;">帳務</div><div class="table-card" style="padding:0;"><div class="table-wrap"><table><thead><tr><th>類別</th><th>對象</th><th style="text-align:right;">未稅</th><th style="text-align:right;">稅</th><th style="text-align:right;">金額</th><th>備註</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
 }
@@ -8881,7 +9418,7 @@ function renderCommissionRecords(){
           return '<option value="'+o[0]+'"'+(crecFilterDocStat===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+
       '</select>'+
       '<button class="btn btn-secondary" onclick="exportCommissionRecords()" style="margin-left:auto;font-size:12.5px;padding:5px 14px;display:flex;align-items:center;gap:6px;">'+
-        '<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>匯出 CSV'+
+        '匯出 CSV'+
       '</button>'+
     '</div>'+
     '<div class="table-card" style="padding:0;"><div class="table-wrap"><table id="crec-table" style="width:100%;border-collapse:collapse;"></table></div><div id="crec-pager" class="pagination" style="padding:12px 16px;"></div></div>';
@@ -11486,7 +12023,7 @@ function renderPayoutDocs(){
       '</select>' +
     '</div><div class="toolbar-right" style="gap:8px;">' +
       '<button class="btn btn-secondary" onclick="_lfdExport()" style="display:inline-flex;align-items:center;gap:6px;">' +
-        '<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>匯出 CSV</button>' +
+        '匯出 CSV</button>' +
       '<button class="btn btn-secondary" id="lfd-sum-btn" onclick="_lfdToggleSummary()">年度扣繳彙總</button>' +
     '</div></div>' +
     '<div class="table-card" style="padding:0;"><div class="table-wrap"><table id="lfd-table" style="width:100%;border-collapse:collapse;"></table></div>' +
@@ -12539,7 +13076,7 @@ function renderFinancialRecords(){
       msDropdown('fin-status','全部狀態',[{v:'pending',l:'待處理'},{v:'paid',l:'已付/收'}],'_finApply')+
       cpDropHtml+
       '<button class="btn btn-secondary" onclick="exportFinancialRecords()" style="margin-left:auto;font-size:12.5px;padding:5px 14px;display:flex;align-items:center;gap:6px;">'+
-        '<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>匯出 CSV'+
+        '匯出 CSV'+
       '</button>'+
     '</div>';
   main.innerHTML=_pageHeader('財務管理','帳務紀錄','financial_records','專案與訂購的所有應收應付，公司的金流去向都在這裡')+
@@ -12637,7 +13174,7 @@ function updateFinTable(){
     var fx=_rowFxInfo(f);
     return '<tr>'+
       '<td class="id-cell">'+(rows.length-(finPage-1)*PAGE_SIZE-idx)+'</td>'+
-      '<td>'+_esc(_finSourceLabel(f))+'</td>'+
+      '<td class="cell-clip" title="'+_esc(_finSourceLabel(f))+'">'+_esc(_finSourceLabel(f))+'</td>'+
       '<td>'+(f.batch_id?_badge('訂購','teal'):_finProjModeBadge(f))+'</td>'+
       '<td>'+_finTypeBadge(f)+'</td>'+
       '<td>'+_esc(_finCp(f))+'</td>'+
@@ -12734,9 +13271,9 @@ function renderSuppliers(){
       '<input type="text" placeholder="搜尋品牌方 / 聯絡窗口 / 地區" value="'+hpEsc(hpSupSearch)+'" oninput="hpSupSearch=this.value;hpSupPage=1;renderSupResults()"></div>'+
       '　'+msDropdown('sup-con','全部聯絡窗口',conOpts,'hpSupFilterChange')+
     '</div><div class="toolbar-right" style="gap:8px;">'+
-      '<button class="btn btn-secondary" onclick="openSupplierImportDialog()">⭳ 批量匯入</button>'+
-      '<button class="btn btn-primary" onclick="openSupplierModal(null,true)">＋ 新增品牌方</button>'+
-      '<button class="btn btn-secondary" onclick="exportSuppliers()" style="display:inline-flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>匯出 CSV</button>'+
+      '<button class="btn btn-secondary" onclick="openSupplierImportDialog()">批量匯入</button>'+
+      '<button class="btn btn-primary" onclick="openSupplierModal(null,true)">新增品牌方</button>'+
+      '<button class="btn btn-secondary" onclick="exportSuppliers()" style="display:inline-flex;align-items:center;gap:6px;">匯出 CSV</button>'+
     '</div></div>'+
     '<div id="sup-results"></div>';
   renderSupResults();
@@ -12765,7 +13302,7 @@ function renderSupResults(){
       '<td>'+(s.settlement_tax==='incl'?'含稅'
              :s.settlement_tax==='excl'?'<span style="color:#b45309;font-weight:600;">未稅</span>'
              :'<span style="color:#9ca3af;">未設定</span>')+'</td>'+
-      '<td>'+hpEsc(s.payment_terms)+'</td>'+
+      '<td class="cell-clip" title="'+hpEsc(s.payment_terms||'')+'">'+hpEsc(s.payment_terms)+'</td>'+
       '<td style="color:#6b7280;white-space:nowrap;">'+hpEsc(s.updated_by||s.created_by||'')+'</td>'+
       '<td style="text-align:right;white-space:nowrap;">'+
         '<button class="btn btn-secondary" style="padding:3px 9px;font-size:12px;" onclick="openSupplierModal(\''+s.id+'\',false)">編輯</button> '+
@@ -12925,7 +13462,7 @@ function renderReferrersPage(){
     '<div class="toolbar"><div class="toolbar-left">'+
       '<div class="search-box"><svg class="search-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M15 15l3 3" stroke-linecap="round"/></svg>'+
       '<input type="text" placeholder="搜尋名稱／備註" value="'+_esc(refSearch)+'" oninput="refSearch=this.value;renderReferrersPage()"></div>'+
-    '</div><div class="toolbar-right"><button class="btn btn-primary" onclick="refAdd()">＋ 新增介紹人</button></div></div>'+
+    '</div><div class="toolbar-right"><button class="btn btn-primary" onclick="refAdd()">新增介紹人</button></div></div>'+
     '<div class="table-card"><div class="table-wrap" style="overflow-x:auto;"><table style="min-width:max-content;width:100%;"><thead><tr>'+
       '<th style="width:80px;white-space:nowrap;">排序</th>'+
       '<th style="white-space:nowrap;">對外顯示名稱</th>'+
@@ -12960,7 +13497,7 @@ function _refRowHtml(r){
     '<td style="white-space:nowrap;">'+_esc(String(r.sort_order==null?'—':r.sort_order))+'</td>'+
     '<td style="white-space:nowrap;"><span class="cell-name">'+_esc(r.display_name||'')+'</span></td>'+
     '<td style="white-space:nowrap;">'+(bp?_esc(bp):'<span style="color:var(--text-dim);">—</span>')+'</td>'+
-    '<td style="white-space:nowrap;">'+(r.note?_esc(r.note):'<span style="color:var(--text-dim);">—</span>')+'</td>'+
+    '<td class="cell-clip" title="'+_esc(r.note||'')+'">'+(r.note?_esc(r.note):'<span style="color:var(--text-dim);">—</span>')+'</td>'+
     '<td>'+_badge(r.is_active===false?'停用':'啟用', r.is_active===false?'gray':'green')+'</td>'+
     '<td style="text-align:right;white-space:nowrap;">'+
       '<button class="btn btn-secondary" style="padding:3px 9px;font-size:12px;" onclick="refEdit('+JSON.stringify(r.id)+')">編輯</button> '+
@@ -13064,8 +13601,8 @@ function renderShelfLife(){
       '<input type="text" placeholder="搜尋類別 / 細項 / 備註" value="'+hpEsc(slSearch)+'" oninput="slSearch=this.value;slApplyFilter()"></div>'+
       '　'+msDropdown('sl-cat','全部類別',HP_CATS.map(function(c){return {v:c,l:c};}),'slApplyFilter')+
     '</div><div class="toolbar-right" style="gap:8px;">'+
-      '<button class="btn btn-primary" onclick="openShelfModal(null,true)">＋ 新增標準</button>'+
-      '<button class="btn btn-secondary" onclick="exportShelfLife()" style="display:inline-flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15h12" stroke-linecap="round"/></svg>匯出 CSV</button>'+
+      '<button class="btn btn-primary" onclick="openShelfModal(null,true)">新增標準</button>'+
+      '<button class="btn btn-secondary" onclick="exportShelfLife()" style="display:inline-flex;align-items:center;gap:6px;">匯出 CSV</button>'+
     '</div></div>'+
     '<div id="sl-results"></div>';
   renderSlResults();
@@ -13268,13 +13805,24 @@ function hpImgPreview(url){ if(!url) return;
 }
 function hpFilteredProducts(){
   var rows=(DB.products||[]).slice();
-  var fReg=msSel('hp-reg'), fCat=msSel('hp-cat'), fBrand=msSel('hp-brand'), fWin=msSel('hp-win'), fCon=msSel('hp-con'), fPub=msSel('hp-pub');
+  var fReg=msSel('hp-reg'), fCat=msSel('hp-cat'), fBrand=msSel('hp-brand'), fWin=msSel('hp-win'), fCon=msSel('hp-con'), fPub=msSel('hp-pub'), fLive=msSel('hp-live');
+  /* 直播地區：商品身上存的一律是城市（「全區」在存檔前就展開掉了，見 hpLiveNormAreas），
+     所以這裡就是單純的「有沒有這個城市」，沒有暗規則。
+     fLive 也跑一次 hpLiveNormAreas —— 換頁記住的舊選取狀態若還留著「<國家>全區」，
+     一併展開，不會突然篩不到。 */
+  if(fLive.length){
+    var want=hpLiveNormAreas(fLive);
+    rows=rows.filter(function(p){
+      var la=hpLiveAreasOf(p);
+      return la.length>0 && want.some(function(a){ return la.indexOf(a)>=0; });
+    });
+  }
   if(fReg.length) rows=rows.filter(function(p){ return (p.stock_regions||[]).some(function(r){return fReg.indexOf(r)>=0;}); });
   if(fCat.length) rows=rows.filter(function(p){ return fCat.indexOf(p.category)>=0; });
   if(fBrand.length) rows=rows.filter(function(p){ return fBrand.indexOf(p.brand)>=0; });
   // 品牌方＝商品的 source_supplier；未填的用 '' 代表「未指定」
   if(fWin.length) rows=rows.filter(function(p){ return fWin.indexOf(String(p.source_supplier||''))>=0; });
-  // 窗口＝由品牌方名稱回查 suppliers 得到的聯絡人；與表格「品牌窗口」欄同源（見 hpContactOf）
+  // 窗口（人）＝由品牌方名稱回查 suppliers 得到的聯絡人；與「品牌方名稱」欄的灰字同源（見 hpContactOf）
   if(fCon.length) rows=rows.filter(function(p){ return fCon.indexOf(String(hpContactOf(p)||''))>=0; });
   // 官網上架狀態：is_public 為 NULL 的舊資料一律視為已上架（資料庫預設就是 true）
   // 兩個都選（或都不選）＝不過濾
@@ -13344,8 +13892,10 @@ function hpRowsHtml(rows){
       '</td></tr>';
   }).join('') : '<tr><td colspan="13" style="text-align:center;color:var(--text-dim);padding:40px;">尚無商品，點右上「新增商品」或「批量匯入」</td></tr>';
 }
-// 商品 → 窗口（聯絡人）：用商品的 source_supplier（＝品牌方名稱）回查 suppliers 的 contact_name。
-// 表格「品牌窗口」欄與篩選列的「全部窗口」都走這一支 —— 看到的跟篩出來的才不會兜不起來。
+/* 商品 → 聯絡窗口（人）：用商品的 source_supplier（＝品牌方名稱）回查 suppliers 的 contact_name。
+   表格「品牌方名稱」欄的灰字與篩選的「全部窗口」都走這一支 —— 看到的跟篩出來的才不會兜不起來。
+   ⚠️ 2026-09-15 sylvia：商品身上存的是**品牌方名稱**，以前卻把那個欄位叫「窗口」／「品牌窗口」，
+      跟真正的窗口（人）混在一起。已改名為「品牌方名稱」；只有「查得到的聯絡人」才叫窗口。 */
 // ⚠️ 同一個品牌方名稱在 suppliers 有多列、聯絡人不同時一律取第一筆（維持既有行為，不是新的取捨）。
 function hpContactOf(p){
   var sn=p&&p.source_supplier; if(!sn) return '';
@@ -13353,7 +13903,7 @@ function hpContactOf(p){
   for(var i=0;i<list.length;i++){ if(list[i].supplier_name===sn && list[i].contact_name) return list[i].contact_name; }
   return '';
 }
-// 品牌窗口欄：品牌方名稱，查得到窗口就一併顯示
+// 品牌方名稱欄：主值是品牌方名稱，查得到聯絡窗口就在後面補一段灰字
 function hpWindowCell(p){
   var sn=p.source_supplier; if(!sn) return '<span style="color:#c0c4cc;">—</span>';
   var contact=hpContactOf(p);
@@ -13369,7 +13919,71 @@ function hpRenderProdBody(){
   var pg=document.getElementById('hp-pager'); if(pg) pg.innerHTML=hpPager(hpProdPage,pages,'hpGoProd');
   hpSyncHeadChk(); hpUpdateSelBar();
 }
-function hpApplyFilter(){ hpProdPage=1; hpRenderProdBody(); }
+/* ─── 商品清單：篩選收合面板（sylvia 2026-09-15）─────────────────────────────
+   7 個篩選收進一顆「篩選」按鈕的面板；面板外用晶片列顯示目前條件。
+   狀態完全沿用 MS[] —— 這裡只負責「開關面板」與「把 MS[] 畫成晶片」。
+   以後要加篩選：renderProducts() 多一行 hpFiltCell()，HP_FILT_DEFS 多一筆，
+   晶片與數字徽章會自動跟上。 */
+var HP_FILT_DEFS=[
+  {id:'hp-reg',lb:'存貨地區'},{id:'hp-cat',lb:'類別'},{id:'hp-brand',lb:'品牌'},
+  {id:'hp-win',lb:'品牌方'},{id:'hp-con',lb:'窗口'},{id:'hp-pub',lb:'上架狀態'},
+  {id:'hp-live',lb:'直播地區'}
+];
+function hpFiltCell(lb,inner){ return '<div class="filt-f"><div class="filt-lb">'+hpEsc(lb)+'</div>'+inner+'</div>'; }
+function hpFiltOpen(){
+  var p=document.getElementById('hp-filt-panel'); if(!p) return;
+  p.style.display='block';
+  var b=document.getElementById('hp-filt-btn'); if(b) b.classList.add('on');
+  _msFlag();
+  setTimeout(function(){ document.addEventListener('click',_hpFiltOutside); },0);
+}
+function hpFiltClose(){
+  var p=document.getElementById('hp-filt-panel'); if(!p) return;
+  p.style.display='none';
+  var b=document.getElementById('hp-filt-btn'); if(b) b.classList.remove('on');
+  // 面板收起來時，裡面開著的選項面板也一起收（手機上它是 fixed，不收會浮在畫面上）
+  document.querySelectorAll('[id^="ms-panel-"]').forEach(function(x){ x.style.display='none'; });
+  _msFlag();
+  document.removeEventListener('click',_hpFiltOutside);
+}
+function hpFiltToggle(){
+  var p=document.getElementById('hp-filt-panel'); if(!p) return;
+  if(p.style.display==='block') hpFiltClose(); else hpFiltOpen();
+}
+function _hpFiltOutside(e){
+  // ⚠️ 手機的選項面板是 position:fixed，但 DOM 上還是掛在 #hp-filt 底下，contains() 抓得到，
+  //    所以點選項不會把整張篩選面板一起關掉。
+  var w=document.getElementById('hp-filt');
+  if(w && !w.contains(e.target)) hpFiltClose();
+}
+function hpFiltClearOne(id){ msClear(id,'hpApplyFilter'); }
+function hpFiltClearAll(){
+  HP_FILT_DEFS.forEach(function(d){
+    MS[d.id]=[];
+    var p=document.getElementById('ms-panel-'+d.id);
+    if(p) p.querySelectorAll('input[type=checkbox]').forEach(function(cb){ cb.checked=false; });
+    _msSync(d.id);
+  });
+  hpApplyFilter();   // 一次重畫，不要 7 個 msClear 各觸發一次
+}
+// MS[] → 按鈕上的數字徽章 ＋ 工具列下面的晶片列
+function hpFiltSync(){
+  var n=0, chips='';
+  HP_FILT_DEFS.forEach(function(d){
+    var a=msSel(d.id); if(!a.length) return;
+    n++;
+    var txt=(a.length===1)?_msLabelOf(d.id,a[0]):(a.length+' 項');
+    chips+='<span class="filt-chip">'+hpEsc(d.lb)+'：<b>'+hpEsc(String(txt))+'</b>'+
+      '<span class="filt-x" title="清除這組條件" onclick="hpFiltClearOne(\''+d.id+'\')">\u2715</span></span>';
+  });
+  var bd=document.getElementById('hp-filt-badge');
+  if(bd){ bd.textContent=n; bd.style.display=n?'':'none'; }
+  var bt=document.getElementById('hp-filt-btn');
+  if(bt) bt.classList.toggle('has',!!n);
+  var box=document.getElementById('hp-filt-chips');
+  if(box) box.innerHTML=chips+(n>1?'<button type="button" class="filt-clear" onclick="hpFiltClearAll()">\u6e05\u9664\u5168\u90e8</button>':'');
+}
+function hpApplyFilter(){ hpProdPage=1; hpFiltSync(); hpRenderProdBody(); }
 function renderProducts(){
   var brands=Array.from(new Set((DB.products||[]).map(function(p){return p.brand;}).filter(Boolean)));
   // 品牌方選項＝商品 source_supplier 的相異值；有未填的就補一個「未指定」
@@ -13386,21 +14000,40 @@ function renderProducts(){
     '<div class="toolbar"><div class="toolbar-left" style="gap:8px;flex-wrap:wrap;align-items:center;">'+
       '<div class="search-box"><svg class="search-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M15 15l3 3" stroke-linecap="round"/></svg>'+
       '<input type="text" placeholder="搜尋名稱 / SKU / 品牌 / 當地編號(JAN/BARCODE)" value="'+hpEsc(hpFSearch)+'" oninput="hpFSearch=this.value;hpApplyFilter()"></div>'+
-      msDropdown('hp-reg','全部存貨地區',HP_REGIONS.map(function(r){return {v:r,l:r};}),'hpApplyFilter')+
-      msDropdown('hp-cat','全部類別',HP_CATS.map(function(c){return {v:c,l:c};}),'hpApplyFilter')+
-      msDropdown('hp-brand','全部品牌',brands.map(function(b){return {v:b,l:b};}),'hpApplyFilter','品牌')+
-      msDropdown('hp-win','全部品牌方',winOpts,'hpApplyFilter','品牌方')+
-      msDropdown('hp-con','全部窗口',conOpts,'hpApplyFilter','窗口')+
-      msDropdown('hp-pub','全部上架狀態',[{v:'1',l:'已上架'},{v:'0',l:'未上架'}],'hpApplyFilter')+
-    // margin-left:auto —— 篩選變多之後這排會換行，沒有它換行後會靠左貼齊
+      // 7 個篩選收進這顆按鈕的面板裡（見 .filt-panel）—— 不然篩選列 935px
+      // ＋ 操作按鈕 354px 放不進 1151px 的內容區，按鈕會被擠到第二行
+      '<div class="filt" id="hp-filt">'+
+        '<button type="button" class="btn btn-secondary filt-btn" id="hp-filt-btn" onclick="event.stopPropagation();hpFiltToggle()">'+
+          '篩選<span class="filt-badge" id="hp-filt-badge" style="display:none;">0</span><span class="filt-caret">\u25be</span></button>'+
+        '<div class="filt-panel" id="hp-filt-panel" style="display:none;">'+
+          '<div class="filt-grid">'+
+            hpFiltCell('存貨地區',msDropdown('hp-reg','全部存貨地區',HP_REGIONS.map(function(r){return {v:r,l:r};}),'hpApplyFilter'))+
+            hpFiltCell('類別',msDropdown('hp-cat','全部類別',HP_CATS.map(function(c){return {v:c,l:c};}),'hpApplyFilter'))+
+            hpFiltCell('品牌',msDropdown('hp-brand','全部品牌',brands.map(function(b){return {v:b,l:b};}),'hpApplyFilter','品牌'))+
+            hpFiltCell('品牌方',msDropdown('hp-win','全部品牌方',winOpts,'hpApplyFilter','品牌方'))+
+            hpFiltCell('窗口',msDropdown('hp-con','全部窗口',conOpts,'hpApplyFilter','窗口'))+
+            hpFiltCell('上架狀態',msDropdown('hp-pub','全部上架狀態',[{v:'1',l:'已上架'},{v:'0',l:'未上架'}],'hpApplyFilter'))+
+            // 直播地區：71 個選項（13 國 × 城市 ＋ 各國全區），所以開搜尋框、
+            // 並且用 hpLiveCountryOf 依國家分組，每組給一個「全選」（sylvia 2026-09-15）
+            hpFiltCell('直播地區',msDropdown('hp-live','全部直播地區',hpLiveAllOpts().map(function(a){return {v:a,l:a};}),'hpApplyFilter','城市',hpLiveCountryOf))+
+          '</div>'+
+          '<div class="filt-ft">'+
+            '<button type="button" class="btn btn-secondary" onclick="hpFiltClearAll()">清除全部</button>'+
+            '<button type="button" class="btn btn-primary" onclick="hpFiltClose()">完成</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+    // margin-left:auto —— 內容區再窄時這排還是會換行，沒有它換行後會靠左貼齊
     '</div><div class="toolbar-right" style="gap:8px;margin-left:auto;">'+
       '<button class="btn btn-secondary" onclick="openProductModal(null,true)">新增商品</button>'+
       '<button class="btn btn-secondary" onclick="openImportDialog()">批量匯入</button>'+
       '<button class="btn btn-secondary" onclick="openBatchImageDialog()">批次配圖</button>'+
       '<button class="btn btn-primary" onclick="openExportDialog(\'filtered\')">匯出貨盤表</button>'+
     '</div></div>'+
+    // 目前套用中的篩選條件（內容由 hpFiltSync() 填；沒有條件時 :empty 會讓它不佔高度）
+    '<div class="filt-chips" id="hp-filt-chips"></div>'+
     '<div class="table-card"><div class="table-wrap"><table id="hp-prod-table" style="min-width:max-content;width:100%;"><thead><tr>'+
-      '<th style="width:32px;text-align:center;"><input type="checkbox" id="hp-head-chk" onclick="hpSelAllPage(this)" title="全選／取消本頁" style="width:15px;height:15px;cursor:pointer;"></th>'+'<th>縮圖</th><th>SKU</th><th>商品名稱</th><th>類別</th><th>品牌</th><th>存貨地區</th><th style="text-align:right;" title="給我們的成本，含稅優先（跟訂購模組試算用的是同一個數字）。對內欄位，匯出貨盤表不會帶出去">供貨價</th><th style="text-align:right;">建議售價</th><th>品牌窗口</th><th>最後操作人</th><th style="text-align:center;" title="控制商品是否顯示在官網貨盤頁">官網</th><th style="text-align:right;">操作</th>'+
+      '<th style="width:32px;text-align:center;"><input type="checkbox" id="hp-head-chk" onclick="hpSelAllPage(this)" title="全選／取消本頁" style="width:15px;height:15px;cursor:pointer;"></th>'+'<th>縮圖</th><th>SKU</th><th>商品名稱</th><th>類別</th><th>品牌</th><th>存貨地區</th><th style="text-align:right;" title="給我們的成本，含稅優先（跟訂購模組試算用的是同一個數字）。對內欄位，匯出貨盤表不會帶出去">供貨價</th><th style="text-align:right;">建議售價</th><th title="商品跟哪一家叫貨（品牌方名稱）。灰字是那家的聯絡窗口，由品牌方資料自動帶出來，不是存在商品上的">品牌方名稱</th><th>最後操作人</th><th style="text-align:center;" title="控制商品是否顯示在官網貨盤頁">官網</th><th style="text-align:right;">操作</th>'+
     '</tr></thead><tbody id="hp-tbody"></tbody></table></div>'+
     '<div class="pagination"><span id="hp-count"></span>'+
       '<div style="display:flex;align-items:center;gap:14px;">'+
@@ -13421,12 +14054,197 @@ function renderProducts(){
       '<button class="btn" style="padding:6px 15px;background:#dc2626;color:#fff;border:1px solid #dc2626;" onclick="hpDeleteSelected()">刪除勾選</button>'+
     '</div>';
   hpRenderProdBody();
+  hpFiltSync();     // 重畫後把徽章與晶片列補回來（切頁回來時 MS[] 是留著的）
 }
 
 function hpToggleRegion(btn){
   var on=btn.getAttribute('data-on')==='1'; on=!on; btn.setAttribute('data-on',on?'1':'0');
   btn.style.background=on?'#eff4ff':'#fff'; btn.style.color=on?'#2563eb':'#6b7280'; btn.style.borderColor=on?'#bcd3f7':'#e5e7eb';
+  hpSyncLiveAreas();   // 存貨地區變了，可選的直播城市要跟著變
 }
+/* ─── 直播資訊（sylvia 2026-09-14）───────────────────────────────────────────
+   直播經紀公司多半是「把海外主播帶到當地開播」，排行程前一定會問：
+   在哪個城市開得了、有沒有樣品可以先摸、樣品寄不寄得到、品牌方會不會派人到場。
+   這幾件事以前都靠 LINE 問來問去，現在變成商品欄位跟著貨盤表一起走。
+
+   🔑 城市清單刻意做成「依國家給的固定選項」，不讓人自由打字 ——
+      不然會出現「東京／東京都／Tokyo」混著用，之後篩不出來也匯不乾淨。
+   🔑 每個國家額外給一個「<國家>全區」，多國商品才分得出是哪一國的全區。
+   🔑 要加城市就改這張表；改完舊資料不受影響（存的是字串）。 */
+var HP_LIVE_AREAS={
+  '台灣':['台北','新北','桃園','新竹','台中','台南','高雄'],
+  '日本':['東京','橫濱','名古屋','大阪','京都','神戶','福岡','札幌','仙台','沖繩'],
+  '韓國':['首爾','仁川','京畿','釜山','大邱','濟州'],
+  '中國':['上海','北京','廣州','深圳','杭州','成都'],
+  '香港':['香港島','九龍','新界'],
+  '馬來西亞':['吉隆坡','雪蘭莪','檳城','新山','亞庇','古晉'],
+  '新加坡':['新加坡'],
+  '泰國':['曼谷','清邁','普吉'],
+  '越南':['胡志明','河內','峴港'],
+  '印尼':['雅加達','泗水','峇里島'],
+  '菲律賓':['馬尼拉','宿霧'],
+  '美國':['洛杉磯','舊金山','紐約','西雅圖'],
+  '歐洲':['倫敦','巴黎','米蘭','柏林']
+};
+/* ⚠️ 選項只有城市，**沒有「<國家>全區」**（sylvia 2026-09-15 改的，理由見 hpLiveNormAreas）。 */
+function hpLiveOpts(country){ return (HP_LIVE_AREAS[country]||[]).slice(); }
+function hpLiveAllOpts(){
+  var out=[]; HP_REGIONS.forEach(function(c){ hpLiveOpts(c).forEach(function(a){ if(out.indexOf(a)<0) out.push(a); }); });
+  return out;
+}
+/* ─── 「全區」只是輸入的寫法，存進去的一律是城市（sylvia 2026-09-15 定案）────
+   一開始做成「勾滿一國就收斂成 <國家>全區」，sylvia 回：
+   「上傳資料如果是全區，那系統會自動判別要全選該國家的所有地區比較好，
+     後台的商品細則就不用多一個國家全區的選項，也避免篩選國家全區會漏篩的問題」。
+   所以整個反過來做：
+     匯入／舊資料寫「馬來西亞全區」或「馬來西亞」 → **展開成該國全部城市**
+     商品身上永遠只有城市 → 篩「吉隆坡」就是單純的「有沒有這個字」，
+     不需要任何「全區也算數」的暗規則，也不會有正反向不對稱的問題。
+   🔑 顯示端要縮回來（不然一格印六個城市很長）：用 hpLiveLabel()，那只是顯示。
+   ⚠️ 代價：**之後 HP_LIVE_AREAS 加新城市，早就存好的商品不會自動涵蓋它**
+      （因為當初已經展開成當時的城市清單）。加城市時要順手跑一支 SQL 補，
+      或請業務重新確認 —— 這是刻意選的，換來的是篩選規則單純、不會漏。 */
+var _HP_LIVE_ALL_RE=/(全區|全区|全國|全国|全境)$/;
+// '馬來西亞全區' / '馬來西亞' → '馬來西亞'；認不得就 null
+function hpLiveCountryWord(v){
+  var t=String(v==null?'':v).trim(); if(!t) return null;
+  var c=t.replace(_HP_LIVE_ALL_RE,'');
+  return HP_LIVE_AREAS[c]?c:null;
+}
+function hpLiveNormAreas(arr){
+  var out=[];
+  (arr||[]).forEach(function(x){
+    var t=String(x==null?'':x).trim(); if(!t) return;
+    var c=hpLiveCountryWord(t);
+    if(c){ (HP_LIVE_AREAS[c]||[]).forEach(function(a){ if(out.indexOf(a)<0) out.push(a); }); }
+    else if(out.indexOf(t)<0) out.push(t);
+  });
+  // 照 hpLiveAllOpts 的順序排，兩筆資料才比得出一不一樣；清單外的（髒資料）排最後
+  var order=hpLiveAllOpts(), seen={}, sorted=[];
+  order.forEach(function(v){ if(out.indexOf(v)>=0&&!seen[v]){ seen[v]=1; sorted.push(v); } });
+  out.forEach(function(v){ if(!seen[v]){ seen[v]=1; sorted.push(v); } });
+  return sorted;
+}
+/* 顯示用：某國城市到齊就縮寫成「<國家>全區」，其餘逐一列出。
+   ⚠️ 只影響**看到的字**，資料裡存的一直是城市。城市只有一個的國家（新加坡）不縮寫。 */
+function hpLiveLabel(areas){
+  var a=(areas||[]).slice(), out=[], seen={};
+  HP_REGIONS.forEach(function(c){
+    var cities=HP_LIVE_AREAS[c]||[]; if(!cities.length) return;
+    var mine=cities.filter(function(x){ return a.indexOf(x)>=0; });
+    if(!mine.length) return;
+    mine.forEach(function(x){ seen[x]=1; });
+    if(mine.length===cities.length && cities.length>1) out.push(c+'全區');
+    else out.push.apply(out, mine);
+  });
+  a.forEach(function(x){ if(!seen[x]) out.push(x); });
+  return out;
+}
+// 匯入驗證：城市名，或「<國家>」「<國家>全區」這種整國的寫法，都算認得
+function hpLiveKnown(v){ return hpLiveAllOpts().indexOf(String(v==null?'':v).trim())>=0 || !!hpLiveCountryWord(v); }
+/* 匯入打錯時猜一個最接近的。先看包含關係（東京都 → 東京），再看字元重疊率。
+   只重疊 1 個字就猜（「巴沙」→「巴黎」）比誠實說「找不到」更糟，所以要 2 個字以上。
+   直播地區與品牌方名稱共用這一支。 */
+function _hpNearest(v, all){
+  var s=String(v==null?'':v).trim(); if(!s||!all||!all.length) return '';
+  var i, o;
+  for(i=0;i<all.length;i++){ o=String(all[i]||''); if(o&&(s.indexOf(o)>=0||o.indexOf(s)>=0)) return o; }
+  var best='', bs=0, bn=0;
+  for(i=0;i<all.length;i++){
+    o=String(all[i]||''); if(!o) continue;
+    var n=0;
+    for(var j=0;j<o.length;j++) if(s.indexOf(o.charAt(j))>=0) n++;
+    var sc=n/Math.max(o.length,s.length);
+    if(sc>bs){ bs=sc; bn=n; best=o; }
+  }
+  return (bs>=0.5&&bn>=2)?best:'';
+}
+function hpLiveSuggest(v){ return _hpNearest(v, hpLiveAllOpts()); }
+function hpSupNames(){ return (DB.suppliers||[]).map(function(x){ return String(x.supplier_name||'').trim(); }).filter(Boolean); }
+function hpSupSuggest(v){ return _hpNearest(v, hpSupNames()); }
+// 讀出來就先收斂，舊資料（六個城市全勾）跟新資料看起來才會一樣
+function hpLiveAreasOf(p){ var v=p&&p.live_areas; return Array.isArray(v)?hpLiveNormAreas(v):[]; }
+// 匯出用：未確認一律留白（印「否」會讓對方以為已經問過而直接跳過這檔）
+function hpTriCell(v){ return v===true?'是':(v===false?'否':''); }
+/* 直播地區 → 國家。用途：篩「東京」時，標成「日本全區」的商品也要篩得到 ——
+   品牌方填全區就是「哪裡都行」，不該因為沒逐一勾城市而在東京的清單裡消失。 */
+var _hpLiveCty=null;
+function hpLiveCountryOf(a){
+  if(!_hpLiveCty){ _hpLiveCty={}; HP_REGIONS.forEach(function(c){ hpLiveOpts(c).forEach(function(x){ if(_hpLiveCty[x]==null) _hpLiveCty[x]=c; }); }); }
+  return _hpLiveCty[a]||null;
+}
+/* 三態：true=是 / false=否 / null=未確認。
+   ⚠️ 匯入留白一定是 null，**不可以當成「否」** ——「沒填」跟「明確說不行」
+      對經紀公司是兩件事（前者還能問，後者不用問了）。 */
+function hpTriText(v){ return v===true?'是':(v===false?'否':'未確認'); }
+function hpTriParse(v){
+  var t=String(v==null?'':v).trim().toLowerCase();
+  if(!t) return null;
+  if(/^(是|有|可|可以|能|y|yes|true|1|o|○|v)$/.test(t)) return true;
+  if(/^(否|無|沒有|不可|不行|不能|n|no|false|0|x|×)$/.test(t)) return false;
+  return null;   // 看不懂就當未確認，不要亂猜
+}
+function hpTriSelHtml(id,label,val,hint){
+  return '<div class="cm-field"><label>'+label+(hint?'<span class="cm-key" title="'+hpEsc(hint)+'">?</span>':'')+'</label>'+
+    '<select class="cm-input" id="'+id+'">'+
+      '<option value=""'+(val==null?' selected':'')+'>未確認</option>'+
+      '<option value="1"'+(val===true?' selected':'')+'>是</option>'+
+      '<option value="0"'+(val===false?' selected':'')+'>否</option>'+
+    '</select></div>';
+}
+function hpTriVal(id){ var el=document.getElementById(id); if(!el) return null; return el.value===''?null:(el.value==='1'); }
+
+/* 編輯視窗當前選到的直播地區。放在模組層而不是讀 DOM，
+   因為勾選「存貨地區」會把城市晶片整批重畫，讀 DOM 會把剛取消國家的選擇弄丟。 */
+var _pfLive=[];
+function hpLiveChip(a,on){
+  return '<button type="button" class="pf-live-chip" data-area="'+hpEsc(a)+'" onclick="hpToggleLive(this)" '+
+    'style="padding:6px 13px;border-radius:16px;border:1px solid '+(on?'#f3c6a8':'#e5e7eb')+
+    ';background:'+(on?'#fff7ed':'#fff')+';color:'+(on?'#c2410c':'#6b7280')+
+    ';font-size:12.5px;cursor:pointer;margin:0 7px 7px 0;">'+hpEsc(a)+'</button>';
+}
+function hpToggleLive(btn){
+  var a=btn.getAttribute('data-area'); var i=_pfLive.indexOf(a);
+  if(i<0) _pfLive.push(a); else _pfLive.splice(i,1);
+  _pfLive=hpLiveNormAreas(_pfLive);   // 去重＋排序（城市進來時等於不動）
+  hpSyncLiveAreas();
+}
+// 整個國家全選／取消。存的是那幾個城市，不是「全區」兩個字。
+function hpToggleLiveAll(c){
+  var opts=hpLiveOpts(c); if(!opts.length) return;
+  var allOn=opts.every(function(a){ return _pfLive.indexOf(a)>=0; });
+  if(allOn) _pfLive=_pfLive.filter(function(a){ return opts.indexOf(a)<0; });
+  else opts.forEach(function(a){ if(_pfLive.indexOf(a)<0) _pfLive.push(a); });
+  _pfLive=hpLiveNormAreas(_pfLive);
+  hpSyncLiveAreas();
+}
+// 依「目前勾選的存貨地區」重畫城市晶片
+function hpSyncLiveAreas(){
+  var box=document.getElementById('pf-live-areas'); if(!box) return;
+  var regs=[]; document.querySelectorAll('#prod-modal .pf-region-chip[data-on="1"]').forEach(function(b){ regs.push(b.getAttribute('data-region')); });
+  var html='', shown={};
+  regs.forEach(function(c){
+    var opts=hpLiveOpts(c); if(!opts.length) return;
+    // 每國一顆「全選」取代以前的「<國家>全區」晶片 —— 存進去的還是那幾個城市
+    var allOn=opts.every(function(a){ return _pfLive.indexOf(a)>=0; });
+    html+='<div style="display:flex;align-items:flex-start;margin-bottom:2px;">'+
+      '<span style="flex:0 0 62px;font-size:11.5px;color:var(--text-dim);padding-top:8px;">'+hpEsc(c)+'</span>'+
+      '<div style="flex:1;min-width:0;">'+
+        '<button type="button" class="pf-live-all" data-country="'+hpEsc(c)+'" onclick="hpToggleLiveAll(this.getAttribute(\'data-country\'))" '+
+          'style="padding:6px 11px;border-radius:16px;border:1px dashed '+(allOn?'#93c5fd':'#d1d5db')+';background:'+(allOn?'#eff6ff':'#fff')+
+          ';color:'+(allOn?'var(--accent)':'#6b7280')+';font-size:12px;cursor:pointer;margin:0 7px 7px 0;">'+(allOn?'取消全選':'全選')+'</button>'+
+        opts.map(function(a){ shown[a]=1; return hpLiveChip(a,_pfLive.indexOf(a)>=0); }).join('')+
+      '</div></div>';
+  });
+  // 已選、但國家後來被取消勾選的：另外列出來，不要無聲弄丟
+  var orphan=_pfLive.filter(function(a){ return !shown[a]; });
+  if(orphan.length) html+='<div style="display:flex;align-items:flex-start;margin-bottom:2px;">'+
+    '<span style="flex:0 0 62px;font-size:11.5px;color:#b45309;padding-top:8px;">其他</span>'+
+    '<div style="flex:1;min-width:0;">'+orphan.map(function(a){ return hpLiveChip(a,true); }).join('')+'</div></div>';
+  if(!html) html='<div style="font-size:12.5px;color:var(--text-dim);">先在上面勾選「存貨地區」，這裡才會出現可選的城市。</div>';
+  box.innerHTML=html;
+}
+
 var HP_REGION_CUR={"台灣":"TWD","中國":"CNY","香港":"HKD","日本":"JPY","韓國":"KRW","馬來西亞":"MYR","新加坡":"SGD","泰國":"THB","越南":"VND","美國":"USD","歐洲":"EUR"};
 function hpRegionCur(r){ return HP_REGION_CUR[r]||''; }
 /* 各國售價一列正規化：
@@ -13504,13 +14322,30 @@ function openProductModal(id,isNew){
           '<div class="cm-field"><label>類別<span style="color:#dc2626;">*</span></label>'+sel('category',HP_CATS,p.category,true)+'</div>'+
           '<div class="cm-field"><label>原產地<span style="color:#dc2626;">*</span>（SKU 依此產生）</label><input class="cm-input" id="pf-origin" list="hp-origin-list" value="'+hpEsc(p.origin)+'"><datalist id="hp-origin-list">'+HP_REGIONS.map(function(r){return '<option value="'+r+'">';}).join('')+'</datalist></div>'+
           '<div class="cm-field"><label>品牌名稱</label><input class="cm-input" id="pf-brand" value="'+hpEsc(p.brand)+'"></div>'+
-          '<div class="cm-field"><label>品牌窗口</label><select class="cm-input" id="pf-source_supplier"><option value="">'+(supOpts.length?'請選擇品牌窗口':'尚無品牌方，請先到品牌方頁建立')+'</option>'+supOpts.map(function(o){return '<option value="'+hpEsc(o.v)+'"'+((p.source_supplier||'')===o.v?' selected':'')+'>'+hpEsc(o.l)+'</option>';}).join('')+'</select></div>'+
+          '<div class="cm-field"><label>品牌方名稱<span class="cm-key" title="這個商品跟哪一家叫貨。存進去的是品牌方名稱（source_supplier）；選項裡「－」後面的人名只是那家的聯絡窗口，方便你認人，存的不是他。">?</span></label><select class="cm-input" id="pf-source_supplier"><option value="">'+(supOpts.length?'請選擇品牌方':'尚無品牌方，請先到品牌方頁建立')+'</option>'+supOpts.map(function(o){return '<option value="'+hpEsc(o.v)+'"'+((p.source_supplier||'')===o.v?' selected':'')+'>'+hpEsc(o.l)+'</option>';}).join('')+'</select></div>'+
           '<div class="cm-field"><label>官網上架</label><select class="cm-input" id="pf-is_public">'+
             '<option value="1"'+((isNew||p.is_public!==false)?' selected':'')+'>上架（顯示在官網貨盤）</option>'+
             '<option value="0"'+((!isNew&&p.is_public===false)?' selected':'')+'>未上架（官網看不到）</option>'+
           '</select></div>'+
         '</div>'+
         '<div style="margin-top:16px;"><label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:8px;">存貨地區（可複選）</label>'+regChips+'</div></div></div>'+
+      // ── 直播資訊：直播經紀公司排主播行程、決定接不接這檔時會問的事 ──
+      '<div class="cm-section"><div><div class="cm-sec-title">直播資訊</div>'+
+        '<div class="cm-sec-desc">直播經紀公司排主播行程時會問的事。留「未確認」代表還沒跟品牌方確認過，跟「否」不一樣。</div></div>'+
+        '<div>'+
+          '<label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px;">直播地區（可複選）</label>'+
+          '<div style="font-size:11.5px;color:var(--text-dim);margin-bottom:8px;">品牌方說「整個國家都能播」就按該國的<b>全選</b>。上傳檔寫「日本全區」或「日本」也可以，匯入時會自動展開成該國所有城市。</div>'+
+          '<div id="pf-live-areas" style="margin-bottom:16px;"></div>'+
+          '<div class="cm-grid">'+
+            hpTriSelHtml('pf-has_sample','是否有樣品',(isNew?null:(p.has_sample==null?null:!!p.has_sample)))+
+            hpTriSelHtml('pf-sample_shippable','樣品可寄送',(isNew?null:(p.sample_shippable==null?null:!!p.sample_shippable)),'選「否」代表只能請主播到場，不能寄（珍珠、精品、生鮮、化妝保健品常見）')+
+            hpTriSelHtml('pf-has_brand_rep','有品牌代表可到場',(isNew?null:(p.has_brand_rep==null?null:!!p.has_brand_rep)))+
+            hpTriSelHtml('pf-sample_trial_onsite','現場可拆封試用',(isNew?null:(p.sample_trial_onsite==null?null:!!p.sample_trial_onsite)))+
+            '<div class="cm-field"><label>需提前預約天數</label><input class="cm-input" type="number" min="0" step="1" id="pf-booking_lead_days" value="'+hpEsc(p.booking_lead_days==null?'':p.booking_lead_days)+'" placeholder="例 7"></div>'+
+          '</div>'+
+          '<div style="margin-top:14px;"><label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:6px;">樣品備註</label>'+
+            '<input class="cm-input" id="pf-sample_note" value="'+hpEsc(p.sample_note)+'" placeholder="幾份、要不要付費、需提前幾天　例：可提供 2 份，需自付運費，出貨前 5 天告知" style="width:100%;"></div>'+
+        '</div></div>'+
       '<div class="cm-section"><div><div class="cm-sec-title">多語系內容</div><div class="cm-sec-desc">至少填一個語言的商品名稱，其餘可留待翻譯</div></div>'+
         '<div><div style="margin-bottom:14px;">'+langTabs+'</div>'+langPanels+'</div></div>'+
       '<div class="cm-section"><div><div class="cm-sec-title">各國售價與編號</div><div class="cm-sec-desc">一國一列、可多國。<b>成本</b>用品牌報價幣（灰底、不外流）；<b>建議售價／最低販售價</b>用當地幣別。至少一國、且該國至少填一個價格。</div></div>'+
@@ -13545,6 +14380,8 @@ function openProductModal(id,isNew){
       '<button class="btn btn-secondary" onclick="document.getElementById(\'prod-modal\').remove()">取消</button>'+
       '<button class="btn btn-primary" onclick="saveProduct(\''+(id||'')+'\')">保存</button></div></div>';
   document.body.appendChild(ov);
+  _pfLive=isNew?[]:hpLiveAreasOf(p);   // 直播地區的選取狀態放模組層，見 hpSyncLiveAreas
+  hpSyncLiveAreas();
   // 帶入既有各國售價（新結構優先；否則由舊單一價格/當地碼轉入）
   var cps=hpCpsOf(p);
   if(!cps.length){
@@ -13604,6 +14441,11 @@ async function saveProduct(id){
   var codes=cps.filter(function(c){return c.local_code;}).map(function(c){return {region:c.region,code:c.local_code};});
   var payload={
     stock_regions:regions, category:category, brand:hpVal('pf-brand'), source_supplier:hpVal('pf-source_supplier'), origin:origin,
+    live_areas:hpLiveNormAreas(_pfLive),
+    has_sample:hpTriVal('pf-has_sample'), sample_shippable:hpTriVal('pf-sample_shippable'),
+    has_brand_rep:hpTriVal('pf-has_brand_rep'), sample_trial_onsite:hpTriVal('pf-sample_trial_onsite'),
+    sample_note:hpVal('pf-sample_note'),
+    booking_lead_days:(function(){ var v=hpVal('pf-booking_lead_days'); var n=(v==null?null:Number(v)); return (n==null||isNaN(n))?null:n; })(),
     name_zh:names.zh, name_en:names.en, name_ja:names.ja, name_ko:names.ko,
     desc_zh:hpVal('pf-desc_zh'), desc_en:hpVal('pf-desc_en'), desc_ja:hpVal('pf-desc_ja'), desc_ko:hpVal('pf-desc_ko'),
     selling_zh:hpVal('pf-selling_zh'), selling_en:hpVal('pf-selling_en'), selling_ja:hpVal('pf-selling_ja'), selling_ko:hpVal('pf-selling_ko'),
@@ -13682,6 +14524,10 @@ function hpRoundUpPrice(v,cur){ if(v==null||v==='') return null; var n=Number(v)
 
 /* ---------- 批量匯入 ---------- */
 var hpImpRows=[];
+/* 同一個上傳檔的「品牌方資料」分頁有哪些品牌方名稱（sylvia 2026-09-15）。
+   用途：商品的品牌方對不上時，分得出是「打錯字」還是「這個檔案有、只是還沒匯品牌方」，
+   兩種要給的指示完全不同。由 hpImpParse() 填。 */
+var hpImpSupNames={};
 function hpImpVal(v){ v=(v==null?'':String(v)).trim(); return v===''?null:v; }
 function hpImpNum(v){ var s=hpImpVal(v); if(s==null) return null; var n=Number(String(s).replace(/,/g,'')); return isNaN(n)?null:n; }
 function hpImpGet(row,sub){ var ks=Object.keys(row); for(var i=0;i<ks.length;i++){ if(ks[i].replace(/\s/g,'').indexOf(sub)>=0) return row[ks[i]]; } return ''; }
@@ -13800,6 +14646,7 @@ function hpMapImportRow(row, extCps){
   var names={zh:hpImpVal(g('商品名稱_中')),en:hpImpVal(g('商品名稱_英')),ja:hpImpVal(g('商品名稱_日')),ko:hpImpVal(g('商品名稱_韓'))};
   var hasName=names.zh||names.en||names.ja||names.ko;
   var regionsRaw=hpImpVal(g('存貨地區')); var regions=regionsRaw?regionsRaw.split(/[、,，\/\s]+/).filter(Boolean):[];
+  var liveRaw=hpImpVal(g('直播地區')); var liveAreas=liveRaw?liveRaw.split(/[、,，\/\s]+/).filter(Boolean):[];
   var cps, cpRaw=null;
   if(extCps){ cps=extCps.slice(); }   // 雙分頁：價格來自「各國售價」分頁
   else {
@@ -13834,12 +14681,25 @@ function hpMapImportRow(row, extCps){
   if(!category&&!origin&&!hasPrice&&!hasName&&!cpRaw) return null; // 空列
   var errs=[];
   if(!category) errs.push('缺類別'); if(!origin) errs.push('缺原產地'); if(!hasPrice) errs.push('缺價格'); if(!hasName) errs.push('缺商品名稱');
+  /* 直播地區打錯就擋下這一列（sylvia 2026-09-15：「匯入時擋下打錯的地區」）。
+     以前是原樣收下，結果「東京都」「Tokyo」會安靜地存進資料庫，
+     之後在篩選裡永遠找不到 —— 因為篩選只認 HP_LIVE_AREAS 那份固定清單。
+     擋下來、附上最接近的建議，人改一個字就好。 */
+  var liveBad=liveAreas.filter(function(a){ return !hpLiveKnown(a); });
+  if(liveBad.length) errs.push('直播地區認不得：'+liveBad.map(function(a){
+    var sg=hpLiveSuggest(a); return a+(sg?'（是不是「'+sg+'」？）':'（清單裡沒有這個地區）');
+  }).join('、')+'。整個國家都能播的話，直接寫國名或「<國名>全區」即可');
   var first=cps[0]||{};
   var codes=cps.filter(function(c){return c.local_code;}).map(function(c){return {region:c.region,code:c.local_code};});
   var allCodes=codes.map(function(c){return c.code;});
   var localCode=allCodes[0]||null; var photo=hpImpVal(g('照片'));
   var payload={
-    stock_regions:regions, category:category, brand:hpImpVal(g('品牌名稱')), source_supplier:(hpImpVal(g('窗口'))||hpImpVal(g('來源'))), origin:origin,
+    stock_regions:regions, category:category, brand:hpImpVal(g('品牌名稱')), source_supplier:(hpImpVal(g('品牌方名稱'))||hpImpVal(g('窗口'))||hpImpVal(g('來源'))), origin:origin,
+    // ── 直播資訊 ── 城市用頓號/逗號分隔；對不上固定清單的會在上面被擋下（見 liveBad）
+    live_areas:hpLiveNormAreas(liveAreas),
+    has_sample:hpTriParse(g('是否有樣品')), sample_shippable:hpTriParse(g('樣品可寄送')),
+    has_brand_rep:hpTriParse(g('有品牌代表')), sample_trial_onsite:hpTriParse(g('現場可試用')),
+    sample_note:hpImpVal(g('樣品備註')), booking_lead_days:hpImpNum(g('提前預約天數')),
     name_zh:names.zh,name_en:names.en,name_ja:names.ja,name_ko:names.ko,
     desc_zh:hpImpVal(g('產品敘述_中')),desc_en:hpImpVal(g('產品敘述_英')),desc_ja:hpImpVal(g('產品敘述_日')),desc_ko:hpImpVal(g('產品敘述_韓')),
     selling_zh:hpImpVal(g('產品賣點_中')),selling_en:hpImpVal(g('產品賣點_英')),selling_ja:hpImpVal(g('產品賣點_日')),selling_ko:hpImpVal(g('產品賣點_韓')),
@@ -13852,6 +14712,20 @@ function hpMapImportRow(row, extCps){
     website:hpImpVal(g('網站連結')), note:hpImpVal(g('備註')),
     photo_url:_impSafePhotoUrl(photo)
   };
+  /* ─── 品牌方名稱對不上 → 擋下這一列（sylvia 2026-09-15）─────────────────────
+     以前有填卻對不上會安靜地存進去，一路要到訂購核對頁才爆「查不到窗口」，
+     那時候已經匯入幾百筆了。改成在匯入預覽就擋。
+     ⚠️ 這一欄仍然是**選填**：留空不算錯（還沒決定跟誰叫貨很正常）。
+     ⚠️ DB.suppliers 還沒載入／真的一家都沒有時整段跳過，不然會每一列都報錯。 */
+  var _sup=payload.source_supplier;
+  if(_sup && Array.isArray(DB.suppliers) && DB.suppliers.length && hpSupNames().indexOf(_sup)<0){
+    if(hpImpSupNames[_sup])
+      errs.push('品牌方「'+_sup+'」還沒建立 —— 這個檔案的「品牌方資料」分頁裡有，請先到「貨盤管理 › 品牌方 › 批量匯入」上傳同一個檔案，再回來匯商品');
+    else {
+      var _sg=hpSupSuggest(_sup);
+      errs.push('品牌方「'+_sup+'」在系統裡找不到'+(_sg?'（是不是「'+_sg+'」？）':'')+'，名稱要跟「品牌方」頁一字不差');
+    }
+  }
   var match=null;
   (DB.products||[]).forEach(function(p){
     if(match) return;
@@ -13862,8 +14736,8 @@ function hpMapImportRow(row, extCps){
 }
 function hpDownloadProductTemplate(){
   if(typeof XLSX==='undefined'){ alert('Excel 函式庫尚未載入，請重新整理頁面再試。'); return; }
-  var pHead=['商品代號','類別','原產地','品牌名稱','窗口','存貨地區','商品名稱_中','商品名稱_英','商品名稱_日','商品名稱_韓','產品敘述_中','產品敘述_英','產品敘述_日','產品敘述_韓','產品賣點_中','產品賣點_英','產品賣點_日','產品賣點_韓','HSCODE','箱入數','箱長','箱寬','箱高','單箱毛重','有效期限(月)','網站連結','照片(網址)','MOQ','備註'];
-  var pEx=['P001','餅乾','日本','ABC Foods','山田太郎','日本、台灣','範例商品','Sample Product','サンプル商品','샘플 상품','中文產品敘述','English description','日本語の説明','한국어 설명','中文賣點','English selling point','日本語の売り','한국어 셀링','1905.31','24','40','30','25','8.5','12','https://abcfoods.jp/p001','https://abcfoods.jp/img/p001.jpg','100 pcs','此列為範例，上傳前請刪除'];
+  var pHead=['商品代號','類別','原產地','品牌名稱','品牌方名稱','存貨地區','商品名稱_中','商品名稱_英','商品名稱_日','商品名稱_韓','產品敘述_中','產品敘述_英','產品敘述_日','產品敘述_韓','產品賣點_中','產品賣點_英','產品賣點_日','產品賣點_韓','HSCODE','箱入數','箱長','箱寬','箱高','單箱毛重','有效期限(月)','網站連結','照片(網址)','MOQ','備註','直播地區','是否有樣品','樣品可寄送','有品牌代表','現場可試用','提前預約天數','樣品備註'];
+  var pEx=['P001','一般食品','日本','ABC Foods','ABC Foods','日本、台灣','範例商品','Sample Product','サンプル商品','샘플 상품','中文產品敘述','English description','日本語の説明','한국어 설명','中文賣點','English selling point','日本語の売り','한국어 셀링','1905.31','24','40','30','25','8.5','12','https://abcfoods.jp/p001','https://abcfoods.jp/img/p001.jpg','100 pcs','此列為範例，上傳前請刪除','東京、大阪','是','是','否','是','7','可提供 2 份，需自付運費，出貨前 5 天告知'];
   var pWs=XLSX.utils.aoa_to_sheet([pHead, pEx]);
   var cHead=['商品代號','國家/地區','成本幣別','供貨價(未稅)','供貨價(含稅)','當地幣別','建議售價(含稅)','最低販售價(未稅)','最低販售價(含稅)','當地商品編號'];
   var cEx1=['P001','日本','JPY','600','660','JPY','980','838','880','JP-0001'];
@@ -13906,6 +14780,16 @@ function hpImpParse(input){
       var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
       var pSheet=wb.Sheets['商品資料']||wb.Sheets['上傳範本'];
       var cpSheet=wb.Sheets['各國售價'];
+      // 先收集同檔「品牌方資料」分頁的名稱。用 header:1 讀成陣列、直接看 A 欄，
+      // 就不必管標題列在第 1 列（build script）還是第 2 列（正式範本）。
+      hpImpSupNames={};
+      var vSheet=wb.Sheets['品牌方資料']||wb.Sheets['供應商資料'];
+      if(vSheet){
+        XLSX.utils.sheet_to_json(vSheet,{defval:'',header:1}).forEach(function(r){
+          var v=String((r&&r[0])||'').trim();
+          if(v && v!=='品牌方名稱' && v.indexOf('批量匯入')<0) hpImpSupNames[v]=1;
+        });
+      }
       hpImpRows=[];
       if(pSheet && cpSheet){ // 雙分頁：商品資料 + 各國售價（以 商品代號 / 商品名稱(中) 對應）
         var prices=XLSX.utils.sheet_to_json(cpSheet,{defval:''});
@@ -13944,6 +14828,19 @@ function hpRenderImp(){
     _impChip('new','新增',nNew,'#16a34a')+
     _impChip('update','更新',nUpd,'#2563eb')+
     _impChip('error','錯誤',bad.length,'#dc2626')+'</div>';
+  /* 品牌方在、但沒登記「聯絡窗口」：商品匯得進去，可是之後開訂購單會卡在
+     「查不到窗口」。不擋匯入（商品資料本身沒問題），但一定要讓人看見。 */
+  var noCon=[];
+  ok.forEach(function(r){
+    var sn=r.payload.source_supplier; if(!sn) return;
+    var sp=(DB.suppliers||[]).filter(function(x){ return String(x.supplier_name||'').trim()===sn; })[0];
+    if(sp && !String(sp.contact_name||'').trim() && noCon.indexOf(sn)<0) noCon.push(sn);
+  });
+  var warn=noCon.length
+    ? '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#92400e;line-height:1.7;">'+
+      '⚠ 這些品牌方還沒登記「聯絡窗口」：<b>'+noCon.map(hpEsc).join('、')+'</b><br>'+
+      '商品匯得進去，但之後要開訂購單時會卡在「查不到窗口」，建議先到「品牌方」頁補上聯絡人。</div>'
+    : '';
   var view=hpImpRows.filter(function(r){
     if(hpImpFilter==='new')    return !r.errors.length && r.mode==='new';
     if(hpImpFilter==='update') return !r.errors.length && r.mode==='update';
@@ -13965,7 +14862,7 @@ function hpRenderImp(){
     return '<tr style="border-top:1px solid #f1f2f4;"><td style="padding:5px 8px;color:#9ca3af;">'+r.rowNum+'</td><td style="padding:5px 8px;">'+hpEsc(r.name)+'</td><td style="padding:5px 8px;">'+hpEsc(r.payload.category)+'</td><td style="padding:5px 8px;">'+st+'</td><td style="padding:5px 8px;color:'+msgColor+';font-size:12px;">'+msg+'</td></tr>';
   }).join('');
   if(!view.length) body='<tr><td colspan="5" style="padding:16px 8px;color:#9ca3af;text-align:center;">此篩選沒有資料</td></tr>';
-  document.getElementById('hp-imp-result').innerHTML=chips+'<div style="border:1px solid var(--border);border-radius:8px;overflow:auto;max-height:320px;"><table style="width:100%;border-collapse:collapse;font-size:12.5px;"><thead><tr style="background:#f9fafb;color:#6b7280;text-align:left;"><th style="padding:6px 8px;">列</th><th style="padding:6px 8px;">商品名稱</th><th style="padding:6px 8px;">類別</th><th style="padding:6px 8px;">狀態</th><th style="padding:6px 8px;">訊息</th></tr></thead><tbody>'+body+'</tbody></table></div>';
+  document.getElementById('hp-imp-result').innerHTML=chips+warn+'<div style="border:1px solid var(--border);border-radius:8px;overflow:auto;max-height:320px;"><table style="width:100%;border-collapse:collapse;font-size:12.5px;"><thead><tr style="background:#f9fafb;color:#6b7280;text-align:left;"><th style="padding:6px 8px;">列</th><th style="padding:6px 8px;">商品名稱</th><th style="padding:6px 8px;">類別</th><th style="padding:6px 8px;">狀態</th><th style="padding:6px 8px;">訊息</th></tr></thead><tbody>'+body+'</tbody></table></div>';
   var btn=document.getElementById('hp-imp-run'); if(btn) btn.disabled=(ok.length===0);
 }
 var hpSkuCount={};
@@ -14038,6 +14935,10 @@ var HP_EXP_COLS=[
   {k:'photo',      w:11, def:1, zh:'照片',             en:'Photo',                        ja:'写真',             ko:'사진'},
   {k:'category',   w:14, def:1, zh:'類別',             en:'Category',                     ja:'カテゴリー',       ko:'카테고리'},
   {k:'brand',      w:14, def:1, zh:'品牌',             en:'Brand',                        ja:'ブランド',         ko:'브랜드'},
+  // 品牌方＝上游供應商（products.source_supplier），跟「品牌」是兩回事。
+  // def:0 —— **預設不匯出**，要在匯出彈窗勾「顯示品牌方名稱」才會出現。
+  // 理由：這等於把上游露出去，只有需要依廠商位置排直播的經紀公司才該拿到。
+  {k:'supplier',   w:20, def:0, zh:'品牌方',           en:'Supplier',                     ja:'仕入先',           ko:'공급업체'},
   {k:'name',       w:34, def:1, zh:'商品名稱',         en:'Product Name',                 ja:'商品名',           ko:'상품명'},
   {k:'sale_region', w:12, def:1, zh:'銷售國家',         en:'Sales Region',                 ja:'販売国',           ko:'판매 국가'},
   {k:'currency',   w:10, def:1, zh:'幣別',             en:'Currency',                     ja:'通貨',             ko:'통화'},
@@ -14055,7 +14956,16 @@ var HP_EXP_COLS=[
   {k:'regions',    w:16, def:1, zh:'存貨地區',         en:'Stock regions',                ja:'在庫地域',         ko:'재고 지역'},
   {k:'local_code', w:16, def:1, zh:'當地商品編號',     en:'Local code',                   ja:'現地商品番号',     ko:'현지 상품 번호'},
   {k:'hscode',     w:13, def:1, zh:'HSCODE',           en:'HSCODE',                       ja:'HSコード',         ko:'HS코드'},
-  {k:'units',      w:11, def:1, zh:'箱入數',           en:'PCS / Box',                    ja:'入数',             ko:'박스당 수량'}
+  {k:'units',      w:11, def:1, zh:'箱入數',           en:'PCS / Box',                    ja:'入数',             ko:'박스당 수량'},
+  // ── 直播資訊（2026-09-14）：經紀公司排主播行程用的。
+  //    不想出現在貨盤表就把該列的 def 改成 0，其他都不用動。
+  {k:'live_areas', w:20, def:1, zh:'直播地區',         en:'Live areas',                   ja:'配信可能エリア',   ko:'라이브 가능 지역'},
+  {k:'has_sample', w:12, def:1, zh:'有樣品',           en:'Sample available',             ja:'サンプル有無',     ko:'샘플 제공'},
+  {k:'sample_ship',w:14, def:1, zh:'樣品可寄送',       en:'Sample shippable',             ja:'サンプル発送可',   ko:'샘플 발송 가능'},
+  {k:'brand_rep',  w:16, def:1, zh:'品牌代表可到場',   en:'Brand rep on site',            ja:'ブランド担当同行', ko:'브랜드 담당 동행'},
+  {k:'trial_onsite',w:14,def:1, zh:'現場可試用',       en:'On-site trial',                ja:'現場で試用可',     ko:'현장 시용 가능'},
+  {k:'lead_days',  w:14, def:1, zh:'需提前預約(天)',   en:'Lead time (days)',             ja:'事前予約(日)',     ko:'사전 예약(일)'},
+  {k:'sample_note',w:30, def:1, zh:'樣品備註',         en:'Sample notes',                 ja:'サンプル備考',     ko:'샘플 비고'}
 ];
 // 套樣式一律走這裡：ExcelJS 從檔案讀進來時，樣式索引相同的儲存格會共用同一個
 // style 物件；直接寫 cell.numFmt / cell.fill 會連帶改到所有共用的儲存格
@@ -14078,15 +14988,52 @@ function hpExpNumFmt(cur){
 var HP_EXP_OLD_HEADS={ gc_price:['GC 報價','Quoted Price','見積価格','견적가'] };
 function hpExpColDef(k){ for(var i=0;i<HP_EXP_COLS.length;i++){ if(HP_EXP_COLS[i].k===k) return HP_EXP_COLS[i]; } return null; }
 function hpExpLabel(k,lang){ var d=hpExpColDef(k); return d?(d[lang]||d.zh):k; }
-// 固定匯出欄位（HP_EXP_COLS 中 def 為真者，依原始順序）；不再讓使用者勾選
+/* 匯出欄位＝HP_EXP_COLS 中 def 為真者（依原始順序），使用者不能自由勾選。
+   唯一的例外是「品牌方」：def:0，由匯出彈窗的 #exp-supplier 決定要不要帶上。
+   位置仍依 HP_EXP_COLS 的順序（接在「品牌」後面），不會跑到最後一欄。 */
 function hpExpSelCols(){
-  return HP_EXP_COLS.filter(function(d){ return d.def; }).map(function(d){ return d.k; });
+  var el=document.getElementById('exp-supplier');
+  var withSup=!!(el && el.checked);
+  return HP_EXP_COLS.filter(function(d){ return d.def || (d.k==='supplier' && withSup); })
+                    .map(function(d){ return d.k; });
 }
 // 匯出來源：scope='selected' 取勾選的 N 項；否則取目前篩選結果
 var hpExpScope='filtered';
-function hpExpSourceProducts(){
+// 匯出範圍的原始清單（還沒套用「未上架」過濾）
+function hpExpRawProducts(){
   if(hpExpScope==='selected'){ return (DB.products||[]).filter(function(p){ return hpSelHas(p.id); }); }
   return hpFilteredProducts();
+}
+/* ─── 未上架商品預設不匯出（sylvia 2026-09-15）──────────────────────────────
+   貨盤表是報給直播經紀公司下單用的，把官網下架的貨報出去，對方下單我們接不了。
+   ⚠️ 但**不是無條件排除**：`is_public` 的語意是「顯示在官網貨盤頁」，不是「停售」。
+      所以給一個「包含未上架商品」的選項，而且把**會被丟掉幾筆**直接寫在視窗上
+      （見 hpExpPubSync）—— 看得見比預設值本身重要，不然會安靜地少報貨。
+   ⚠️ 勾選匯出也一樣排除（sylvia 選的）：兩種範圍行為一致，比較不會記錯。
+   ⚠️ 每次開啟回到不勾（跟「顯示品牌方名稱」同一個理由：會把不該給的東西送出去的
+      選項，記住上次狀態比忘記危險）。 */
+function hpExpIncUnpub(){ var el=document.getElementById('exp-unpub'); return !!(el&&el.checked); }
+function hpExpUnpubOf(rows){ return (rows||[]).filter(function(p){ return !hpIsPub(p); }); }
+function hpExpSourceProducts(){
+  var rows=hpExpRawProducts();
+  return hpExpIncUnpub()?rows:rows.filter(hpIsPub);
+}
+// 範圍說明下面那行提示；順便重繪國別／匯率（它們只能看實際會匯出的那些商品）
+function hpExpPubSync(){
+  var el=document.getElementById('exp-unpub-note');
+  var raw=hpExpRawProducts(), bad=hpExpUnpubOf(raw), inc=hpExpIncUnpub();
+  if(el){
+    if(!bad.length){ el.innerHTML=''; }
+    else if(inc){
+      el.style.color='var(--text-dim)';
+      el.innerHTML='其中 <b>'+bad.length+'</b> 項未上架，已勾「包含未上架商品」，會一起匯出。';
+    } else {
+      el.style.color='#b45309';
+      el.innerHTML='\u26a0 其中 <b>'+bad.length+'</b> 項未上架（官網看不到），<b>預設不會匯出</b>，'+
+        '實際匯出 <b>'+(raw.length-bad.length)+'</b> 項。要一起帶的話勾下面的「包含未上架商品」。';
+    }
+  }
+  hpExpRenderScopeParts();
 }
 function openExportDialog(scope){
   if(typeof ExcelJS==='undefined'){ alert('Excel 函式庫尚未載入，請重新整理頁面再試。'); return; }
@@ -14108,8 +15055,18 @@ function openExportDialog(scope){
         '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;">'+
           '<label style="display:flex;align-items:center;gap:6px;cursor:'+(selN?'pointer':'not-allowed')+';'+(selN?'':'opacity:.45;')+'"><input type="radio" name="exp-scope" value="selected" '+(hpExpScope==='selected'?'checked':'')+' '+(selN?'':'disabled')+' onchange="hpExpSetScope(\'selected\')">勾選的 <b>'+selN+'</b> 項</label>'+
           '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="exp-scope" value="filtered" '+(hpExpScope==='filtered'?'checked':'')+' onchange="hpExpSetScope(\'filtered\')">目前篩選的 <b>'+filN+'</b> 項</label>'+
-        '</div></div>'+
-      '<div style="margin-bottom:14px;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">售價國別／銷售市場（依各國售價分頁，僅列出範圍內商品有售價的國別；可複選，每國一個分頁；不選＝各商品第一國、單一分頁）</label><div id="exp-country-wrap"></div></div>'+
+        '</div>'+
+        // 未上架有幾筆會被丟掉——由 hpExpPubSync() 填，沒有未上架的頁面就是空的
+        '<div id="exp-unpub-note" style="font-size:11.5px;margin-top:7px;line-height:1.6;"></div>'+
+        '</div>'+
+      '<div style="margin-bottom:14px;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">售價國別／銷售市場（只列出範圍內商品有售價的國別；可複選＝這幾國的售價都會出現；不選＝各商品第一國）</label><div id="exp-country-wrap"></div></div>'+
+      // 分頁方式：以前分頁一定是「一國一頁」，2026-09-15 起可以改成「一家品牌方一頁」
+      '<div style="margin-bottom:14px;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">分頁方式</label>'+
+        '<label style="display:flex;align-items:flex-start;gap:7px;margin-bottom:6px;cursor:pointer;"><input type="radio" name="exp-split" value="country" checked onchange="hpExpSplitChange()" style="margin-top:3px;"><span><b>依銷售國別</b>　每個國家一個分頁（沒選國別就全部放同一張）</span></label>'+
+        '<label style="display:flex;align-items:flex-start;gap:7px;margin-bottom:6px;cursor:pointer;"><input type="radio" name="exp-split" value="supplier" onchange="hpExpSplitChange()" style="margin-top:3px;"><span><b>依品牌方</b>　每家廠商一個分頁，方便對方依廠商位置安排直播</span></label>'+
+        '<label style="display:flex;align-items:flex-start;gap:7px;cursor:pointer;"><input type="radio" name="exp-split" value="none" onchange="hpExpSplitChange()" style="margin-top:3px;"><span><b>不分頁</b>　全部放同一張表</span></label>'+
+        '<div id="exp-split-hint" style="font-size:11.5px;color:var(--text-dim);margin-top:7px;line-height:1.6;">不論怎麼分頁，表上都有<b>銷售國家</b>欄，看得出每一列的價格是哪一國的。</div>'+
+      '</div>'+
       '<div style="display:flex;gap:12px;margin-bottom:14px;">'+
         '<div style="flex:1;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">顯示語系（表頭與內容）</label><select class="cm-input" id="exp-lang"><option value="zh">中文</option><option value="en">English</option><option value="ja">日本語</option><option value="ko">한국어</option></select></div>'+
         '<div style="flex:1;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">GC 利潤率 (%)</label><input class="cm-input" id="exp-margin" type="number" value="5"></div>'+
@@ -14120,6 +15077,17 @@ function openExportDialog(scope){
           '<select class="cm-input" id="exp-cur" style="width:110px;flex:none;" onchange="document.querySelector(\'input[name=exp-conv][value=unified]\').checked=true;hpExpRenderFx();">'+curOpts+'</select></label>'+
       '</div>'+
       '<div id="exp-fx" style="margin-bottom:14px;"></div>'+
+      // 品牌方名稱：預設不勾。每次開啟都回到不勾（不記住上次），
+      // 免得給經紀公司勾過之後，下一次給別的客戶時把上游一起送出去。
+      '<div style="margin-bottom:14px;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">額外欄位</label>'+
+        '<label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;"><input type="checkbox" id="exp-supplier" style="margin-top:2px;width:15px;height:15px;cursor:pointer;">'+
+          '<span><b>顯示品牌方名稱</b>　讓對方看得出這些商品統一跟哪一家叫貨，方便依廠商位置安排直播。<br>'+
+          '<span style="color:var(--text-dim);">預設不勾——這等於把上游供應商露出去。每次開啟都會回到不勾，請視收件對象決定。</span></span></label>'+
+        '<label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin-top:10px;"><input type="checkbox" id="exp-unpub" onchange="hpExpPubSync()" style="margin-top:2px;width:15px;height:15px;cursor:pointer;">'+
+          '<span><b>包含未上架商品</b>　把官網貨盤頁看不到的那些也一起報出去。<br>'+
+          '<span style="color:var(--text-dim);">預設不勾——貨盤表是給對方下單用的，下架的貨報出去接不了單。'+
+          '如果你有「刻意不放官網、但還是要給經紀公司」的貨（獨家、未公開），就勾起來。每次開啟都會回到不勾。</span></span></label>'+
+      '</div>'+
       '<div style="margin-bottom:14px;"><label style="display:block;color:#6b7280;font-size:12px;margin-bottom:6px;">備註（會存進匯出紀錄，例：給哪家經紀公司／用途）</label><textarea class="cm-input" id="exp-note" rows="2" style="resize:vertical;" placeholder="選填"></textarea></div>'+
       '<div style="background:#f9fafb;border-radius:7px;padding:9px 12px;font-size:12px;color:#6b7280;line-height:1.7;">將依<b id="exp-scope-desc"></b>匯出，欄位固定（<b>成本／供貨價不會匯出</b>）。<b>售價國別複選</b>時每國一個分頁，各分頁只列有該國售價的商品。<br><b>GC 報價(含稅)</b> ＝ 該國供貨價(含稅，無則未稅) ×(1＋利潤率)，<b>報出去的價本來就是含稅價</b>。<b>原幣</b>模式：GC 報價用成本幣、最低／建議售價用當地幣，<b>幣別欄＝GC 報價的幣別</b>，另外兩欄各自把幣別寫在數字前面（例：報價 TWD、建議售價 EUR 9.40），不換算；<b>統一換成</b>模式才會依匯率換成同一幣別。圖片內嵌儲存格。<br>表尾固定附上<b>訂購數量</b>與<b>小計金額</b>兩欄（藍底）給直播經紀公司回填，<b>小計金額是公式</b>（訂購數量 × GC 報價），對方填完數量就會自動算出金額。</div>'+
       '<div id="exp-status" style="font-size:12px;color:var(--text-dim);margin-top:10px;"></div>'+
@@ -14128,13 +15096,34 @@ function openExportDialog(scope){
       '<button class="btn btn-secondary" id="exp-cancel" onclick="document.getElementById(\'exp-modal\').remove()">取消</button>'+
       '<button class="btn btn-primary" id="exp-run" onclick="hpExportRun()">匯出 Excel</button></div></div>';
   document.body.appendChild(ov);
-  hpExpRenderScopeParts();
+  // 範圍內「全部」都是未上架（例如先篩了上架狀態＝未上架再按匯出）→ 自動勾起來。
+  // 不然會拿到一個空檔案，還不知道為什麼。跟「依品牌方自動勾顯示品牌方名稱」同一套做法。
+  var _raw0=hpExpRawProducts();
+  if(_raw0.length && hpExpUnpubOf(_raw0).length===_raw0.length){
+    var _u=document.getElementById('exp-unpub'); if(_u) _u.checked=true;
+  }
+  hpExpPubSync();   // 內含 hpExpRenderScopeParts()
+}
+/* 切到「依品牌方」時自動把「顯示品牌方名稱」勾起來 ——
+   分頁名稱本來就是品牌方，欄位再藏起來只會讓對方看得到頁籤卻對不回列。
+   只是自動勾、不鎖住，她要拿掉還是可以。 */
+function hpExpSplitChange(){
+  var v=((document.querySelector('input[name=exp-split]:checked')||{}).value)||'country';
+  var sup=document.getElementById('exp-supplier');
+  var hint=document.getElementById('exp-split-hint');
+  if(v==='supplier' && sup && !sup.checked) sup.checked=true;
+  if(hint){
+    hint.innerHTML=(v==='supplier')
+      ? '分頁名稱就是品牌方名稱，所以上面的「顯示品牌方名稱」已自動勾起來。'+
+        '表上都有<b>銷售國家</b>欄；國別有複選時，同一個商品在幾個國家有售價就出幾列。'
+      : '不論怎麼分頁，表上都有<b>銷售國家</b>欄，看得出每一列的價格是哪一國的。';
+  }
 }
 function hpExpSetScope(s){
   if(s==='selected' && hpSelIds.size===0){ s='filtered'; }
   hpExpScope=s;
   if(typeof msSel==='function'){ msSel('exp-country').length=0; }  // 換範圍→重置國別複選
-  hpExpRenderScopeParts();
+  hpExpPubSync();   // 連帶重繪國別／匯率（見 hpExpPubSync）
 }
 // 依目前匯出範圍重繪：售價國別下拉、範圍說明文字、匯率列
 function hpExpRenderScopeParts(){
@@ -14260,17 +15249,36 @@ async function hpExpFillSheet(wb, ws, rows, country, lang, margin, mode, targetC
   var skipped=0, used=0;
   // 進度提示：匯出 100 項要跑一分多鐘（大部分時間在抓縮圖），
   // 沒有數字的話操作人員會以為系統當掉了。每 5 列更新一次就夠，太密反而拖慢。
-  var _pfx=(country&&country!=='__FIRST__')?('分頁「'+country+'」　'):'';
+  var _pfx=(typeof country==='string' && country!=='__FIRST__')?('分頁「'+country+'」　'):(ws.name?('分頁「'+ws.name+'」　'):'');
   function _prog(i,extra){
     if(!st) return;
-    st.textContent=_pfx+'處理第 '+(i+1)+' / '+rows.length+' 列'+(extra||'')+'…';
+    st.textContent=_pfx+'處理第 '+(i+1)+' / '+pairs.length+' 列'+(extra||'')+'…';
   }
-  for(var i=0;i<rows.length;i++){
+  /* 先把「商品 × 售價國別」展開成要輸出的列。country 有三種：
+       '__FIRST__'  各商品的第一組國別價格 —— 一商品一列
+       單一國名      舊行為，只出那一國 —— 一商品一列
+       國名陣列      依品牌方／不分頁時用：這幾國的售價**全部**列出來，
+                    一個商品在三個選取國有價，就出三列，靠「銷售國家」欄分辨
+     ⚠️ 展開成 pairs 而不是在迴圈裡再包一層迴圈，是為了不動下面整段寫入邏輯
+        （縮圖快取、小計公式的列號都靠 row.number，多列也不會算錯）。 */
+  var pairs=[];
+  rows.forEach(function(p){
+    var ents=hpEntriesOf(p);
+    if(Array.isArray(country)){
+      var ms=ents.filter(function(x){ return country.indexOf(x.region)>=0; });
+      if(!ms.length){ skipped++; return; }
+      ms.forEach(function(e){ pairs.push({p:p,e:e}); });
+    } else if(country && country!=='__FIRST__'){
+      var e1=ents.filter(function(x){ return x.region===country; })[0];
+      if(!e1){ skipped++; return; }
+      pairs.push({p:p,e:e1});
+    } else {
+      pairs.push({p:p,e:ents[0]||hpNormCp({})});
+    }
+  });
+  for(var i=0;i<pairs.length;i++){
     if(i%5===0) _prog(i);
-    var p=rows[i];
-    var ents=hpEntriesOf(p), e;
-    if(country && country!=='__FIRST__'){ e=ents.filter(function(x){return x.region===country;})[0]; if(!e){ skipped++; continue; } }
-    else { e=ents[0]||hpNormCp({}); }
+    var p=pairs[i].p, e=pairs[i].e;
     var unified=(mode==='unified');
     var supCur=e.supply_currency||'', locCur=e.local_currency||'';
     // GC 報價 ＝ 成本×(1+利潤率)（成本幣）；最低／建議售價為當地幣。成本本身永不輸出。
@@ -14297,6 +15305,7 @@ async function hpExpFillSheet(wb, ws, rows, country, lang, margin, mode, targetC
     }
     var vals={
       sku:p.sku||'', photo:'', category:p.category||'', brand:p.brand||'',
+      supplier:p.source_supplier||'',
       name:(p['name_'+lang]||p.name_zh||p.name_en||p.name_ja||p.name_ko||''),
       // 銷售國家＝這一列的價格取自哪一組國別價格。同一個商品在不同國家可能是不同定價，
       // 有這一欄，回填檔就自帶國別，解析時不必再從分頁名去猜（2026-09-04 加）
@@ -14307,7 +15316,12 @@ async function hpExpFillSheet(wb, ws, rows, country, lang, margin, mode, targetC
       shelf:(p.shelf_life_months==null?'':p.shelf_life_months),
       shelf_std:hpShelfStdText(p, lang),
       origin:p.origin||'', regions:(p.stock_regions||[]).join('、'), local_code:e.local_code||'',
-      hscode:p.hscode||'', units:(p.units_per_carton==null?'':p.units_per_carton)
+      hscode:p.hscode||'', units:(p.units_per_carton==null?'':p.units_per_carton),
+      // 直播資訊：三態欄位「未確認」就留白，不要印「否」——留白對方會來問，印「否」對方就直接跳過了
+      live_areas:hpLiveLabel(hpLiveAreasOf(p)).join('、'),   // 顯示縮寫，資料仍是城市
+      has_sample:hpTriCell(p.has_sample), sample_ship:hpTriCell(p.sample_shippable),
+      brand_rep:hpTriCell(p.has_brand_rep), trial_onsite:hpTriCell(p.sample_trial_onsite),
+      lead_days:(p.booking_lead_days==null?'':p.booking_lead_days), sample_note:(p.sample_note||'')
     };
     var row=ws.addRow(cols.map(function(k){ return vals[k]; }));
     row.height=48; row.alignment={vertical:'middle',wrapText:true}; used++;
@@ -14487,6 +15501,13 @@ async function hpExportRun(){
   var fxUsed=Object.keys(fx).length?fx:null;
   var fxMiss={};
   var rows=hpExpSourceProducts();
+  if(!rows.length){
+    var _raw=hpExpRawProducts();
+    alert(_raw.length
+      ? '這個範圍內的 '+_raw.length+' 項全部都是未上架商品，預設不會匯出。\n要匯出的話，請勾「包含未上架商品」。'
+      : '這個範圍內沒有商品可以匯出。');
+    return;
+  }
   // 產檔之前先跑一輪供貨價檢查（提醒而已，不擋匯出）
   if(sel.length){
     var goOn=await hpExpWarnSupply(rows, sel, '貨盤表_'+_tpeDate(new Date())+'.xlsx');
@@ -14500,7 +15521,28 @@ async function hpExportRun(){
   if(st){ st.style.color='var(--accent)'; st.textContent='匯出中…請稍候'; }
   try{
     var wb=new ExcelJS.Workbook(); var imgCache={}; var cnt=0; var emptyCountries=[];
-    if(sel.length){
+    var splitBy=((document.querySelector('input[name=exp-split]:checked')||{}).value)||'country';
+    // 依品牌方／不分頁時，國別從「分頁的依據」退回「單純的篩選」：
+    // 有選就把那幾國的售價全部列出來（一列一國，靠「銷售國家」欄分辨），沒選就各商品第一國
+    var ctryArg=sel.length?sel.slice():'__FIRST__';
+    if(splitBy==='supplier'){
+      var groups={}, names=[];
+      rows.forEach(function(p){
+        var k=String(p.source_supplier||'').trim()||'（未指定品牌方）';
+        if(!groups[k]){ groups[k]=[]; names.push(k); }
+        groups[k].push(p);
+      });
+      names.sort(function(a,b){ return String(a).localeCompare(String(b),'zh-Hant'); });
+      for(var g=0;g<names.length;g++){
+        var gn=names[g];
+        if(st) st.textContent='產生分頁：'+gn+'（'+(g+1)+'/'+names.length+'）…';
+        var rg=await hpExpFillSheet(wb, wb.addWorksheet(hpSheetName(gn,wb)), groups[gn], ctryArg, lang, margin, mode, targetCur, cols, imgCache, st, fx, fxMiss);
+        cnt+=rg.used; if(rg.used===0) emptyCountries.push(gn);
+      }
+    } else if(splitBy==='none'){
+      var rn=await hpExpFillSheet(wb, wb.addWorksheet('貨盤表'), rows, ctryArg, lang, margin, mode, targetCur, cols, imgCache, st, fx, fxMiss);
+      cnt=rn.used;
+    } else if(sel.length){
       for(var s=0;s<sel.length;s++){
         var c=sel[s];
         if(st) st.textContent='產生分頁：'+c+'（'+(s+1)+'/'+sel.length+'）…';
@@ -14514,8 +15556,11 @@ async function hpExportRun(){
     var country=sel.length?sel.join('、'):'__FIRST__';
     var out=await wb.xlsx.writeBuffer();
     var note=((document.getElementById('exp-note')||{}).value||'').trim();
+    // 帶了未上架商品就寫進備註，事後追得出來是哪一份檔案帶出去的（不用改資料表）
+    var _unpubN=hpExpIncUnpub()?hpExpUnpubOf(rows).length:0;
+    if(_unpubN) note=(note?note+'　':'')+'（含未上架商品 '+_unpubN+' 項）';
     var stamp=new Date(); var dstr=_tpeDate(stamp);
-    var dlName='貨盤表_'+dstr+'.xlsx';
+    var dlName='貨盤表'+(splitBy==='supplier'?'_依品牌方':'')+'_'+dstr+'.xlsx';
     var blob=new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     // 上傳存檔到 Storage，供「匯出紀錄」日後預覽/下載。路徑用純 ASCII（中文檔名會被 Storage 拒絕）
     var fileUrl=null, fileName='pallet_'+stamp.getTime()+'.xlsx', upErr='';
@@ -14547,7 +15592,10 @@ async function hpExportRun(){
     // 瀏覽器下載
     var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=dlName; a.click();
     setTimeout(function(){ URL.revokeObjectURL(a.href); },4000);
-    if(emptyCountries.length) alert('以下售價國別沒有任何商品有價格，該分頁為空：'+emptyCountries.join('、'));
+    // 依品牌方分頁時，emptyCountries 裡裝的是品牌方名稱，訊息要跟著換，不然會說成「售價國別」
+    if(emptyCountries.length) alert((splitBy==='supplier'
+        ? '以下品牌方在選取的售價國別沒有任何商品有價格，該分頁為空：'
+        : '以下售價國別沒有任何商品有價格，該分頁為空：')+emptyCountries.join('、'));
     var miss=Object.keys(fxMiss);
     if(miss.length) alert('以下換算缺匯率，相關金額欄留空：\n'+miss.join('\n')+'\n\n請在匯出視窗的「換算匯率」補上該幣別的匯率後重新匯出。');
     if(upErr) alert('檔案已下載到本機，但存到雲端失敗，匯出紀錄會顯示「未存檔」、無法再次下載/預覽。\n原因：'+upErr+'\n\n請確認已在 Supabase 執行建立 export-files bucket 的 SQL（貨盤管理_匯出紀錄_建表.sql）。');
@@ -15328,7 +16376,7 @@ function renderExportLogs(){
       '<td>'+hpEsc(curL)+fxTxt+'</td>'+
       '<td style="text-align:right;">'+(x.margin!=null?x.margin:0)+'%</td>'+
       '<td style="text-align:right;">'+(x.product_count!=null?x.product_count:'')+'</td>'+
-      '<td style="max-width:240px;">'+hpEsc(x.note||'')+'</td>'+
+      '<td class="cell-clip" title="'+hpEsc(x.note||'')+'">'+hpEsc(x.note||'')+'</td>'+
       '<td style="text-align:right;white-space:nowrap;">'+dl+' <button class="btn btn-secondary" style="padding:4px 10px;color:#dc2626;" onclick="hpExpDelete(\''+x.id+'\')">刪除</button></td></tr>';
   }).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--text-dim);padding:40px;">尚無匯出紀錄</td></tr>';
   var pag;
@@ -15390,6 +16438,57 @@ function hpImgPathsOf(p){
   });
   return out;
 }
+/* ─── 批次配圖結果：狀態篩選（sylvia 2026-09-14）──────────────────────────
+   原本只是一串彩色文字，104 張裡要找出「未對應那 3 張」得自己用眼睛掃。
+   改成跟批量匯入同一套：上面一排晶片，點下去只看該狀態的列。
+   每一筆存 {t, file, html}：t 是分類、file 是檔名（給「複製檔名」用）、
+   html 是原本那一行的樣子（顏色與文字都沒變）。 */
+var hpImgLog=[];                 // 這一批的結果
+var hpImgFilter='all';           // 'all' | 'ok' | 'nomatch' | 'fail' | 'note'
+function hpImgSetFilter(f){ hpImgFilter=f; hpRenderImgLog(); }
+function hpImgCopyNames(){
+  var names=hpImgLog.filter(function(e){ return (hpImgFilter==='all'||e.t===hpImgFilter) && e.file; })
+                    .map(function(e){ return e.file; });
+  if(!names.length) return;
+  var txt=names.join('\n');
+  function done(){ if(typeof _toast==='function') _toast('已複製 '+names.length+' 個檔名'); }
+  // 彈窗裡有時候拿不到 clipboard 權限，失敗就退回 textarea + execCommand
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done, function(){ hpImgCopyFallback(txt, done); });
+  } else hpImgCopyFallback(txt, done);
+}
+function hpImgCopyFallback(txt, done){
+  var ta=document.createElement('textarea');
+  ta.value=txt; ta.style.cssText='position:fixed;top:-1000px;left:0;opacity:0;';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); done(); }catch(e){ alert(txt); }
+  ta.remove();
+}
+function hpRenderImgLog(){
+  var box=document.getElementById('hp-img-result'); if(!box) return;
+  var n={all:hpImgLog.length, ok:0, nomatch:0, fail:0, note:0};
+  hpImgLog.forEach(function(e){ if(n[e.t]!=null) n[e.t]++; });
+  function chip(f,label,cnt,color){
+    var on=(hpImgFilter===f), dim=(cnt===0&&f!=='all');
+    return '<button type="button" onclick="hpImgSetFilter(\''+f+'\')"'+(dim?' disabled':'')+
+      ' style="cursor:'+(dim?'default':'pointer')+';font-size:12px;padding:4px 13px;border-radius:14px;border:1px solid '+(on?color:'var(--border)')+
+      ';background:'+(on?color:'#fff')+';color:'+(on?'#fff':(dim?'#c3c7cd':'#6b7280'))+';font-weight:'+(on?'600':'400')+';">'+label+' '+cnt+'</button>';
+  }
+  var chips='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">'+
+    chip('all','全部',n.all,'#6b7280')+
+    chip('ok','成功',n.ok,'#16a34a')+
+    chip('nomatch','未對應',n.nomatch,'#dc2626')+
+    chip('fail','失敗',n.fail,'#b91c1c')+
+    (n.note?chip('note','系統訊息',n.note,'#b45309'):'')+
+    // 篩到「未對應／失敗」時，直接把檔名複製走去改名，不用一個一個抄
+    ((hpImgFilter==='nomatch'||hpImgFilter==='fail')&&(n[hpImgFilter]>0)
+      ? '<button type="button" class="btn btn-secondary" onclick="hpImgCopyNames()" style="font-size:11.5px;padding:3px 10px;margin-left:auto;">複製檔名</button>' : '')+
+  '</div>';
+  var view=hpImgLog.filter(function(e){ return hpImgFilter==='all' || e.t===hpImgFilter; });
+  var body=view.map(function(e){ return e.html; }).join('')
+    || '<div style="color:#9ca3af;text-align:center;padding:14px 0;">此篩選沒有資料</div>';
+  box.innerHTML=chips+'<div style="max-height:200px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;">'+body+'</div>';
+}
 function hpImgKey(fname){ var d=fname.lastIndexOf('.'); var base=(d>=0?fname.slice(0,d):fname); return base.replace(/_\d+$/,'').trim(); }
 function hpNorm(s){ return String(s==null?'':s).replace(/[\s_\-\/\\:*?"<>|()（）＊*]/g,'').toLowerCase(); }
 function hpFindByKey(key){ var nk=hpNorm(key);
@@ -15425,19 +16524,20 @@ async function hpBatchImgRun(){
     if(ka<kb) return -1; if(ka>kb) return 1;
     return _imgSuffixNum(a.name)-_imgSuffixNum(b.name);
   });
-  var acc={}, log=[], matched=0, unmatched=0;
+  var acc={}, matched=0, unmatched=0;
+  hpImgLog=[]; hpImgFilter='all';   // 每次跑新的一批就重置
   for(var i=0;i<entries.length;i++){
     var e=entries[i]; var key=hpImgKey(e.name); var p=hpFindByKey(key);
     if(st) st.textContent='上傳中… '+(i+1)+'/'+entries.length;
-    if(!p){ unmatched++; log.push('<div style="color:#dc2626;">'+hpEsc(e.name)+' → 找不到對應商品（'+hpEsc(key)+'）</div>'); continue; }
+    if(!p){ unmatched++; hpImgLog.push({t:'nomatch', file:e.name, html:'<div style="color:#dc2626;">'+hpEsc(e.name)+' → 找不到對應商品（'+hpEsc(key)+'）</div>'}); continue; }
     var path='p_'+(p.sku||p.id)+'_'+Date.now()+'_'+e.name.replace(/[^\w.\-]/g,'_');
     var up=await sb.storage.from('product-images').upload(path,e.blob,{upsert:true,cacheControl:'3600'});
-    if(up.error){ log.push('<div style="color:#dc2626;">'+hpEsc(e.name)+' → 上傳失敗：'+hpEsc(up.error.message)+'</div>'); continue; }
+    if(up.error){ hpImgLog.push({t:'fail', file:e.name, html:'<div style="color:#dc2626;">'+hpEsc(e.name)+' → 上傳失敗：'+hpEsc(up.error.message)+'</div>'}); continue; }
     var url=sb.storage.from('product-images').getPublicUrl(path).data.publicUrl;
     // 重新配圖採「覆蓋」：本次配到的商品，圖片以這次上傳的為準（第一張主圖、其餘附圖），覆蓋原有圖片
     var a=acc[p.id]||(acc[p.id]={photo_url:null, photos:[]});
     if(!a.photo_url) a.photo_url=url; else a.photos.push(url);
-    matched++; log.push('<div style="color:#16a34a;">'+hpEsc(e.name)+' → '+hpEsc(p.sku||'')+' '+hpEsc(hpProductName(p))+'</div>');
+    matched++; hpImgLog.push({t:'ok', file:e.name, html:'<div style="color:#16a34a;">'+hpEsc(e.name)+' → '+hpEsc(p.sku||'')+' '+hpEsc(hpProductName(p))+'</div>'});
   }
   var who=(currentUser?currentUser.full_name:'admin'), now=new Date().toISOString();
   // 商品寫入逐筆檢查 error：失敗的納入計數並回報，不得無聲成功
@@ -15455,7 +16555,7 @@ async function hpBatchImgRun(){
     var ur=await sb.from('products').update({photo_url:_a.photo_url, photos:_a.photos, updated_time:now, updated_by:who}).eq('id',id);
     if(ur.error){
       updFailProds++; updFailImgs+=_nImgs;
-      log.push('<div style="color:#dc2626;">商品 #'+hpEsc(id)+' 圖片寫入失敗：'+hpEsc(ur.error.message)+'</div>');
+      hpImgLog.push({t:'fail', file:'', html:'<div style="color:#dc2626;">商品 #'+hpEsc(id)+' 圖片寫入失敗：'+hpEsc(ur.error.message)+'</div>'});
       delete _oldByProd[id];                         // 寫入失敗的商品，舊檔一律不能刪
     }
   }
@@ -15481,17 +16581,17 @@ async function hpBatchImgRun(){
         _from+=_SZ;
       }
       var _targets=_scanOk? _cand.filter(function(x){ return !_still[x]; }) : [];
-      if(!_scanOk) log.push('<div style="color:#b45309;">舊圖檔比對時讀取商品失敗，這次不刪任何舊檔。</div>');
+      if(!_scanOk) hpImgLog.push({t:'note', file:'', html:'<div style="color:#b45309;">舊圖檔比對時讀取商品失敗，這次不刪任何舊檔。</div>'});
       for(var i2=0;i2<_targets.length;i2+=50){
         var _batch=_targets.slice(i2,i2+50);
         var _rm=await sb.storage.from(HP_IMG_BUCKET).remove(_batch);
-        if(_rm && _rm.error){ delFail+=_batch.length; log.push('<div style="color:#b45309;">舊圖檔刪除失敗：'+hpEsc(_rm.error.message)+'（不影響配圖結果）</div>'); }
+        if(_rm && _rm.error){ delFail+=_batch.length; hpImgLog.push({t:'note', file:'', html:'<div style="color:#b45309;">舊圖檔刪除失敗：'+hpEsc(_rm.error.message)+'（不影響配圖結果）</div>'}); }
         else delOk+=_batch.length;
       }
-      if(delOk) log.push('<div style="color:#6b7280;">已清掉 '+delOk+' 個被取代的舊圖檔</div>');
+      if(delOk) hpImgLog.push({t:'note', file:'', html:'<div style="color:#6b7280;">已清掉 '+delOk+' 個被取代的舊圖檔</div>'});
     }
   }
-  document.getElementById('hp-img-result').innerHTML='<div style="max-height:200px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;">'+log.join('')+'</div>';
+  hpRenderImgLog();
   if(st) st.textContent='完成：成功 '+(matched-updFailImgs)+' 張 / 失敗 '+updFailImgs+' 張'+(updFailProds?('（'+updFailProds+' 筆商品寫入失敗）'):'')+'，未對應 '+unmatched+' 張。';
   if(btn){btn.disabled=false;btn.textContent='完成';}
   await loadProducts();
@@ -15518,7 +16618,11 @@ function hpSupDownloadTemplate(){
   if(typeof XLSX==='undefined'){ alert('Excel 函式庫尚未載入，請重新整理頁面再試。'); return; }
   var note=['品牌方批量匯入範本：第 2 列為欄位標題（請勿刪除或更名），第 3 列起填資料'];
   var headers=['品牌方名稱','負責地區/國家','聯絡窗口','職稱','電話','Email','通訊軟體(LINE/WeChat/WhatsApp)','品牌連結','收款幣別','結算稅別','付款方式/帳期','最低起訂量MOQ','最低起訂金額','備註'];
-  var example=['（範例）ABC Foods','日本','山田太郎','業務課長','+81-3-1234-5678','sales@abcfoods.jp','LINE: abcfoods','https://abcfoods.jp','JPY','T/T 月結30天','100','50000','此列為範例，上傳前請刪除'];
+  /* ⚠️ 這一列要跟 headers 一格一格對齊。2026-09-11 加「結算稅別」時只加了表頭、
+     忘了加範例，於是從「收款幣別」之後整列右移一格 ——
+     範例的「T/T 月結30天」跑到結算稅別底下、「100」跑到付款方式底下。
+     以後改 headers 一定要同時改這一列。 */
+  var example=['（範例）ABC Foods','日本','山田太郎','業務課長','+81-3-1234-5678','sales@abcfoods.jp','LINE: abcfoods','https://abcfoods.jp','JPY','含稅','T/T 月結30天','100','50000','此列為範例，上傳前請刪除'];
   var ws=XLSX.utils.aoa_to_sheet([note, headers, example]);
   var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '品牌方資料');
   XLSX.writeFile(wb, '品牌方_批量匯入範本.xlsx');
@@ -15553,9 +16657,18 @@ function hpSupImpParse(input){
     try{
       var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
       var sh=wb.Sheets['品牌方資料']||wb.Sheets['供應商資料']||wb.Sheets[wb.SheetNames[0]];
-      var rows=XLSX.utils.sheet_to_json(sh,{defval:'',range:1});
+      /* 標題列在第幾列要「找」出來，不能寫死（sylvia 2026-09-15）──────────────
+         正式範本第 1 列是說明、第 2 列才是標題；但 gc-pallet-converter 的
+         build_gc_upload.py 產出的檔標題就在第 1 列。以前寫死 range:1，
+         遇到後者會**把第一家品牌方當成標題吃掉**，而且不會報錯 ——
+         剩下的列 key 全變成那家公司的名字，解析出來一筆都對不上。 */
+      var _hdr=1, _aoa=XLSX.utils.sheet_to_json(sh,{defval:'',header:1});
+      for(var _i=0;_i<Math.min(_aoa.length,5);_i++){
+        if((_aoa[_i]||[]).some(function(c){ var t=String(c||'').trim(); return t==='品牌方名稱'||t==='供應商名稱'; })){ _hdr=_i; break; }
+      }
+      var rows=XLSX.utils.sheet_to_json(sh,{defval:'',range:_hdr});
       hpSupImpRows=[];
-      rows.forEach(function(row,idx){ var m=hpSupMapRow(row); if(m){ m.rowNum=idx+3; hpSupImpRows.push(m); } });
+      rows.forEach(function(row,idx){ var m=hpSupMapRow(row); if(m){ m.rowNum=idx+_hdr+2; hpSupImpRows.push(m); } });
       hpRenderSupImp();
     }catch(err){ if(status) status.textContent='解析失敗：'+err.message; }
   };
@@ -20794,8 +21907,8 @@ function ordLineRow(l){
     '<td style="font-family:var(--font);font-variant-numeric:tabular-nums;font-size:11.5px;white-space:nowrap;">'+_esc(l.sku||'—')+
       (l.origin==='manual'?'<div style="font-size:10px;color:#7c3aed;">手動新增</div>':'')+'</td>'+
     '<td style="font-size:11.5px;">'+_esc(l.brand||l._fileBrand||'—')+'</td>'+
-    '<td><div style="font-size:12px;">'+_esc(l.product_name||l._fileName||'—')+'</div>'+
-      (l.line_note?'<div style="font-size:10px;color:var(--text-dim);">'+_esc(l.line_note)+'</div>':'')+'</td>'+
+    '<td title="'+_esc(l.product_name||l._fileName||'')+'"><div class="cell-clip-in" style="font-size:12px;">'+_esc(l.product_name||l._fileName||'—')+'</div>'+
+      (l.line_note?'<div class="cell-clip-in" style="font-size:10px;color:var(--text-dim);">'+_esc(l.line_note)+'</div>':'')+'</td>'+
     // 人工填單價的列國別本來就可能留空（訂購單上就不印當地品號），不是錯誤，用灰的
     '<td>'+(l.region?_badge(l.region,'gray')
             :(l._manualCost?'<span style="color:var(--text-dim);font-size:11px;">未指定</span>'
@@ -22001,7 +23114,7 @@ function ordLedgerHtml(){
       msDropdown('ord-contact','全部窗口',_ordContactOpts(),'_ordApply',true)+
     '</div><div class="toolbar-right" style="display:flex;gap:8px;">'+
       '<button class="btn btn-secondary" onclick="ordExpOpen()">匯出台帳</button>'+
-      '<button class="btn btn-primary" onclick="ordGoImport()"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg> 新增訂購</button>'+
+      '<button class="btn btn-primary" onclick="ordGoImport()">新增訂購</button>'+
     '</div></div>'+
     ordLedgerDateHtml()+
     '<div class="table-card"><div class="table-wrap"><table>'+
@@ -22413,8 +23526,8 @@ function ordDetailSellLinesHtml(lines){
           : ('<td style="font-family:var(--font);font-variant-numeric:tabular-nums;font-size:11.5px;">'+_esc(l.sku||'—')+
              (l.origin==='manual'?'<div style="font-size:10px;color:#7c3aed;">手動新增</div>':'')+'</td>'+
              '<td style="font-size:11.5px;">'+_esc(l.brand||'—')+'</td>'+
-             '<td><div style="font-size:12px;">'+_esc(l.product_name||'—')+'</div>'+
-               (l.line_note?'<div style="font-size:10px;color:var(--text-dim);">'+_esc(l.line_note)+'</div>':'')+'</td>'+
+             '<td title="'+_esc(l.product_name||'')+'"><div class="cell-clip-in" style="font-size:12px;">'+_esc(l.product_name||'—')+'</div>'+
+               (l.line_note?'<div class="cell-clip-in" style="font-size:10px;color:var(--text-dim);">'+_esc(l.line_note)+'</div>':'')+'</td>'+
              '<td>'+(l.region?_badge(l.region,'gray'):'<span style="color:var(--text-dim);">—</span>')+'</td>'))+
         '<td style="text-align:right;">'+Number(l.qty||0)+'</td>'+
         '<td style="font-size:11.5px;">'+_esc(l.sell_currency||'—')+'</td>'+
