@@ -235,6 +235,12 @@ function blogInjectStyle(){
      ⚠ 刻意只有「空方框」這一種樣子：sylvia 2026-08-27 指定純展示，
        後台與官網都不做打勾，所以資料結構裡也沒有打勾狀態。 */
   + '.blog-doc ul.blog-todo>li::before{content:"";left:2px;top:.55em;width:14px;height:14px;border-radius:4px;border:1.5px solid #cbd5e1;background:#fff;box-sizing:border-box}'
+  /* 巢狀清單的第二層：縮排靠 <li> 自己的 padding-left 疊上去，子清單本身不再加，
+     不然兩層加起來會縮太多。項目符號改成空心圓，跟第一層分得開。 */
+  + '.blog-doc li>ul,.blog-doc li>ol{padding-left:4px;margin-top:4px}'
+  + '.blog-doc li ul>li::before{background:none;border:1.5px solid var(--accent);box-sizing:border-box}'
+  + '.blog-doc li ol>li::before{content:counter(blogoli,lower-alpha) "."}'
+  + '.blog-doc li ul.blog-todo>li::before{border-color:#cbd5e1;background:#fff}'
   + '.blog-doc [data-ph]:empty::before{content:attr(data-ph);color:rgba(17,24,39,.26)}'
   + '.blog-doc>p:only-child:empty::before{content:"在這裡打字…　按 / 可插入標題、圖片、影片、引言";color:rgba(17,24,39,.26)}'
   + '.blog-nb{position:relative;margin:0 0 2px;padding:2px 0}'
@@ -247,6 +253,12 @@ function blogInjectStyle(){
   + '.blog-calb>p{min-height:1.9em}'
   + '.blog-calb>p:only-child:empty::before{content:"框裡面要寫的內容…";color:rgba(17,24,39,.26)}'
   + '.blog-cal .blog-caltag{position:absolute;top:-9px;left:14px;background:#fff;border:1px solid var(--border);border-radius:20px;padding:0 8px;font-size:10.5px;color:var(--text-dim);line-height:17px}'
+  /* 摺疊區塊：沿用重點框的骨架，換成白底＋左邊一條灰線，標題前面一個 ▾。
+     ▾ 是 ::before 畫的，不是真元素 —— 塞真元素進可編輯區會被當成內文。 */
+  + '.blog-cal.blog-tog{background:#fff;border-color:var(--border);padding:12px 16px 10px}'
+  + '.blog-cal.blog-tog .blog-calt{padding-left:22px;position:relative}'
+  + '.blog-cal.blog-tog .blog-calt::before{content:"\\25BE";position:absolute;left:4px;top:1px;color:var(--accent);font-size:12px}'
+  + '.blog-cal.blog-tog .blog-calb{padding-left:22px;border-left:2px solid #e5e7eb;margin-left:8px;margin-top:2px}'
   + '.blog-cal[data-style="warn"] .blog-caltag{border-color:#fcd34d;color:#b45309}'
   /* 游標退到圖片前面按退格：先「選起來」，再按一次才真的刪掉 */
   + '.blog-nb.blog-msel{outline:2px solid var(--accent);outline-offset:3px;border-radius:8px}'
@@ -255,6 +267,13 @@ function blogInjectStyle(){
   + '.blog-gut.blog-on{display:flex}'
   + '.blog-gut span{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:rgba(17,24,39,.32);cursor:pointer;font-size:14px;line-height:1;user-select:none;background:#fff}'
   + '.blog-gut span:hover{background:#eef0f3;color:var(--text)}'
+  /* 表格：沿用後台索引頁表格的樣子（表頭灰底加粗、格線用 --border）。
+     窄螢幕要能橫向捲，不然欄位多的表會把整個編輯區撐爆。 */
+  + '.blog-doc>table.blog-tbl{width:100%;border-collapse:collapse;margin:10px 0 8px;padding:0;font-size:13.5px;line-height:1.7;display:table}'
+  + '.blog-tbl th,.blog-tbl td{border:1px solid var(--border);padding:6px 10px;text-align:left;vertical-align:top;min-width:64px}'
+  + '.blog-tbl th{background:#f4f5f7;font-weight:700;color:var(--text)}'
+  + '.blog-tbl td{background:#fff}'
+  + '.blog-tbl th:focus,.blog-tbl td:focus{outline:2px solid rgba(37,99,235,.35);outline-offset:-2px}'
   + '.blog-hr{height:1px;background:var(--border);margin:16px 0}'
   + '.blog-embw{position:relative}'
   + '.blog-emb{width:100%;border-radius:9px;position:relative;overflow:hidden;background:#e9ecf1 center/cover no-repeat;border:1px solid var(--border);cursor:zoom-in;min-height:120px}'
@@ -343,10 +362,8 @@ function blogInjectStyle(){
   + '.blog-impb{padding:14px 18px;overflow-y:auto}'
   + '.blog-impn{font-size:12.5px;line-height:1.85;color:var(--text-mid);background:#f7f8fa;border:1px solid var(--border);border-radius:9px;padding:10px 13px;margin-bottom:12px}'
   + '.blog-impn code{background:#eef1f5;border-radius:4px;padding:1px 5px;font-size:11.5px}'
-  + '.blog-impfile{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}'
-  + '.blog-impfn{font-size:12px;color:var(--text-dim)}'
-  + '.blog-impta{width:100%;height:200px;resize:vertical;border:1px solid var(--border);border-radius:9px;padding:11px 13px;font-family:inherit;font-size:13px;line-height:1.8;color:var(--text);outline:none}'
-  + '.blog-impta:focus{border-color:var(--accent)}'
+  + '.blog-impurl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}'
+  + '.blog-impurl .blog-i{flex:1 1 320px;min-width:0;font-family:Inter,ui-monospace,monospace;font-size:12.5px}'
   + '.blog-impsum{margin-top:10px;font-size:12.5px;line-height:1.8;color:var(--text-mid)}'
   + '.blog-impf{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 18px;border-top:1px solid var(--border);background:#fbfcfd}'
   + '.blog-impmode{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--text-mid)}'
@@ -1807,7 +1824,9 @@ var BLOG_SLASH_ITEMS = [
   ['img',   '▣',  '圖片',       '維持原圖比例，不裁切'],
   ['vid',   '▶',  '影片',       '貼連結自動抓縮圖'],
   ['hr',    '—',  '分隔線',     '分段用'],
-  ['cal',   '▤',  '重點框',     '標題＋重點條列的灰底框']
+  ['cal',   '▤',  '重點框',     '標題＋重點條列的灰底框'],
+  ['tog',   '▾',  '摺疊區塊',   '官網上點一下才展開（編輯器裡一律展開）'],
+  ['tbl',   '▦',  '表格',       '三欄兩列，Tab 跳格、最後一格 Tab 長一列']
 ];
 
 function blogCardDoc(ro){
@@ -1831,7 +1850,7 @@ function blogCardDoc(ro){
   +     '<button class="btn btn-secondary" onclick="blogFootAdd(\'vid\')">貼影片連結</button>'
   +     '<button class="btn btn-secondary" onclick="blogFootAdd(\'cal\')">重點框</button>'
   +     '<span class="blog-fk" style="margin-left:8px">匯入</span>'
-  +     '<button class="btn btn-secondary" onclick="blogOpenImport()">Notion／Markdown</button>'
+  +     '<button class="btn btn-secondary" onclick="blogOpenImport()">Notion 連結</button>'
   +     '<span class="blog-fh">或在文件裡按 <kbd>/</kbd>　·　從 Notion 複製後直接貼上也會自動轉換</span></div>')
   + '</div></div>';
 }
@@ -1923,6 +1942,14 @@ function blogSanitize(html){
       // 這幾種連內容都不要留（<script>alert(1)</script> 不該變成文字「alert(1)」）
       if (['script','style','noscript','iframe','object','embed','template'].indexOf(tag) >= 0){ n.remove(); return; }
       if (BLOG_INLINE_OK.indexOf(tag) < 0){
+        /* ⚠ 拆掉這一層之前必須先 walk(n)。
+           外層的 forEach 跑的是「進迴圈前拍的子節點快照」，
+           被提上來的小孩不在那份快照裡 —— 不先洗的話它們永遠不會被檢查，
+           第二層以後的 <p>/<div> 會原封不動留在內文。一個 <p> 卡在
+           <blockquote> 或 <li> 裡面，瀏覽器會把它另起一行 —— 文字就從
+           引言框／項目符號裡「跑」出來了，而且髒 HTML 會直接存進資料庫。
+           下面 span 的那一段本來就是這樣寫的，這裡只是跟它對齊。 */
+        walk(n);
         while (n.firstChild) n.parentNode.insertBefore(n.firstChild, n);
         n.remove(); return;
       }
@@ -1957,13 +1984,120 @@ function blogSanitize(html){
      選取，⌘A 只選得到一段、退格也併不回上一段。整份改成一個可編輯區之後
      全選、跨段刪除、退格併段全部都是原生行為，不用自己模擬。            */
 
-var BLOG_TEXT_TAGS = { p:'p', h2:'h2', h3:'h3', blockquote:'quote', ul:'ul', ol:'ol' };
+var BLOG_TEXT_TAGS = { p:'p', h2:'h2', h3:'h3', blockquote:'quote', ul:'ul', ol:'ol', table:'table' };
 var BLOG_MEDIA_T = ['img','vid','car','hr'];
 /* 三種清單：項目清單、編號清單、核取方塊。核取方塊在 DOM 裡是
    <ul class="blog-todo">，資料結構跟一般清單一模一樣（items 是字串陣列）。
    ⚠ 型別判斷只看「容器」的標籤＋class，<li> 本身永遠是純文字。 */
 var BLOG_LIST_T = ['ul','ol','todo'];
 function blogIsListT(t){ return BLOG_LIST_T.indexOf(t) >= 0; }
+
+/* ── 巢狀清單 ──────────────────────────────────────────────────────
+   items 可以是字串（＝第一層，既有文章全部都是這樣），要縮排的才寫成
+   { html:'…', lv:1 }。刻意做成這樣，既有文章一篇都不用轉檔。
+   ⚠ 只做兩層（lv 0/1）。再深下去官網、目錄與 SEO 摘要都要多處理好幾種
+     情況，文章排到第三層本來也不好讀。                                */
+var BLOG_LIST_MAXLV = 1;
+function blogLiItem(x){
+  if (x && typeof x === 'object'){
+    var lv = parseInt(x.lv, 10); if (!(lv > 0)) lv = 0;
+    return { html: String(x.html == null ? '' : x.html), lv: Math.min(BLOG_LIST_MAXLV, lv) };
+  }
+  return { html: String(x == null ? '' : x), lv: 0 };
+}
+/* 一串「扁的」items → 真的巢狀的 <ul>/<ol>。
+   ⚠ 用真巢狀而不是自己算 padding：Tab 縮排、跨項選取、退格併行全都是
+     瀏覽器原生行為，自己模擬的話每一項都得補回來。                    */
+function blogListHtml(tag, items, cls){
+  var arr = (items && items.length ? items : ['']).map(blogLiItem);
+  var prev = -1;                       // 層級一次只能深一階，第一項一定是第一層
+  arr.forEach(function(it){ if (it.lv > prev + 1) it.lv = prev + 1; prev = it.lv; });
+  var c = cls ? ' class="' + cls + '"' : '';
+  var out = '<' + tag + c + '>', lv = 0, openLi = false;
+  arr.forEach(function(it){
+    while (it.lv > lv){ out += '<' + tag + c + '>'; lv++; openLi = false; }
+    while (it.lv < lv){ if (openLi) out += '</li>'; out += '</' + tag + '></li>'; lv--; openLi = false; }
+    if (openLi) out += '</li>';
+    out += '<li>' + blogSanitize(it.html);
+    openLi = true;
+  });
+  while (lv > 0){ if (openLi) out += '</li>'; out += '</' + tag + '></li>'; lv--; openLi = false; }
+  if (openLi) out += '</li>';
+  return out + '</' + tag + '>';
+}
+/* 這個 <li> 在最外層清單底下的第幾層（直接子項＝0） */
+function blogLiLevel(li, list){
+  var lv = 0, p = li.parentNode;
+  while (p && p !== list){
+    var t = p.tagName && p.tagName.toLowerCase();
+    if (t === 'ul' || t === 'ol') lv++;
+    p = p.parentNode;
+  }
+  return lv;
+}
+/* 最外層清單底下所有的 <li>，照畫面順序（含子項） */
+function blogLiAll(list){ return Array.prototype.slice.call(list.querySelectorAll('li')); }
+/* Tab：把這個 <li> 塞進「上一個 <li>」底下的子清單。
+   沒有上一個項目就不能縮 —— 第一項縮排在 HTML 裡沒有合法的寫法。 */
+function blogLiIndent(li, list){
+  var prev = li.previousElementSibling;
+  if (!prev || prev.tagName.toLowerCase() !== 'li') return false;
+  if (blogLiLevel(li, list) >= BLOG_LIST_MAXLV) return false;
+  var sub = prev.lastElementChild;
+  if (!sub || ['ul','ol'].indexOf(sub.tagName.toLowerCase()) < 0){
+    sub = document.createElement(list.tagName.toLowerCase());
+    if (list.className) sub.className = list.className;
+    prev.appendChild(sub);
+  }
+  sub.appendChild(li);
+  return true;
+}
+/* Shift+Tab：退回上一層。後面還有兄弟項的話，它們要跟著掛到自己底下，
+   不然它們會突然跳一層上來。 */
+function blogLiOutdent(li, list){
+  var sub = li.parentNode;
+  if (!sub || ['ul','ol'].indexOf((sub.tagName || '').toLowerCase()) < 0) return false;
+  var host = sub.parentNode;
+  if (!host || host.tagName.toLowerCase() !== 'li') return false;   // 已經在第一層
+  if (li.nextElementSibling){
+    var rest = document.createElement(sub.tagName.toLowerCase());
+    if (sub.className) rest.className = sub.className;
+    while (li.nextSibling) rest.appendChild(li.nextSibling);
+    li.appendChild(rest);
+  }
+  host.after(li);
+  if (!sub.children.length) sub.remove();
+  return true;
+}
+/* 游標在這一段裡的第幾個字／把游標放回第幾個字。
+   縮排是把整個 <li> 搬家，搬完選取範圍就沒了，要自己放回去。 */
+function blogOffOf(el){
+  var s = window.getSelection();
+  if (!s || !s.rangeCount) return 0;
+  try {
+    var r = document.createRange();
+    r.selectNodeContents(el);
+    r.setEnd(s.getRangeAt(0).startContainer, s.getRangeAt(0).startOffset);
+    return r.toString().length;
+  } catch(e){ return 0; }
+}
+function blogCaretAt(el, off){
+  var r = document.createRange(), hit = false, n = 0;
+  (function walk(x){
+    if (hit) return;
+    if (x.nodeType === 3){
+      var L = x.nodeValue.length;
+      if (n + L >= off){ r.setStart(x, Math.max(0, Math.min(L, off - n))); hit = true; return; }
+      n += L; return;
+    }
+    if (x.nodeType !== 1) return;
+    if (x !== el && ['ul','ol'].indexOf(x.tagName.toLowerCase()) >= 0) return;   // 子清單的字不算
+    Array.prototype.slice.call(x.childNodes).forEach(walk);
+  })(el);
+  if (!hit){ r.selectNodeContents(el); r.collapse(false); } else r.collapse(true);
+  var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  var d = blogDoc(); if (d) d.focus();
+}
 function blogMakeList(t){
   var el = document.createElement(t === 'ol' ? 'ol' : 'ul');
   if (t === 'todo') el.className = 'blog-todo';
@@ -1982,9 +2116,12 @@ function blogBlkType(el){
   return BLOG_TEXT_TAGS[tag] || 'p';
 }
 function blogIsMedia(el){ return BLOG_MEDIA_T.indexOf(blogBlkType(el)) >= 0; }
-function blogIsCal(el){ return blogBlkType(el) === 'cal'; }
-/* 圖片與重點框後面都要留一段可以打字的地方，不然游標無處可去 */
-function blogNeedsTail(el){ return blogIsMedia(el) || blogIsCal(el); }
+/* 摺疊區塊在這裡一律跟重點框同一掛：退格保護、後面要不要補空段落、
+   ＋／⠿ 指著整個框 —— 規則完全一樣。 */
+function blogIsCal(el){ var t = blogBlkType(el); return t === 'cal' || t === 'tog'; }
+function blogIsTbl(el){ return blogBlkType(el) === 'table'; }
+/* 圖片、重點框、摺疊區塊、表格後面都要留一段可以打字的地方，不然游標無處可去 */
+function blogNeedsTail(el){ return blogIsMedia(el) || blogIsCal(el) || blogIsTbl(el); }
 
 /* ── 「容器」＝ 段落住在哪裡 ───────────────────────────────────────
    平常是 #blog-doc 本身；重點框裡面的段落則住在那個框的 .blog-calb。
@@ -2029,19 +2166,10 @@ function blogBlockHtml(b, ro){
       return '<' + hn + ' data-ph="標題">'
         + (b.html ? blogSanitize(b.html) : bgEsc(b.text || '')) + '</' + hn + '>';
     case 'list':
-      var lt = (b.style === 'ol' ? 'ol' : 'ul');
-      return '<' + lt + '>'
-        + ((b.items && b.items.length ? b.items : ['']).map(function(x){
-            return '<li>' + blogSanitize(x) + '</li>'; }).join(''))
-        + '</' + lt + '>';
+      return blogListHtml(b.style === 'ol' ? 'ol' : 'ul', b.items, '');
     case 'todo':
-      return '<ul class="blog-todo">'
-        + ((b.items && b.items.length ? b.items : ['']).map(function(x){
-            // 舊資料若是 {html,done} 物件也讀得動，但一律畫成空方框
-            var h = (x && typeof x === 'object') ? (x.html || '') : String(x == null ? '' : x);
-            return '<li>' + blogSanitize(h) + '</li>';
-          }).join(''))
-        + '</ul>';
+      // 舊資料若是 {html,done} 物件也讀得動（blogLiItem 會收），但一律畫成空方框
+      return blogListHtml('ul', b.items, 'blog-todo');
     case 'quote':
       return '<blockquote data-ph="想強調的一句話">'
         + (b.html ? blogSanitize(b.html) : bgEsc(b.text || '')) + '</blockquote>';
@@ -2055,6 +2183,29 @@ function blogBlockHtml(b, ro){
         + '<span class="blog-caltag"' + ce + '>' + (cs === 'warn' ? '提醒框' : '重點框') + '</span>'
         + '<div class="blog-calt" data-ph="框的標題（可留空）">' + (b.title ? blogSanitize(b.title) : '') + '</div>'
         + '<div class="blog-calb">' + inner + '</div></div>';
+    /* 摺疊區塊＝重點框的雙胞胎：同樣的 .blog-calt 標題 ＋ .blog-calb 內容區，
+       所以 blogHostOf／blogTopOf／blogGutBlk／Enter 離開框那一整套都直接沿用。
+       刻意也掛 .blog-cal，因為那幾個地方是用 closest('.blog-cal') 找框的。
+       ⚠ 編輯器裡一律展開 —— 收起來就編不到了。data-open 只給官網用。 */
+    /* 表格。整張表是 #blog-doc 的一個直接子節點，儲存格直接繼承 contenteditable
+       —— 不另外做成不可編輯物件，這樣點進去就能打字，選取、複製也都是原生行為。
+       ⚠ 表頭永遠是 <thead><th>，讀回來時第一列就是 head。 */
+    case 'table':
+      var thh = (b.head && b.head.length ? b.head : []).map(function(x){
+        return '<th>' + blogSanitize(x) + '</th>'; }).join('');
+      var trr = (b.rows && b.rows.length ? b.rows : [['']]).map(function(r){
+        return '<tr>' + ((r && r.length) ? r : ['']).map(function(x){
+          return '<td>' + blogSanitize(x) + '</td>'; }).join('') + '</tr>'; }).join('');
+      return '<table class="blog-tbl">'
+        + (thh ? '<thead><tr>' + thh + '</tr></thead>' : '')
+        + '<tbody>' + trr + '</tbody></table>';
+    case 'toggle':
+      var tgi = (b.blocks && b.blocks.length ? b.blocks : [{ type:'paragraph', html:'' }])
+        .map(function(x){ return blogCalInner(x, ro); }).join('');
+      return '<div class="blog-nb blog-cal blog-tog" data-t="tog" data-open="' + (b.open ? '1' : '0') + '">'
+        + '<span class="blog-caltag"' + ce + '>摺疊區塊</span>'
+        + '<div class="blog-calt" data-ph="點開才看到的標題">' + (b.title ? blogSanitize(b.title) : '') + '</div>'
+        + '<div class="blog-calb">' + tgi + '</div></div>';
     case 'image':
       var ar = (b.w && b.h) ? (b.w + ' × ' + b.h + '（' + blogRatioText(b.w, b.h) + '）· 不裁切') : '原圖比例 · 不裁切';
       return '<div class="blog-nb" data-t="img" data-j="' + j(b) + '"' + ce + '>'
@@ -2127,15 +2278,20 @@ function blogReadBlocks(host, keepEmpty, inCal){
     }
     if (el.nodeType !== 1) return;
     var t = blogBlkType(el);
-    if (t === 'cal'){
+    if (t === 'cal' || t === 'tog'){
       if (inCal) return;                     // 框裡面不再放框
       var body = el.querySelector('.blog-calb');
       var ti = el.querySelector('.blog-calt');
       var kids = body ? blogReadBlocks(body, keepEmpty, true) : [];
       var title = ti ? blogSanitize(ti.innerHTML) : '';
       if (kids.length || plain(title) || keepEmpty){
-        out.push({ type:'callout', style: el.getAttribute('data-style') === 'warn' ? 'warn' : 'note',
-                   title: title, blocks: kids });
+        if (t === 'tog'){
+          out.push({ type:'toggle', title: title,
+                     open: el.getAttribute('data-open') === '1', blocks: kids });
+        } else {
+          out.push({ type:'callout', style: el.getAttribute('data-style') === 'warn' ? 'warn' : 'note',
+                     title: title, blocks: kids });
+        }
       }
       return;
     }
@@ -2147,6 +2303,21 @@ function blogReadBlocks(host, keepEmpty, inCal){
       out.push(j);
       return;
     }
+    if (t === 'table'){
+      if (inCal) return;                       // 框裡面不放表格
+      var cellOf = function(c){ return blogSanitize(c.innerHTML); };
+      var head = [], rows = [];
+      var hr0 = el.tHead && el.tHead.rows[0];
+      if (hr0) head = Array.prototype.slice.call(hr0.cells).map(cellOf);
+      var tb0 = el.tBodies && el.tBodies[0];
+      if (tb0) Array.prototype.slice.call(tb0.rows).forEach(function(r){
+        rows.push(Array.prototype.slice.call(r.cells).map(cellOf));
+      });
+      var anyT = head.some(function(x){ return plain(x); })
+              || rows.some(function(r){ return r.some(function(x){ return plain(x); }); });
+      if (anyT || keepEmpty) out.push({ type:'table', head: head, rows: rows });
+      return;
+    }
     if (t === 'hr'){ out.push({ type:'divider' }); return; }
     if (t === 'h2' || t === 'h3'){
       // text 一律保留純文字版本：SEO、目錄、搜尋、異動紀錄都吃這個欄位
@@ -2156,12 +2327,11 @@ function blogReadBlocks(host, keepEmpty, inCal){
     }
     if (blogIsListT(t)){
       var items = [];
-      Array.prototype.slice.call(el.querySelectorAll('li')).forEach(function(li){
-        // 巢狀清單在資料結構裡沒有對應，一律攤平成同一層，內容不會掉
-        var c = li.cloneNode(true);
-        Array.prototype.slice.call(c.querySelectorAll('ul,ol')).forEach(function(x){ x.remove(); });
-        var h = blogSanitize(c.innerHTML);
-        if (plain(h)) items.push(h);
+      blogLiAll(el).forEach(function(li){
+        var h = blogSanitize(blogLiHtml(li));          // blogLiHtml 會把子清單先拿掉
+        if (!plain(h)) return;
+        var lv = Math.min(BLOG_LIST_MAXLV, blogLiLevel(li, el));
+        items.push(lv ? { html:h, lv:lv } : h);        // 第一層仍然存字串，舊資料格式不變
       });
       if (!items.length && !keepEmpty) return;
       if (t === 'todo') out.push({ type:'todo', items: items.length ? items : [''] });
@@ -2252,6 +2422,8 @@ function blogMakeNb(type){
   else if (type === 'vid')   b = { type:'video', url:'', thumb:'', caption:'', source:'' };
   else if (type === 'cal')   b = { type:'callout', style:'note', title:'', blocks:[{ type:'paragraph', html:'' }] };
   else if (type === 'calw')  b = { type:'callout', style:'warn', title:'', blocks:[{ type:'paragraph', html:'' }] };
+  else if (type === 'tog')   b = { type:'toggle', title:'', open:false, blocks:[{ type:'paragraph', html:'' }] };
+  else if (type === 'tbl')   b = { type:'table', head:['','',''], rows:[['','',''],['','','']] };
   else                       b = { type:'paragraph', html:'' };
   var wrap = document.createElement('div');
   wrap.innerHTML = blogBlockHtml(b, false);
@@ -2275,6 +2447,10 @@ function blogFocusBlock(el, atEnd){
     target = nx;
   }
   var tag = target.tagName.toLowerCase();
+  if (tag === 'table'){                        // 表格：游標落在第一格（atEnd 就是最後一格）
+    var c0 = atEnd ? target.querySelector('tbody tr:last-child td:last-child') : target.querySelector('th,td');
+    if (c0) target = c0;
+  }
   if (tag === 'ul' || tag === 'ol'){
     var li = atEnd ? target.lastElementChild : target.firstElementChild;
     if (!li){ li = document.createElement('li'); target.appendChild(li); }
@@ -2395,12 +2571,13 @@ function blogSelRows(){
   var rows = [];
   Array.prototype.slice.call(host.children).forEach(function(b){
     var t = blogBlkType(b);
-    if (BLOG_MEDIA_T.indexOf(t) >= 0 || t === 'cal') return;   // 沒有文字／自己是個容器
+    // 沒有文字／自己是個容器：圖片、重點框、摺疊區塊、表格
+    if (BLOG_MEDIA_T.indexOf(t) >= 0 || blogIsCal(b) || t === 'table') return;
     if (b.classList && (b.classList.contains('blog-calt') || b.classList.contains('blog-caltag'))) return;
     if (!blogHits(r, b)) return;
     if (blogIsListT(t)){
-      Array.prototype.slice.call(b.children).forEach(function(li){
-        if (li.tagName.toLowerCase() === 'li' && blogHits(r, li)) rows.push({ el:li, list:b });
+      blogLiAll(b).forEach(function(li){                // 含子項，不能只看直接子節點
+        if (blogHits(r, li)) rows.push({ el:li, list:b });
       });
     } else rows.push({ el:b, list:null });
   });
@@ -2435,12 +2612,15 @@ function blogSetBlock(type){
   var plan = [];
   olds.forEach(function(b){
     var t = blogBlkType(b);
-    if (BLOG_MEDIA_T.indexOf(t) >= 0){ plan.push({ keep:b }); return; }
+    /* ⚠ 重點框（以及 1.6.3 新增的摺疊區塊與表格）夾在選取範圍中間時，
+         原本會掉進下面那條「當成一般段落」的路，整個框被攤平成一個 <p> ——
+         框裡的結構就沒了。容器型區塊一律原封不動搬過去。 */
+    if (BLOG_MEDIA_T.indexOf(t) >= 0 || blogIsCal(b) || t === 'table'){ plan.push({ keep:b }); return; }
     if (blogIsListT(t)){
-      Array.prototype.slice.call(b.children).forEach(function(li){
-        if (li.tagName.toLowerCase() !== 'li') return;
+      blogLiAll(b).forEach(function(li){
         var on = picked.indexOf(li) >= 0;
-        plan.push({ html: blogLiHtml(li), t: on ? type : t, sel: on });
+        plan.push({ html: blogLiHtml(li), t: on ? type : t, sel: on,
+                    lv: blogLiLevel(li, b) });          // 換型別時把縮排帶著走
       });
       return;
     }
@@ -2449,28 +2629,39 @@ function blogSetBlock(type){
   });
 
   var frag = document.createDocumentFragment();
-  var curList = null, curListT = '', fr = null, lr = null;
+  var fr = null, lr = null;
+  /* 連續的清單列要先收起來、整串交給 blogListHtml 組 —— 一列一列 appendChild
+     的話組不出巢狀（子清單得掛在「上一個 <li>」裡面）。 */
+  var pend = null, pendT = '';
+  var flushList = function(){
+    if (!pend) return;
+    var box = document.createElement('div');
+    box.innerHTML = blogListHtml(pendT === 'ol' ? 'ol' : 'ul', pend,
+                                 pendT === 'todo' ? 'blog-todo' : '');
+    var list = box.firstElementChild;
+    var lis = blogLiAll(list);
+    pend.forEach(function(x, k){ if (x.sel && lis[k]){ if (!fr) fr = lis[k]; lr = lis[k]; } });
+    frag.appendChild(list);
+    pend = null; pendT = '';
+  };
   plan.forEach(function(row){
-    if (row.keep){ curList = null; frag.appendChild(row.keep); return; }   // 圖片節點整個搬過去
-    var el;
+    if (row.keep){ flushList(); frag.appendChild(row.keep); return; }     // 圖片節點整個搬過去
     if (blogIsListT(row.t)){
       // 三種清單不能混在同一個容器裡，型別一換就開新的一份
-      if (!curList || curListT !== row.t){
-        curList = blogMakeList(row.t); curListT = row.t;
-        frag.appendChild(curList);
-      }
-      el = document.createElement('li');
-      curList.appendChild(el);
-    } else {
-      curList = null;
-      el = document.createElement(row.t === 'quote' ? 'blockquote' : (row.t === 'h2' || row.t === 'h3' ? row.t : 'p'));
-      if (row.t === 'h2' || row.t === 'h3') el.setAttribute('data-ph', '標題');
-      if (row.t === 'quote') el.setAttribute('data-ph', '想強調的一句話');
-      frag.appendChild(el);
+      if (pend && pendT !== row.t) flushList();
+      if (!pend){ pend = []; pendT = row.t; }
+      pend.push({ html: row.html || '', lv: row.lv || 0, sel: row.sel });
+      return;
     }
+    flushList();
+    var el = document.createElement(row.t === 'quote' ? 'blockquote' : (row.t === 'h2' || row.t === 'h3' ? row.t : 'p'));
+    if (row.t === 'h2' || row.t === 'h3') el.setAttribute('data-ph', '標題');
+    if (row.t === 'quote') el.setAttribute('data-ph', '想強調的一句話');
     el.innerHTML = blogSanitize(row.html || '');
+    frag.appendChild(el);
     if (row.sel){ if (!fr) fr = el; lr = el; }
   });
+  flushList();
 
   olds.forEach(function(n){ if (n.parentNode === host) host.removeChild(n); });
   host.insertBefore(frag, anchor);
@@ -2579,6 +2770,10 @@ function blogEnsureMenus(){
     + '<div id="blog-bcal" style="display:none"><div class="blog-sh" style="padding:4px 10px 6px">框的樣式</div><div class="blog-bcg">'
     +   '<button data-cal="note" title="中性的重點框">重點</button><button data-cal="warn" title="帶警示色的提醒框">提醒</button>'
     + '</div><div class="blog-bsep"></div></div>'
+    + '<div id="blog-btbl" style="display:none"><div class="blog-sh" style="padding:4px 10px 6px">表格</div><div class="blog-bcg">'
+    +   '<button data-tb="r+" title="在最後面加一列">＋列</button><button data-tb="c+" title="在最右邊加一欄">＋欄</button>'
+    +   '<button data-tb="r-" title="刪掉最後一列">－列</button><button data-tb="c-" title="刪掉最右邊一欄">－欄</button>'
+    + '</div><div class="blog-bsep"></div></div>'
     + '<div class="blog-bi" data-bm="up"><span>↑</span>上移一段</div>'
     + '<div class="blog-bi" data-bm="down"><span>↓</span>下移一段</div>'
     + '<div class="blog-bi" data-bm="dup"><span>⧉</span>複製這一段</div>'
@@ -2599,6 +2794,12 @@ function blogEnsureMenus(){
   });
 
   m.addEventListener('click', function(ev){
+    var tb = ev.target.closest('[data-tb]');
+    if (tb){
+      if (_blogBMenuTarget && document.contains(_blogBMenuTarget)) blogTblOp(_blogBMenuTarget, tb.getAttribute('data-tb'));
+      blogHideBMenu();
+      return;
+    }
     var cl = ev.target.closest('[data-cal]');
     if (cl){
       if (_blogBMenuTarget && document.contains(_blogBMenuTarget)) blogCalStyle(_blogBMenuTarget, cl.getAttribute('data-cal'));
@@ -2668,7 +2869,7 @@ function blogShowSlash(nb, anchor, mode){
   var inCal = !!(nb && blogHostOf(nb) !== blogDoc());
   if (s) Array.prototype.slice.call(s.querySelectorAll('.blog-si')).forEach(function(it){
     var k = it.getAttribute('data-ins');
-    it.style.display = (inCal && ['img','vid','hr','cal'].indexOf(k) >= 0) ? 'none' : '';
+    it.style.display = (inCal && ['img','vid','hr','cal','tog','tbl'].indexOf(k) >= 0) ? 'none' : '';
   });
   blogHideBMenu();
   blogFloatAt(s, anchor || nb);
@@ -2730,7 +2931,9 @@ function blogShowBMenu(nb, anchor){
   // 圖片／影片／分隔線沒有文字，不顯示「轉換為」
   var cv = document.getElementById('blog-bcv');
   var t = blogBlkType(nb);
-  if (cv) cv.style.display = (BLOG_MEDIA_T.indexOf(t) >= 0 || t === 'cal') ? 'none' : '';
+  if (cv) cv.style.display = (BLOG_MEDIA_T.indexOf(t) >= 0 || t === 'cal' || t === 'tog' || t === 'table') ? 'none' : '';
+  var tbm = document.getElementById('blog-btbl');
+  if (tbm) tbm.style.display = (t === 'table') ? '' : 'none';
   var cl = document.getElementById('blog-bcal');
   if (cl){
     cl.style.display = (t === 'cal') ? '' : 'none';
@@ -2741,6 +2944,31 @@ function blogShowBMenu(nb, anchor){
   }
   blogFloatAt(document.getElementById('blog-bmenu'), anchor || nb);
 }
+/* ⠿ 選單的表格操作。⠿ 指著的是「整張表」，所以一律在最後面加、刪最後一列／欄
+   —— 好預測，不必記住游標停在哪一格。要刪中間的列，選起來刪字再刪整列即可。 */
+function blogTblOp(tbl, op){
+  if (!tbl || blogBlkType(tbl) !== 'table') return;
+  var head = tbl.tHead, body = tbl.tBodies && tbl.tBodies[0];
+  if (!body) return;
+  var cols = (head && head.rows[0]) ? head.rows[0].cells.length
+           : (body.rows[0] ? body.rows[0].cells.length : 0);
+  if (op === 'r+'){
+    var tr = document.createElement('tr');
+    for (var i = 0; i < cols; i++) tr.appendChild(document.createElement('td'));
+    body.appendChild(tr);
+  } else if (op === 'r-'){
+    if (body.rows.length > 1) body.deleteRow(body.rows.length - 1);
+  } else if (op === 'c+'){
+    if (head && head.rows[0]) head.rows[0].appendChild(document.createElement('th'));
+    Array.prototype.slice.call(body.rows).forEach(function(r){ r.appendChild(document.createElement('td')); });
+  } else if (op === 'c-'){
+    if (cols <= 1) return;
+    if (head && head.rows[0]) head.rows[0].deleteCell(-1);
+    Array.prototype.slice.call(body.rows).forEach(function(r){ if (r.cells.length) r.deleteCell(-1); });
+  }
+  blogTouchNow(); blogWordCount();
+}
+
 /* 切換重點框的樣式（重點／提醒） */
 function blogCalStyle(el, style){
   if (!el || !blogIsCal(el)) return;
@@ -2778,8 +3006,8 @@ function blogAtEdge(blk, r, atStart){
 /* 游標所在的那個 <li> */
 function blogLiOf(node, list){
   var n = node && node.nodeType === 3 ? node.parentNode : node;
-  while (n && n.parentNode && n.parentNode !== list) n = n.parentNode;
-  return (n && n.parentNode === list && n.tagName && n.tagName.toLowerCase() === 'li') ? n : null;
+  n = (n && n.closest) ? n.closest('li') : null;        // 子項的 parentNode 是子清單，不是 list
+  return (n && list && list.contains(n)) ? n : null;
 }
 
 /* ── 段落左邊的 ＋／⠿ ────────────────────────────────────────────
@@ -2852,6 +3080,43 @@ function blogBindDoc(){
   doc.addEventListener('keydown', function(e){
     if ((e.metaKey || e.ctrlKey) && (e.key || '').toLowerCase() === 'k'){ e.preventDefault(); blogFmtLink(); return; }
 
+    /* Tab／Shift+Tab＝清單縮排，跟 Notion 的手感一樣。
+       ⚠ 不在清單裡就「不要攔」Tab —— 要讓它照原本的行為跳到下一個欄位，
+         不然使用者會以為畫面當掉了。 */
+    if (e.key === 'Tab'){
+      var sT = window.getSelection();
+      // 表格：Tab 跳下一格、Shift+Tab 上一格、最後一格再按 Tab 自動長一列
+      var nT = (sT && sT.rangeCount) ? sT.getRangeAt(0).startContainer : null;
+      var cellT = nT ? (nT.nodeType === 3 ? nT.parentNode : nT) : null;
+      cellT = (cellT && cellT.closest) ? cellT.closest('th,td') : null;
+      if (cellT && doc.contains(cellT)){
+        e.preventDefault();
+        var tblT = cellT.closest('table');
+        var cellsT = Array.prototype.slice.call(tblT.querySelectorAll('th,td'));
+        var kT = cellsT.indexOf(cellT) + (e.shiftKey ? -1 : 1);
+        if (kT >= cellsT.length){
+          blogTblOp(tblT, 'r+');
+          cellsT = Array.prototype.slice.call(tblT.querySelectorAll('th,td'));
+        }
+        var nxT = cellsT[Math.max(0, Math.min(cellsT.length - 1, kT))];
+        if (nxT){
+          var rT = document.createRange();
+          rT.selectNodeContents(nxT); rT.collapse(true);
+          var ssT = window.getSelection(); ssT.removeAllRanges(); ssT.addRange(rT);
+        }
+        return;
+      }
+      var blkT = blogCurBlk();
+      var liT = (blkT && blogIsListT(blogBlkType(blkT)) && sT && sT.rangeCount)
+                ? blogLiOf(sT.getRangeAt(0).startContainer, blkT) : null;
+      if (!liT) return;
+      e.preventDefault();
+      var offT = blogOffOf(liT);
+      var okT = e.shiftKey ? blogLiOutdent(liT, blkT) : blogLiIndent(liT, blkT);
+      if (okT){ blogNormalizeDoc(); blogCaretAt(liT, offT); blogTouchNow(); blogWordCount(); }
+      return;
+    }
+
     // 已經框起來的圖片／影片：再按一次刪除鍵就真的刪掉
     var msel = doc.querySelector('.blog-nb.blog-msel');
     if (msel){
@@ -2869,6 +3134,18 @@ function blogBindDoc(){
 
     if (e.key === 'Enter' && !e.shiftKey){
       if (blogImeBusy(e)) return;             // 選字用的 Enter，不要拿來斷段落
+      // 表格的儲存格裡按 Enter＝換行。交給瀏覽器的話它會在格子裡塞 <div>，
+      // 存回去就多一層洗不掉的結構。
+      var sE = window.getSelection();
+      var nE = (sE && sE.rangeCount) ? sE.getRangeAt(0).startContainer : null;
+      var cellE = nE ? (nE.nodeType === 3 ? nE.parentNode : nE) : null;
+      cellE = (cellE && cellE.closest) ? cellE.closest('th,td') : null;
+      if (cellE && doc.contains(cellE)){
+        e.preventDefault();
+        document.execCommand('insertLineBreak');
+        blogTouchNow(); blogWordCount();
+        return;
+      }
       var sel0 = window.getSelection();
       var ti = (sel0 && sel0.rangeCount) ? blogCalTitleOf(sel0.getRangeAt(0).startContainer) : null;
       if (ti){                                 // 框的標題按 Enter＝跳到框裡面的內容
@@ -2898,8 +3175,14 @@ function blogBindDoc(){
       if (blogIsListT(t)){
         var s = window.getSelection();
         var li = (s && s.rangeCount) ? blogLiOf(s.getRangeAt(0).startContainer, blk) : null;
-        // 空項目上按 Enter＝離開清單；其餘交給瀏覽器（它會自己多一個 <li>）
-        if (li && !(li.textContent || '').trim()){ e.preventDefault(); blogListExit(li, blk); }
+        // 空項目上按 Enter：子項先退回上一層（跟 Notion 一樣），
+        // 已經在第一層才真的離開清單。其餘交給瀏覽器（它會自己多一個 <li>）
+        if (li && !(li.textContent || '').trim()){
+          e.preventDefault();
+          if (blogLiLevel(li, blk) > 0 && blogLiOutdent(li, blk)){
+            blogNormalizeDoc(); blogCaretAt(li, 0); blogTouchNow(); blogWordCount();
+          } else blogListExit(li, blk);
+        }
         return;
       }
       // 標題與引言後面接的通常是內文，跟 Word 一樣換行就回到內文
@@ -3439,7 +3722,7 @@ window.addEventListener('beforeunload', function(e){
      而且跨網域抓不下來，所以貼上時一律略過並回報張數，請改用
      Markdown 匯入（可以一起帶圖檔）或直接上傳。                    */
 
-var BLOG_IMP = { blocks:[], files:{}, mode:'append' };
+var BLOG_IMP = { blocks:[], mode:'append', title:'', busy:false };
 
 /* ── 行內語法 ──────────────────────────────────────────────────── */
 function blogMdInline(s){
@@ -3546,7 +3829,16 @@ function blogMdToBlocks(md){
         // Notion 的引言若用 shift+Enter 換行，第二行以後不會再加「>」。
         // 這些行原本會掉出去變成一般段落，引言只剩第一行 —— 看起來就像
         // 「引言被轉成文字」。中間沒有空行就代表還是同一段引言。
-        while (i < lines.length && lines[i].trim()
+        /* ⚠ 這個續行迴圈本來會把「引言後面沒空行的下一段」整個吸進引言裡，
+             兩段變一段 —— 使用者看到的就是「引言框的文字跑掉」。
+             真正的 shift+Enter 續行，前一行一定是斷在句子中間（逗號、頓號或沒有標點）；
+             前一行已經以句號／問號／驚嘆號收尾的話，下一行就是新的一段，不要再收。
+             寧可切開也不要合併：切開你自己選起來轉一下就好，合併會把段落界線弄丟。 */
+        var qOpen = function(){
+          var last = String(q[q.length - 1] || '').trim();
+          return !!last && !/[。！？!?.][”」』）)\]]?$/.test(last);
+        };
+        while (i < lines.length && lines[i].trim() && qOpen()
                && !/^\s{0,3}>/.test(lines[i])
                && !/^\s{0,3}(#{1,6}\s|```|<)/.test(lines[i])
                && !/^(\s*)([-*+]|\d+[.)])\s+/.test(lines[i])
@@ -3572,7 +3864,7 @@ function blogMdToBlocks(md){
       continue;
     }
 
-    // 表格：沒有對應的區塊型別，每一列轉成一個段落，用「｜」隔開，內容不會掉
+    // 表格（1.6.3 起有對應的區塊型別，不再攤成「｜」段落）
     if (/^\s*\|.*\|\s*$/.test(ln) && /^\s*\|[\s:\-|]+\|\s*$/.test(lines[i + 1] || '')){
       var rows = [];
       while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])){
@@ -3582,9 +3874,10 @@ function blogMdToBlocks(md){
         i++;
       }
       if (rows.length){
-        var head = rows.shift();
-        push({ type:'paragraph', html:'<b>' + blogMdInline(head.join('｜')) + '</b>' });
-        rows.forEach(function(r){ push({ type:'paragraph', html: blogMdInline(r.join('｜')) }); });
+        var head = rows.shift();               // markdown 表格的第一列一定是表頭
+        push({ type:'table',
+               head: head.map(function(c){ return blogMdInline(c); }),
+               rows: rows.map(function(r){ return r.map(function(c){ return blogMdInline(c); }); }) });
         stats.table++;
       }
       continue;
@@ -3597,8 +3890,18 @@ function blogMdToBlocks(md){
       var isTd = function(t){ return /^\[[ xX]\](\s|$)/.test(t); };
       var todo = !ordered && isTd(ml[3]);
       var items = [];
+      // Notion 匯出的子項是多縮 4 個空白（或一個 tab），拿第一項的縮排當基準
+      var baseInd = ml[1].replace(/\t/g, '    ').length;
+      var indOf = function(w){ return String(w || '').replace(/\t/g, '    ').length; };
       var addTail = function(h){
-        if (items.length) items[items.length - 1] += '<br>' + h;
+        var k = items.length - 1;
+        if (k < 0) return;
+        if (items[k] && typeof items[k] === 'object') items[k].html += '<br>' + h;
+        else items[k] += '<br>' + h;
+      };
+      var pushItem = function(h, ind){
+        var lv = ind > baseInd ? 1 : 0;                 // 只認兩層
+        items.push(lv ? { html:h, lv:lv } : h);
       };
       while (i < lines.length){
         var m2 = lines[i].match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
@@ -3610,7 +3913,7 @@ function blogMdToBlocks(md){
         if (/\d/.test(m2[2]) !== ordered) break;         // 換了清單型別就分成兩塊
         if ((!ordered && isTd(m2[3])) !== todo) break;    // 待辦與一般條列也要分開
         // 勾不勾一律不帶進來（核取方塊是純展示的）
-        items.push(blogMdInline(m2[3].replace(/^\[[ xX]\]\s*/, '')));
+        pushItem(blogMdInline(m2[3].replace(/^\[[ xX]\]\s*/, '')), indOf(m2[1]));
         i++;
       }
       if (todo) push({ type:'todo', items: items });
@@ -3640,6 +3943,23 @@ function blogMdToBlocks(md){
    「提醒框」。                                                          */
 var BLOG_EMO_RE = /^(?:(?:[\uD800-\uDBFF][\uDC00-\uDFFF])|[\u00A9\u00AE\u203C\u2049\u2122\u2139\u2190-\u21FF\u2300-\u23FF\u24C2\u25AA-\u25FE\u2600-\u27BF\u2B00-\u2BFF\u3030\u303D\u3297\u3299])[\uFE00-\uFE0F\u200D\u20E3]*/;
 var BLOG_WARN_EMO = ['\u26A0','\uD83D\uDEA8','\u2757','\u2755','\u203C','\u26D4','\uD83D\uDED1','\uD83D\uDD34','\u274C','\uD83D\uDD25','\u2622','\u2623','\uD83D\uDC80'];
+
+/* Notion 匯出 .md 時，框的圖示是一張 icon 圖，而它的 alt 常常就是圖片網址本身
+   （alt="https://www.notion.so/icons/light-bulb_gray.svg"）。alt 拿不到 emoji 時就從檔名反查，
+   否則框標題前面的 \uD83D\uDCA1 會整個不見。檔名長得像 light-bulb_gray.svg、warning_yellow.svg。 */
+var BLOG_ICON_EMO = {
+  'light-bulb':'\uD83D\uDCA1', 'bulb':'\uD83D\uDCA1', 'info':'\u2139\uFE0F', 'info-alternate':'\u2139\uFE0F',
+  'warning':'\u26A0\uFE0F', 'alert':'\u26A0\uFE0F', 'exclamation-mark':'\u2757', 'error':'\u274C',
+  'no-entry':'\u26D4', 'report':'\uD83D\uDEA9', 'flag':'\uD83D\uDEA9', 'checkmark':'\u2705', 'check':'\u2705',
+  'star':'\u2B50', 'fire':'\uD83D\uDD25', 'pin':'\uD83D\uDCCC', 'bookmark':'\uD83D\uDD16',
+  'calendar':'\uD83D\uDCC5', 'clock':'\uD83D\uDD50', 'document':'\uD83D\uDCC4', 'list':'\uD83D\uDCCB',
+  'gear':'\u2699\uFE0F', 'key':'\uD83D\uDD11', 'lock':'\uD83D\uDD12', 'question-mark':'\u2753',
+  'megaphone':'\uD83D\uDCE3', 'target':'\uD83C\uDFAF', 'thumbs-up':'\uD83D\uDC4D', 'tag':'\uD83C\uDFF7\uFE0F'
+};
+function blogIconEmoji(src){
+  var m = String(src || '').match(/\/icons\/([a-z0-9-]+?)(?:_[a-z]+)?\.(?:svg|png)/i);
+  return (m && BLOG_ICON_EMO[m[1].toLowerCase()]) || '';
+}
 
 function blogPlainOf(h){
   return String(h == null ? '' : h).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
@@ -3671,7 +3991,10 @@ function blogHtmlChunkToBlocks(tag, lines){
     var ico = '';
     inner = inner.replace(/<img[^>]*>/gi, function(t){
       var a = t.match(/alt\s*=\s*["']([^"']*)["']/i);
+      var sc = t.match(/src\s*=\s*["']([^"']*)["']/i);
       if (!ico && a && a[1] && !/^https?:/i.test(a[1])) ico = blogLeadEmoji(a[1]) || a[1].trim();
+      // Notion 匯出 .md 時 alt 常常就是圖片網址本身，抓不到 emoji 就從 icon 檔名反查
+      if (!ico && sc && sc[1]) ico = blogIconEmoji(sc[1]);
       return '';
     });
     var r = blogMdToBlocks(inner);
@@ -3691,19 +4014,22 @@ function blogHtmlChunkToBlocks(tag, lines){
   }
 
   if (tag === 'details'){
-    // 摺疊區塊：summary 當小標題，裡面的內容接在下面（後台沒有摺疊區塊）
+    // 摺疊區塊：summary＝框標題，裡面的內容進框裡（1.6.3 起有對應型別了）
     var sm = raw.match(/<summary[^>]*>([\s\S]*?)<\/summary>/i);
     var body = raw.replace(/^\s*<details\b[^>]*>/i, '')
                   .replace(/<\/details\s*>\s*$/i, '')
                   .replace(/<summary[^>]*>[\s\S]*?<\/summary>/i, '');
-    var head2 = [];
-    if (sm){
-      var st = blogMdInline(blogPlainOf(sm[1]));
-      if (blogPlainOf(st)) head2.push({ type:'heading', level:3, text: blogPlainOf(st), html: st });
-    }
+    var st = sm ? blogMdInline(blogPlainOf(sm[1])) : '';
     var rb = blogMdToBlocks(body);
     stats.img += rb.stats.img; stats.table += rb.stats.table;
-    return { blocks: head2.concat(rb.blocks), stats: stats };
+    var inBox = function(b){ return ['paragraph','heading','list','todo','quote'].indexOf(b.type) >= 0; };
+    var kids = rb.blocks.filter(inBox);
+    // 框裡不放圖片、影片、分隔線與框中框 —— 濾掉的不能丟，接在框後面
+    var rest = rb.blocks.filter(function(b){ return !inBox(b); });
+    if (!blogPlainOf(st) && !kids.length) return { blocks: rest, stats: stats };
+    return { blocks: [{ type:'toggle', title: st,
+                        open: /<details[^>]*\bopen\b/i.test(raw), blocks: kids }].concat(rest),
+             stats: stats };
   }
 
   if (tag === 'img' || tag === 'figure'){
@@ -3764,24 +4090,48 @@ function blogHtmlToBlocks(html){
         return;
       }
       if (tag === 'hr'){ out.push({ type:'divider' }); return; }
+      /* Notion 的摺疊區塊複製出來是 <ul class="toggle"><li><details>…</details></li></ul>。
+         不先攔下來的話會掉進下面的清單分支，整個變成「一個項目符號」，
+         而且標題跟內容還會黏在一起。 */
+      if (!inCal && tag === 'ul' && (/toggle/.test(cls) || el.querySelector('li > details'))){
+        Array.prototype.slice.call(el.children).forEach(function(li){
+          if (li.tagName.toLowerCase() !== 'li') return;
+          var dt = li.querySelector('details');
+          var smEl = dt ? dt.querySelector('summary') : null;
+          var ti = smEl ? blogSanitize(smEl.innerHTML) : inlineOf(li);
+          var sub2 = [];
+          if (dt){
+            var c2 = dt.cloneNode(true);
+            var s2 = c2.querySelector('summary'); if (s2) s2.remove();
+            var save2 = out; out = sub2;
+            walk(c2, true);
+            out = save2;
+          }
+          sub2 = sub2.filter(function(b){ return ['paragraph','heading','list','todo','quote'].indexOf(b.type) >= 0; });
+          if (!plain(ti) && !sub2.length) return;
+          out.push({ type:'toggle', title: ti,
+                     open: !!(dt && dt.hasAttribute('open')), blocks: sub2 });
+        });
+        return;
+      }
       if (tag === 'ul' || tag === 'ol'){
         // Notion 的待辦清單：<ul class="to-do-list">，或項目裡有 checkbox
         var isTodo = tag === 'ul' && (/to-?do/.test(cls)
                      || !!el.querySelector('input[type="checkbox"],.checkbox'));
         var items = [];
-        var take = function(node){
+        var take = function(node, lv){
           var c = node.cloneNode(true);
           Array.prototype.slice.call(c.querySelectorAll('ul,ol')).forEach(function(x){ x.remove(); });
           // 打勾的框框只是圖示，拿掉不留（核取方塊是純展示的）
           Array.prototype.slice.call(c.querySelectorAll('input[type="checkbox"],.checkbox')).forEach(function(x){ x.remove(); });
           var hh = blogSanitize(c.innerHTML);
-          if (plain(hh)) items.push(hh);
+          if (plain(hh)) items.push(lv ? { html:hh, lv:lv } : hh);
         };
         Array.prototype.slice.call(el.children).forEach(function(li){
           if (li.tagName.toLowerCase() !== 'li') return;
-          take(li);
-          // 巢狀清單攤平到同一層，內容不會掉
-          Array.prototype.slice.call(li.querySelectorAll('li')).forEach(take);
+          take(li, 0);
+          // 子項收成第二層（只做兩層，更深的一律當第二層）
+          Array.prototype.slice.call(li.querySelectorAll('li')).forEach(function(x){ take(x, 1); });
         });
         if (!items.length) return;
         if (isTodo) out.push({ type:'todo', items: items });
@@ -3799,6 +4149,7 @@ function blogHtmlToBlocks(html){
           if (!/notion\.so\/icons\//i.test(src0) && !/^\d{1,2}px$/.test(w0)) return;
           var a0 = im.getAttribute('alt') || '';
           if (!ico && a0 && !/^https?:/i.test(a0)) ico = blogLeadEmoji(a0) || a0.trim();
+          if (!ico) ico = blogIconEmoji(src0);
           im.remove();
         });
         var sub = [];
@@ -3807,6 +4158,15 @@ function blogHtmlToBlocks(html){
         out = save;
         sub = sub.filter(function(b){ return ['paragraph','heading','list','todo','quote'].indexOf(b.type) >= 0; });
         var title = '';
+        /* Notion 複製出來的重點框是「emoji 一個 div ＋ 內容一個 div」並排，
+           所以 sub[0] 常常整段就只是那個 emoji 自己。不先把它收成圖示的話，
+           它會被當成框標題，真正的標題就被擠到框內容的第一行去了。
+           收成 ico 之後下面那段會組成「💡 這篇文章會說明」，跟 .md 路徑一致。 */
+        if (sub.length && sub[0].type === 'paragraph'){
+          var p0 = plain(sub[0].html || '');
+          var e0 = blogLeadEmoji(p0);
+          if (e0 && p0 === e0){ if (!ico) ico = e0; sub.shift(); }
+        }
         if (sub.length && (sub[0].type === 'paragraph' || sub[0].type === 'heading')
             && plain(sub[0].html || '').length <= 60){
           title = String(sub.shift().html || '');
@@ -3819,7 +4179,9 @@ function blogHtmlToBlocks(html){
       }
       if (tag === 'blockquote'){
         var q = inlineOf(el);
-        if (plain(q)) out.push({ type:'quote', text: plain(q), html: q, source:'' });
+        // <br> 只是換行，轉純文字時要換成空格，否則 text（SEO／摘要／目錄用）會黏成一團
+        var qp = plain(String(q).replace(/<br\s*\/?>/gi, ' '));
+        if (qp) out.push({ type:'quote', text: qp, html: q, source:'' });
         return;
       }
       if (tag === 'pre'){
@@ -3828,12 +4190,14 @@ function blogHtmlToBlocks(html){
         return;
       }
       if (tag === 'table'){
-        Array.prototype.slice.call(el.querySelectorAll('tr')).forEach(function(tr, ri){
-          var cells = Array.prototype.slice.call(tr.children).map(function(td){ return blogSanitize(td.innerHTML); });
-          var line = cells.filter(function(c){ return plain(c); }).join('｜');
-          if (!plain(line)) return;
-          out.push({ type:'paragraph', html: ri === 0 ? '<b>' + line + '</b>' : line });
-        });
+        var trs2 = Array.prototype.slice.call(el.querySelectorAll('tr'));
+        var cellsOf = function(tr){
+          return Array.prototype.slice.call(tr.children).map(function(td){ return blogSanitize(td.innerHTML); });
+        };
+        // Notion 的 simple-table 用的是 <td> 不是 <th>，第一列就當表頭
+        var head2 = trs2.length ? cellsOf(trs2[0]) : [];
+        var rows2 = trs2.slice(1).map(cellsOf);
+        if (head2.length || rows2.length) out.push({ type:'table', head: head2, rows: rows2 });
         stats.table++;
         return;
       }
@@ -3900,30 +4264,30 @@ function blogInsertBlocks(blocks, mode){
 function blogOpenImport(){
   if (blogEditorLocked()){ bgToast('已發佈的文章不能編輯，請先下架', 'err'); return; }
   blogCloseImport();
-  BLOG_IMP = { blocks:[], files:{}, mode:'append' };
+  BLOG_IMP = { blocks:[], mode:'append', title:'', busy:false };
   var mask = document.createElement('div');
   mask.className = 'blog-mask'; mask.id = 'blog-impmask';
   mask.onclick = blogCloseImport;
   var dg = document.createElement('div');
   dg.className = 'blog-imp'; dg.id = 'blog-imp';
   dg.innerHTML =
-    '<div class="blog-imph"><h3>匯入 Notion／Markdown</h3>'
+    '<div class="blog-imph"><h3>從 Notion 連結匯入</h3>'
     + '<div class="blog-dwx" onclick="blogCloseImport()"><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5l10 10M15 5L5 15"/></svg></div></div>'
     + '<div class="blog-impb">'
     +   '<div class="blog-impn">'
-    +     '<b>兩種用法：</b>① 在 Notion 全選複製，直接貼進下面的框（或直接貼進內文區也可以）。'
-    +     '② Notion → 匯出 → <b>Markdown &amp; CSV</b>，把解壓出來的 <code>.md</code> 檔選進來；'
-    +     '圖片可以一起選（多選），會自動上傳並接回文中。'
-    +     '<br>Notion 的<b>重點框、摺疊區塊、待辦清單、引言</b>都會照著轉過來；'
-    +     '框開頭的 emoji 會留在框的標題最前面，⚠️🚨 這類會自動轉成「提醒框」。'
+    +     '在 Notion 打開那一頁，複製網址貼進來就好 —— <b>標題、內文與圖片都會一起進來</b>，'
+    +     '表格、摺疊區塊、巢狀清單、重點框都照著轉。'
+    +     '<br><b>這一頁要先分享給匯入用的連線：</b>在 Notion 該頁右上「⋯」→ 連線 → 加入 GC 的 integration。'
+    +     '<b>母頁或資料庫加一次，底下的子頁都會生效</b>，之後新文章不用再設。'
+    +     '<br><span style="color:var(--text-dim)">匯入是一次性的搬運 —— 進來之後這篇就完全屬於後台，'
+    +     '之後在 Notion 改了什麼都不會影響這裡。</span>'
     +   '</div>'
-    +   '<div class="blog-impfile">'
-    +     '<button class="btn btn-secondary" onclick="blogImportPickMd()">選擇 .md 檔</button>'
-    +     '<button class="btn btn-secondary" onclick="blogImportPickImgs()">一起選圖片（選填）</button>'
-    +     '<span class="blog-impfn" id="blog-impfn">尚未選擇檔案</span>'
+    +   '<div class="blog-impurl">'
+    +     '<input id="blog-impu" class="blog-i" placeholder="https://…notion.so/… 或 …notion.site/…" '
+    +       'onkeydown="if(event.key===\'Enter\'){event.preventDefault();blogImportFetch();}">'
+    +     '<button class="btn btn-secondary" id="blog-impget" onclick="blogImportFetch()">讀取</button>'
     +   '</div>'
-    +   '<textarea id="blog-impta" class="blog-impta" placeholder="或把 Notion 的內容／Markdown 直接貼在這裡…"></textarea>'
-    +   '<div class="blog-impsum" id="blog-impsum">貼上或選檔之後，這裡會顯示會轉出幾個區塊。</div>'
+    +   '<div class="blog-impsum" id="blog-impsum">貼上連結後按「讀取」，這裡會顯示會轉出幾個區塊。</div>'
     + '</div>'
     + '<div class="blog-impf">'
     +   '<div class="blog-impmode">'
@@ -3938,115 +4302,145 @@ function blogOpenImport(){
     + '</div>';
   document.body.appendChild(mask);
   document.body.appendChild(dg);
-  var ta = document.getElementById('blog-impta');
-  ta.addEventListener('input', function(){ blogImportPreview(ta.value, null); });
-  // 貼上時如果剪貼簿有 HTML，優先用 HTML（Notion 的結構比較完整）
-  ta.addEventListener('paste', function(e){
-    var h = (e.clipboardData || window.clipboardData).getData('text/html');
-    if (!h) return;
-    e.preventDefault();
-    ta.value = '（已讀取 Notion 的格式內容，可直接按「匯入」）';
-    blogImportPreview(null, h);
-  });
-  setTimeout(function(){ ta.focus(); }, 30);
+  setTimeout(function(){ var u = document.getElementById('blog-impu'); if (u) u.focus(); }, 30);
+}
+
+/* 讀取：連結只拿來抽 page id，內容一律走官方 API（公開分享頁的 HTML 是
+   空殼，伺服器直接抓網址抓不到任何內容 —— 2026-09-16 實測過）。
+   ⚠ 這一支在 file:// 下叫不到（沒有伺服器），要 `netlify dev` 或部署上去才測得到。*/
+async function blogImportFetch(){
+  if (BLOG_IMP.busy) return;
+  var u = document.getElementById('blog-impu');
+  var box = document.getElementById('blog-impsum');
+  var btn = document.getElementById('blog-impget');
+  var go = document.getElementById('blog-impgo');
+  var url = String((u && u.value) || '').trim();
+  if (!url){ if (box) box.textContent = '請先貼上 Notion 的頁面網址。'; return; }
+
+  BLOG_IMP.busy = true;
+  if (btn){ btn.disabled = true; btn.textContent = '讀取中…'; }
+  if (go) go.disabled = true;
+  if (box) box.textContent = '讀取中…';
+
+  var jwt = '';
+  try {
+    var ss = await sb.auth.getSession();
+    jwt = (ss && ss.data && ss.data.session && ss.data.session.access_token) || '';
+  } catch(e){}
+
+  var d = null;
+  try {
+    var res = await fetch(window.GC_NOTION_ENDPOINT || '/.netlify/functions/notion-import', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + jwt },
+      body: JSON.stringify({ url: url })
+    });
+    d = await res.json();
+  } catch(e){
+    d = { ok:false, error:'連不到匯入服務。'
+          + (location.protocol === 'file:'
+             ? '（你現在是用 file:// 直接開後台，這個功能需要伺服器 —— 請用 netlify dev 或到線上的後台操作。）'
+             : '（請確認網路，或稍後再試。）') };
+  }
+
+  BLOG_IMP.busy = false;
+  if (btn){ btn.disabled = false; btn.textContent = '讀取'; }
+
+  if (!d || !d.ok){
+    BLOG_IMP.blocks = [];
+    if (box) box.innerHTML = '<span style="color:var(--danger)">' + bgEsc((d && d.error) || '讀取失敗') + '</span>';
+    if (go) go.disabled = true;
+    return;
+  }
+  BLOG_IMP.blocks = d.blocks || [];
+  BLOG_IMP.title = d.title || '';
+  blogImportPreview(d);
 }
 function blogCloseImport(){
   ['blog-impmask','blog-imp'].forEach(function(id){ var e = document.getElementById(id); if (e) e.remove(); });
 }
-function blogImportPreview(text, html){
-  var r = html ? blogHtmlToBlocks(html) : blogMdToBlocks(text || '');
-  BLOG_IMP.blocks = r.blocks;
+function blogImportPreview(d){
+  var blocks = BLOG_IMP.blocks || [];
   var n = {};
-  r.blocks.forEach(function(b){ n[b.type] = (n[b.type] || 0) + 1; });
-  var name = { heading:'標題', paragraph:'段落', list:'清單', todo:'核取方塊', quote:'引言', divider:'分隔線', image:'圖片', callout:'重點框' };
+  blocks.forEach(function(b){ n[b.type] = (n[b.type] || 0) + 1; });
+  var name = { heading:'標題', paragraph:'段落', list:'清單', todo:'核取方塊', quote:'引言',
+               divider:'分隔線', image:'圖片', callout:'重點框', toggle:'摺疊區塊', table:'表格' };
   var parts = Object.keys(n).map(function(k){ return (name[k] || k) + ' ' + n[k]; });
   var box = document.getElementById('blog-impsum');
   var go = document.getElementById('blog-impgo');
-  if (!r.blocks.length){
-    if (box) box.textContent = '還沒有可以匯入的內容。';
+  if (!blocks.length){
+    if (box) box.textContent = '這一頁沒有讀到可以匯入的內容。';
     if (go) go.disabled = true;
     return;
   }
   var extra = '';
-  if (html && r.stats.img) extra += '　⚠ 有 ' + r.stats.img + ' 張圖片沒有帶進來（Notion 複製過來的圖片網址會過期），請改用 Markdown 匯入或直接上傳。';
-  if (r.stats.table) extra += '　※ 表格已轉成文字段落，用「｜」隔開。';
-  if (box) box.innerHTML = '會轉出 <b>' + r.blocks.length + '</b> 個區塊：' + bgEsc(parts.join('、')) + bgEsc(extra).replace(/&lt;b&gt;/g, '<b>');
+  if (BLOG_IMP.title) extra += '　·　標題「' + BLOG_IMP.title + '」';
+  if (d && d.images) extra += '　·　圖片 ' + d.images + ' 張，按下匯入時一併搬進 Storage';
+  if (d && d.truncated) extra += '　⚠ 這一頁太長，只讀到前面一部分，剩下的請分次匯入。';
+  if (box) box.innerHTML = '會轉出 <b>' + blocks.length + '</b> 個區塊：' + bgEsc(parts.join('、')) + bgEsc(extra);
   if (go) go.disabled = false;
 }
-function blogImportPickMd(){
-  var inp = document.createElement('input');
-  inp.type = 'file';
-  inp.accept = '.md,.markdown,.txt,text/markdown,text/plain';
-  inp.onchange = function(){
-    var f = (inp.files || [])[0];
-    if (!f) return;
-    var rd = new FileReader();
-    rd.onload = function(){
-      var ta = document.getElementById('blog-impta');
-      if (ta) ta.value = String(rd.result || '');
-      BLOG_IMP.mdName = f.name;
-      blogImportFileLabel();
-      blogImportPreview(String(rd.result || ''), null);
-    };
-    rd.readAsText(f, 'utf-8');
-  };
-  inp.click();
-}
-function blogImportPickImgs(){
-  blogPickFiles(true, function(files){
-    if (!files.length) return;
-    files.forEach(function(f){
-      BLOG_IMP.files[f.name] = f;
-      // Notion 匯出的檔名會被 URL 編碼，兩種寫法都收
-      try { BLOG_IMP.files[decodeURIComponent(f.name)] = f; } catch(e){}
-    });
-    blogImportFileLabel();
-  });
-}
-function blogImportFileLabel(){
-  var el = document.getElementById('blog-impfn');
-  if (!el) return;
-  var n = Object.keys(BLOG_IMP.files).length;
-  var t = [];
-  if (BLOG_IMP.mdName) t.push(BLOG_IMP.mdName);
-  if (n) t.push('圖片 ' + n + ' 個');
-  el.textContent = t.length ? t.join('　·　') : '尚未選擇檔案';
-}
-
-/* 匯入：先把本機圖片上傳換成正式網址，再把區塊放進文件 */
+/* 匯入：先把 Notion 的圖片搬進 Storage，再把區塊放進文件。
+   ⚠ Notion 給的圖片網址約一小時就過期，**一定要在這裡搬**，不能只存網址，
+     否則文章過一小時圖就全破。
+   ⚠ 一張一張搬：那些網址沒有 CORS 標頭，瀏覽器讀不到位元組，要靠 function
+     代抓；整篇塞進同一個呼叫會撞到執行時間上限，而且一張失敗不該讓整篇匯不進來。*/
 async function blogDoImport(){
-  var blocks = BLOG_IMP.blocks;
-  if (!blocks || !blocks.length) return;
+  var blocks = (BLOG_IMP.blocks || []).slice();
+  if (!blocks.length) return;
   var go = document.getElementById('blog-impgo');
+  var box = document.getElementById('blog-impsum');
   if (go){ go.disabled = true; go.textContent = '匯入中…'; }
 
-  var pending = blocks.filter(function(b){ return b.type === 'image' && !/^https?:\/\//i.test(String(b.url || '')); });
+  var jwt = '';
+  try {
+    var ss = await sb.auth.getSession();
+    jwt = (ss && ss.data && ss.data.session && ss.data.session.access_token) || '';
+  } catch(e){}
+  var ep = window.GC_NOTION_ENDPOINT || '/.netlify/functions/notion-import';
+
+  var pending = blocks.filter(function(b){ return b.type === 'image' && b._notion; });
   var missing = 0;
   for (var i = 0; i < pending.length; i++){
     var b = pending[i];
-    var key = String(b.url || '').replace(/^\.?\//, '');
-    var f = BLOG_IMP.files[key] || BLOG_IMP.files[key.split('/').pop()];
-    if (!f){ try { f = BLOG_IMP.files[decodeURIComponent(key.split('/').pop())]; } catch(e){} }
-    if (!f){ b._drop = true; missing++; continue; }
-    var up = await blogUpload(f);
+    if (box) box.textContent = '搬圖片中… ' + (i + 1) + '／' + pending.length;
+    var file = null;
+    try {
+      var res = await fetch(ep, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + jwt },
+        body: JSON.stringify({ action:'image', url: b.url })
+      });
+      var j = await res.json();
+      if (j && j.ok && j.data){
+        var bin = atob(j.data);
+        var arr = new Uint8Array(bin.length);
+        for (var k = 0; k < bin.length; k++) arr[k] = bin.charCodeAt(k);
+        var ct = String(j.contentType || 'image/jpeg');
+        var ext = (ct.split('/')[1] || 'jpg').replace(/[^a-z0-9]/gi, '').slice(0, 4) || 'jpg';
+        file = new File([arr], 'notion_' + Date.now() + '_' + i + '.' + ext, { type: ct });
+      }
+    } catch(e){}
+    if (!file){ b._drop = true; missing++; continue; }
+    var up = await blogUpload(file);
     if (up){ b.url = up.url; b.w = up.w; b.h = up.h; } else { b._drop = true; missing++; }
   }
   blocks = blocks.filter(function(b){ return !b._drop; });
+  blocks.forEach(function(b){ delete b._notion; });     // 內部旗標不要存進資料庫
 
-  // Markdown 第一行的大標題通常就是文章標題；標題欄還空著就順手填進去
+  // 標題欄還空著就用 Notion 那一頁的標題（API 直接給，不必再從第一個 H2 猜）
   var titleUsed = '';
-  if (!String(BLOG_EDIT.title || '').trim() && blocks.length && blocks[0].type === 'heading'
-      && blocks[0].level === 2 && (BLOG_IMP.mode === 'replace' || !blogReadDoc(false).length)){
-    titleUsed = blocks[0].text || '';
+  if (!String(BLOG_EDIT.title || '').trim() && BLOG_IMP.title
+      && (BLOG_IMP.mode === 'replace' || !blogReadDoc(false).length)){
+    titleUsed = BLOG_IMP.title;
     BLOG_EDIT.title = titleUsed;
-    blocks = blocks.slice(1);
   }
 
   var n = blogInsertBlocks(blocks, BLOG_IMP.mode);
   blogCloseImport();
   var msg = '已匯入 ' + n + ' 個區塊';
   if (titleUsed) msg += '，標題自動帶入「' + titleUsed + '」';
-  if (missing) msg += '；有 ' + missing + ' 張圖片找不到檔案，請手動補上';
+  if (missing) msg += '；有 ' + missing + ' 張圖片沒搬成功（簽名網址可能已過期，重讀一次連結再試）';
   bgToast(msg, missing ? 'err' : '');
 }
 
