@@ -25,7 +25,12 @@
 //   避免一次把整篇的圖塞進同一個 function 呼叫裡撞到執行時間上限。
 //
 // 需要的環境變數（Netlify → Site configuration → Environment variables）：
-//   NOTION_TOKEN                       Notion internal integration 的 token（機密）
+//   NOTION_TOKEN…                      Notion 的 personal access token（機密）。
+//                                      🔑 **可以設定多組**：一組 token 只認得「建立它時選的
+//                                      那一個 workspace」，文章散在不同 workspace 就會讀不到。
+//                                      凡是 NOTION_TOKEN 開頭的變數都算數，例如
+//                                      NOTION_TOKEN_GCTEAM、NOTION_TOKEN_SYLVIA，
+//                                      依序試到哪一組讀得到為止。名字自己取，看得懂就好。
 //   SUPABASE_URL / SUPABASE_ANON_KEY   驗證登入用（與其他 function 共用）
 //
 // ⚠ 這支在 file:// 下叫不到（本機直接開 index.html 時沒有伺服器）。
@@ -94,6 +99,17 @@ function calStyle(emo, title){
   if (emo && WARN_EMO.some(e => emo.indexOf(e) === 0)) return 'warn';
   if (/注意|警告|提醒|小心|風險|危險|禁止/.test(String(title || ''))) return 'warn';
   return 'note';
+}
+
+/* 所有 NOTION_TOKEN 開頭的環境變數。`NOTION_TOKEN` 本身排最前面（當主要的那組），
+   其餘照名字排序，讓「哪一組先被試」是可預期的。 */
+function notionTokens(){
+  return Object.keys(process.env)
+    .filter(k => /^NOTION_TOKEN(_[A-Z0-9_]+)?$/i.test(k) && String(process.env[k] || '').trim())
+    .sort((a, b) => (a.toUpperCase() === 'NOTION_TOKEN' ? -1
+                   : b.toUpperCase() === 'NOTION_TOKEN' ? 1
+                   : a.localeCompare(b)))
+    .map(k => ({ name: k, token: String(process.env[k]).trim() }));
 }
 
 async function nfetch(path, token, ms){
@@ -294,11 +310,12 @@ exports.handler = async function (event) {
 
   const SB_URL = process.env.SUPABASE_URL;
   const SB_KEY = process.env.SUPABASE_ANON_KEY;
-  const TOKEN = process.env.NOTION_TOKEN;
+  const TOKENS = notionTokens();
 
-  if (!TOKEN) {
+  if (!TOKENS.length) {
     return reply(503, { ok:false, error:
-      '這個站還沒設定 NOTION_TOKEN。請到 Netlify → Site configuration → Environment variables 加上它。' });
+      '這個站還沒設定 Notion token。請到 Netlify → Site configuration → Environment variables '
+      + '加一個 NOTION_TOKEN（或 NOTION_TOKEN_XXX）。' });
   }
 
   // ── 驗證呼叫者是已登入的後台使用者（比照 build-hook.js）──
@@ -344,20 +361,40 @@ exports.handler = async function (event) {
   }
 
   const state = { count:0, truncated:false, deadline: Date.now() + BUDGET_MS };
-  let title = '';
-  try {
-    const page = await nfetch('/pages/' + pageId, TOKEN);
-    const props = page.properties || {};
-    const tp = Object.keys(props).find(k => props[k] && props[k].type === 'title');
-    if (tp) title = plainOf(props[tp].title);
-  } catch (e) {
-    if (e.status === 404) {
-      return reply(404, { ok:false, error:
-        '讀不到這一頁。多半是還沒把它分享給匯入用的連線 —— 在 Notion 打開該頁（或它的母頁／資料庫）→ 右上「⋯」→ 連線 → 加入 GC 的 integration，母層加一次底下的子頁都會生效。' });
+  let title = '', used = null;
+  const bad = [];        // token 本身壞掉的（401）
+  let other = null;      // 既不是「讀不到」也不是「token 壞掉」的錯
+
+  /* 一組一組試。一組 token 只看得到它自己那個 workspace，所以「讀不到」(404/403)
+     是完全正常的結果，不是錯誤 —— 換下一組就好。全部試完才報錯。 */
+  for (const t of TOKENS) {
+    try {
+      const page = await nfetch('/pages/' + pageId, t.token);
+      const props = page.properties || {};
+      const tp = Object.keys(props).find(k => props[k] && props[k].type === 'title');
+      if (tp) title = plainOf(props[tp].title);
+      used = t;
+      break;
+    } catch (e) {
+      if (e.status === 404 || e.status === 403) continue;          // 這組看不到這一頁
+      if (e.status === 401) { bad.push(t.name); continue; }        // 這組 token 失效
+      other = e;                                                   // 其他錯先記著，還是把剩下的試完
     }
-    if (e.status === 401) return reply(502, { ok:false, error:'NOTION_TOKEN 不正確或已失效，請到 Netlify 重新設定。' });
-    return reply(502, { ok:false, error:'讀取頁面失敗：' + String((e && e.message) || e) + (e.body ? '｜' + e.body : '') });
   }
+
+  if (!used) {
+    if (other) {
+      return reply(502, { ok:false, error:'讀取頁面失敗：' + String((other && other.message) || other)
+                                         + (other.body ? '｜' + other.body : '') });
+    }
+    const names = TOKENS.map(t => t.name).join('、');
+    let msg = '這一頁讀不到。已設定的 ' + TOKENS.length + ' 組 token（' + names + '）都沒有它的權限。';
+    msg += '一組 token 只認得建立它時選的那一個 workspace —— '
+         + '請確認這一頁所在的 workspace 有對應的 token，或改用「在 Notion 全選複製、直接貼進內文區」。';
+    if (bad.length) msg += '（另外：' + bad.join('、') + ' 這幾組回報無效或已失效，請到 Netlify 重新設定。）';
+    return reply(404, { ok:false, error: msg });
+  }
+  const TOKEN = used.token;
 
   let blocks;
   try {
