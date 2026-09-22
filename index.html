@@ -7,10 +7,12 @@
      所以無障礙沒有被關掉（要連捏合都停才要加 user-scalable=no，刻意不加）。
      ⚠️ 有了這行，輸入框就不必再被逼到 16px —— 手機字級才能調回正常大小。 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>GC 後台管理系統 v1.6.3</title>
+<title>GC 後台管理系統 v1.6.4</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2306080e'/%3E%3Ctext x='16' y='23' font-family='Arial Black,sans-serif' font-weight='900' font-size='18' fill='%23ffffff' text-anchor='middle'%3EG%3Ctspan fill='%23BFC3C9'%3EC%3C/tspan%3E%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://rtzfeoahpsutyikutsys.supabase.co" crossorigin>
 <!-- Inter 是後台唯一的字體；Noto Sans TC 只負責 Inter 沒有的中文字形（2026-09-10） -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -1296,7 +1298,7 @@ body.gc-viewer #main-topbar::after {
 <div id="login-screen">
   <div class="login-card">
     <div class="login-logo"><img src="data:image/png;base64,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" alt="GC" style="height:48px;width:48px;border-radius:10px;display:block;"></div>
-    <div class="login-subtitle">後台管理系統 v1.6.3</div>
+    <div class="login-subtitle">後台管理系統 v1.6.4</div>
     <div class="form-group">
       <label>電子信箱</label>
       <input type="email" id="login-email" placeholder="請輸入 Email" autocomplete="email">
@@ -1317,7 +1319,7 @@ body.gc-viewer #main-topbar::after {
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
     </button>
     <div class="topbar-logo"><img src="data:image/png;base64,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" alt="GC"></div>
-    <div class="topbar-badge">後台 v1.6.3</div>
+    <div class="topbar-badge">後台 v1.6.4</div>
   </div>
   <!-- 收合鈕放在頂欄（sylvia 2026-09-14：要像 Claude 放上面那條）。
        絕對定位：展開時站在側欄那一格的右緣，收合時貼著窄軌右邊。 -->
@@ -1480,21 +1482,116 @@ body.gc-viewer #main-topbar::after {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.50.0/build/docxtemplater.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js"></script>
-<script src="quote_templates.js"></script>
-<!-- 訂購模組的 Word 模板：刻意跟 quote_templates.js 分開，那個檔已經 5MB -->
-<script src="po_templates.js?v=20260908"></script>
 <script>
 // ─── Supabase ────────────────────────────────────────────
 var SUPABASE_URL = 'https://rtzfeoahpsutyikutsys.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0emZlb2FocHN1dHlpa3V0c3lzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODU2NTAsImV4cCI6MjA5NjU2MTY1MH0.1ouoDmHrmetOc_qsvPrXiKsKx8eDEebbsXr2Fk2Sy-o';
 var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── 需要時才載入的大型工具 ──────────────────────────
+// 以前登入前就同步下載 Excel／PDF／Word 元件與近 5MB 的範本；
+// 現在只保留 Supabase 在首屏，其他等操作人員真的按到該功能再載入。
+var _gcScriptLoads={};
+function _gcLoadScript(src, ready){
+  try{ if(!ready || ready()) return Promise.resolve(); }catch(e){}
+  if(_gcScriptLoads[src]) return _gcScriptLoads[src];
+  var p=new Promise(function(resolve,reject){
+    var s=document.createElement('script');
+    s.src=src; s.async=true;
+    s.onload=function(){
+      try{
+        if(ready && !ready()){ reject(new Error('元件載入後未初始化：'+src)); return; }
+        resolve();
+      }catch(e){ reject(e); }
+    };
+    s.onerror=function(){ reject(new Error('無法載入 '+src)); };
+    document.head.appendChild(s);
+  });
+  _gcScriptLoads[src]=p['catch'](function(e){ delete _gcScriptLoads[src]; throw e; });
+  return _gcScriptLoads[src];
+}
+async function _gcNeed(p,label){
+  try{ await p; return true; }
+  catch(e){ if(typeof _toast==='function') _toast(label+'載入失敗：'+((e&&e.message)||e),'err'); else alert(label+'載入失敗'); return false; }
+}
+function _gcEnsurePdf(){
+  return _gcLoadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js',function(){ return typeof html2pdf!=='undefined'; });
+}
+function _gcEnsureXlsx(){
+  return _gcLoadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',function(){ return typeof XLSX!=='undefined'; });
+}
+function _gcEnsureExcelJs(){
+  return _gcLoadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js',function(){ return typeof ExcelJS!=='undefined'; });
+}
+function _gcEnsureJsZip(){
+  return _gcLoadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',function(){ return typeof JSZip!=='undefined'; });
+}
+async function _gcEnsureDocxCore(){
+  await _gcLoadScript('https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.js',function(){ return typeof PizZip!=='undefined'; });
+  await _gcLoadScript('https://cdn.jsdelivr.net/npm/docxtemplater@3.50.0/build/docxtemplater.js',function(){ return typeof window.docxtemplater!=='undefined'||typeof Docxtemplater!=='undefined'; });
+}
+async function _gcEnsureDocxPreview(){
+  await _gcEnsureJsZip();
+  await _gcLoadScript('https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js',function(){ return !!(window.docx&&window.docx.renderAsync); });
+}
+async function _gcEnsureQuoteDocs(){
+  await Promise.all([_gcEnsureDocxCore(),_gcEnsureDocxPreview()]);
+  await _gcLoadScript('quote_templates.js?v=20260921',function(){ return typeof QUOTE_TPL_TW!=='undefined'&&typeof REBATE_TPL_TW!=='undefined'; });
+}
+async function _gcEnsureOrderDocs(){
+  await _gcEnsureDocxCore();
+  await _gcLoadScript('po_templates.js?v=20260921',function(){ return typeof ORD_TPL_CONFIRM!=='undefined'&&typeof ORD_TPL_PO!=='undefined'; });
+}
+function _gcEnsureBlog(){
+  return _gcLoadScript('blog-admin.js?v=20260921',function(){ return typeof loadBlogPosts==='function'; });
+}
+function _gcActivateEmbedded(id,ready,label){
+  return new Promise(function(resolve,reject){
+    function activate(){
+      var src=document.getElementById(id);
+      if(!src){
+        if(document.readyState==='loading'){
+          document.addEventListener('DOMContentLoaded',activate,{once:true});
+          return;
+        }
+        reject(new Error('找不到'+label+'模組')); return;
+      }
+      var s=document.createElement('script');
+      s.text=src.textContent||'';
+      document.head.appendChild(s);
+      if(!ready()){
+        s.remove(); reject(new Error(label+'模組初始化失敗')); return;
+      }
+      src.remove();
+      resolve();
+    }
+    activate();
+  });
+}
+var _gcInventoryLoad=null;
+function _gcEnsureInventory(){
+  if(typeof loadProducts==='function') return Promise.resolve();
+  if(_gcInventoryLoad) return _gcInventoryLoad;
+  _gcInventoryLoad=_gcActivateEmbedded('gc-inventory-module-source',function(){ return typeof loadProducts==='function'; },'貨盤管理')
+    ['catch'](function(e){ _gcInventoryLoad=null; throw e; });
+  return _gcInventoryLoad;
+}
+var _gcOrdersLoad=null;
+function _gcEnsureOrders(){
+  if(typeof loadOrders==='function') return Promise.resolve();
+  if(_gcOrdersLoad) return _gcOrdersLoad;
+  _gcOrdersLoad=_gcEnsureInventory().then(function(){
+    return _gcActivateEmbedded('gc-orders-module-source',function(){ return typeof loadOrders==='function'; },'訂購管理');
+  })['catch'](function(e){ _gcOrdersLoad=null; throw e; });
+  return _gcOrdersLoad;
+}
+function _gcLazyPage(label,ensure,start){
+  var main=document.getElementById('main-content');
+  if(main) main.innerHTML='<div style="padding:60px;text-align:center;color:var(--text-dim);font-size:13px;">'+label+'載入中…</div>';
+  ensure().then(start)['catch'](function(e){
+    if(main) main.innerHTML='<div style="padding:60px;text-align:center;color:#dc2626;font-size:13px;">'+label+'載入失敗：'+_esc((e&&e.message)||e)+'</div>';
+  });
+}
 
 // ─── 檢視者寫入攔截 ──────────────────────────────────────
 // role='1'（檢視者）一律唯讀。資料庫 RLS 本來就會擋，這一層是為了讓使用者
@@ -2072,23 +2169,24 @@ function renderPage(pageKey) {
   if (pageKey === 'commission_records')        { loadCommissionRecords();return; }
   if (pageKey === 'payout_docs')              { loadPayoutDocs();       return; }
   if (pageKey === 'financial_records')          { loadFinancialRecords(); return; }
-  if (pageKey === 'products')                   { loadProducts();         return; }
-  if (pageKey === 'suppliers')                  { loadSuppliers();        return; }
-  if (pageKey === 'export_logs')                { loadExportLogs();       return; }
-  if (pageKey === 'shelf_life')                 { loadShelfLife();        return; }
-  if (pageKey === 'orders')                     { loadOrders();           return; }
-  if (pageKey === 'referrers')                  { loadReferrersPage();    return; }
-  if (pageKey === 'web_inquiries')              { loadWebTable('web_inquiries');    return; }
-  if (pageKey === 'web_partner_apps')           { loadWebTable('web_partner_apps'); return; }
-  if (pageKey === 'web_forms')                  { loadWebTable('web_forms');        return; }
+  if (pageKey === 'products')                   { _gcLazyPage('商品清單',_gcEnsureInventory,function(){ loadProducts(); }); return; }
+  if (pageKey === 'suppliers')                  { _gcLazyPage('品牌方',_gcEnsureInventory,function(){ loadSuppliers(); }); return; }
+  if (pageKey === 'export_logs')                { _gcLazyPage('匯出紀錄',_gcEnsureInventory,function(){ loadExportLogs(); }); return; }
+  if (pageKey === 'shelf_life')                 { _gcLazyPage('效期標準',_gcEnsureInventory,function(){ loadShelfLife(); }); return; }
+  if (pageKey === 'orders')                     {
+    _gcLazyPage('訂購管理',_gcEnsureOrders,function(){ loadOrders(); });
+    return;
+  }
+  if (pageKey === 'referrers')                  { _gcLazyPage('介紹人管理',_gcEnsureInventory,function(){ loadReferrersPage(); }); return; }
+  if (pageKey === 'web_inquiries')              { _gcLazyPage('詢價管理',_gcEnsureInventory,function(){ loadWebTable('web_inquiries'); }); return; }
+  if (pageKey === 'web_partner_apps')           { _gcLazyPage('服務商申請',_gcEnsureInventory,function(){ loadWebTable('web_partner_apps'); }); return; }
+  if (pageKey === 'web_forms')                  { _gcLazyPage('需求診斷表',_gcEnsureInventory,function(){ loadWebTable('web_forms'); }); return; }
   if (pageKey === 'blog_posts')                 {
-    // blog-admin.js 是外部檔案，重整後自動還原頁面時可能還沒下載完，先擋一下
-    if (typeof loadBlogPosts === 'function') { loadBlogPosts(); }
-    else {
-      var _bm = document.getElementById('main-content');
-      if (_bm) _bm.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-dim);font-size:13px;">部落格模組載入中…</div>';
-      setTimeout(function(){ if (typeof loadBlogPosts === 'function') loadBlogPosts(); }, 300);
-    }
+    var _bm = document.getElementById('main-content');
+    if (_bm) _bm.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-dim);font-size:13px;">部落格模組載入中…</div>';
+    _gcEnsureBlog().then(function(){ loadBlogPosts(); })['catch'](function(e){
+      if (_bm) _bm.innerHTML='<div style="padding:60px;text-align:center;color:#dc2626;font-size:13px;">部落格模組載入失敗：'+_esc((e&&e.message)||e)+'</div>';
+    });
     return;
   }
 
@@ -6807,6 +6905,7 @@ function _wizBuildQuoteDocx(forceOverseas, lang){
 var _qdocCur=null, _qdocOverseas=false, _qdocLang='zh';
 // 產生指定版本＋語言並渲染預覽（自動縮放到完整一頁寬度）
 async function _qdocRender(overseas, lang){
+  if(!await _gcNeed(_gcEnsureQuoteDocs(),'Word 報價單元件')) return;
   if(overseas!=null) _qdocOverseas=!!overseas;
   if(lang!=null) _qdocLang=lang;
   var r=_wizBuildQuoteDocx(_qdocOverseas, _qdocLang); if(!r) return;
@@ -6958,6 +7057,7 @@ function _wizBuildRebateDocx(spId, forceOverseas, lang){
 // 居間預覽視窗狀態（服務商／版本／語言）
 var _rdocCur=null, _rdocOverseas=false, _rdocLang='zh', _rdocSp=null;
 async function _rdocRender(spId, overseas, lang){
+  if(!await _gcNeed(_gcEnsureQuoteDocs(),'Word 確認書元件')) return;
   if(spId!=null) _rdocSp=spId;
   if(overseas!=null) _rdocOverseas=!!overseas;
   if(lang!=null) _rdocLang=lang;
@@ -7054,8 +7154,8 @@ function _wizSwitchDoc(type){
   if(q) q.className='btn '+(type==='quote'?'btn-primary':'btn-secondary');
   if(o) o.className='btn '+(type==='order'?'btn-primary':'btn-secondary');
 }
-function _wizDownloadDoc(){
-  if(typeof html2pdf==='undefined'){ _toast('PDF 產生元件尚未載入，請稍候再試','err'); return; }
+async function _wizDownloadDoc(){
+  if(!await _gcNeed(_gcEnsurePdf(),'PDF 元件')) return;
   var el=document.getElementById('doc-paper'); if(!el) return;
   var no=WIZ.project.project_no||('專案'+WIZ.id);
   var inter=WIZ.project.cooperation_mode==='intermediary';
@@ -11402,7 +11502,7 @@ function _lfA4Html(f, calc, imgs, meta){
 }
 
 async function _lfDownloadPdf(){
-  if (typeof html2pdf === 'undefined') { _toast('PDF 元件尚未載入，請重新整理','err'); return; }
+  if(!await _gcNeed(_gcEnsurePdf(),'PDF 元件')) return;
   var split = _lfIsSplit(), el = null, tmp = null;
   if (split) {
     // 疊在畫面上的 stage 還含著灰底與「第 N / M 張」標籤，直接輸出會一起印進去。
@@ -12452,6 +12552,7 @@ function _lfUploadSignedBtn(docId, label, title){
 // 後台完全看不到。這裡提供一條走後台身分的補寄路徑：用已驗證的 send-mail，
 // 不管成敗都寫一筆通知紀錄，營運才有得追。
 async function _lfResendCopy(docId){
+  if(!await _gcNeed(_gcEnsurePdf(),'PDF 元件')) return;
   var doc = (DB.payout_docs||[]).find(function(d){ return String(d.id) === String(docId); });
   if (!doc) return;
   if (!doc.signed_at) { _toast('這張單還沒收到簽回，沒有副本可寄。','err'); return; }
@@ -13215,7 +13316,7 @@ function goFinPage(p){ finPage=p; updateFinTable(); }
 })();
 </script>
 
-<script>
+<script type="text/plain" id="gc-inventory-module-source">
 /* ===================== 貨盤管理模組 (products / 品牌方) ===================== */
 var HP_CATS=["一般食品","一般食品・酒類","素食食品","生鮮食品(冷藏冷凍)","保健食品","美妝與保養品","寵物用品","母嬰用品","服裝與配件","運動用品","戶外、園藝","家電3C","廚房用品、家居裝飾"];
 var HP_CAT_CODE={"一般食品":"FOO","一般食品・酒類":"ALC","素食食品":"VEG","生鮮食品(冷藏冷凍)":"FRS","保健食品":"SUP","美妝與保養品":"BEA","寵物用品":"PET","母嬰用品":"MOM","服裝與配件":"APP","運動用品":"SPT","戶外、園藝":"OUT","家電3C":"ELE","廚房用品、家居裝飾":"HOM"};
@@ -14734,8 +14835,8 @@ function hpMapImportRow(row, extCps){
   });
   return {payload:payload, errors:errs, mode:(match?'update':'new'), id:(match?match.id:null), name:(names.zh||names.en||names.ja||names.ko||'')};
 }
-function hpDownloadProductTemplate(){
-  if(typeof XLSX==='undefined'){ alert('Excel 函式庫尚未載入，請重新整理頁面再試。'); return; }
+async function hpDownloadProductTemplate(){
+  if(!await _gcNeed(_gcEnsureXlsx(),'Excel 元件')) return;
   var pHead=['商品代號','類別','原產地','品牌名稱','品牌方名稱','存貨地區','商品名稱_中','商品名稱_英','商品名稱_日','商品名稱_韓','產品敘述_中','產品敘述_英','產品敘述_日','產品敘述_韓','產品賣點_中','產品賣點_英','產品賣點_日','產品賣點_韓','HSCODE','箱入數','箱長','箱寬','箱高','單箱毛重','有效期限(月)','網站連結','照片(網址)','MOQ','備註','直播地區','是否有樣品','樣品可寄送','有品牌代表','現場可試用','提前預約天數','樣品備註'];
   var pEx=['P001','一般食品','日本','ABC Foods','ABC Foods','日本、台灣','範例商品','Sample Product','サンプル商品','샘플 상품','中文產品敘述','English description','日本語の説明','한국어 설명','中文賣點','English selling point','日本語の売り','한국어 셀링','1905.31','24','40','30','25','8.5','12','https://abcfoods.jp/p001','https://abcfoods.jp/img/p001.jpg','100 pcs','此列為範例，上傳前請刪除','東京、大阪','是','是','否','是','7','可提供 2 份，需自付運費，出貨前 5 天告知'];
   var pWs=XLSX.utils.aoa_to_sheet([pHead, pEx]);
@@ -14749,8 +14850,8 @@ function hpDownloadProductTemplate(){
   XLSX.utils.book_append_sheet(wb, cWs, '各國售價');
   XLSX.writeFile(wb, '商品_批量匯入範本.xlsx');
 }
-function openImportDialog(){
-  if(typeof XLSX==='undefined'){ alert('Excel 函式庫尚未載入，請重新整理頁面再試。'); return; }
+async function openImportDialog(){
+  if(!await _gcNeed(_gcEnsureXlsx(),'Excel 元件')) return;
   hpImpRows=[];
   var _old=document.getElementById('imp-modal'); if(_old) _old.remove();
   var ov=document.createElement('div'); ov.id='imp-modal';
@@ -14771,7 +14872,8 @@ function openImportDialog(){
       '<button class="btn btn-primary" id="hp-imp-run" disabled onclick="hpImpRun()">匯入</button></div></div>';
   document.body.appendChild(ov);
 }
-function hpImpParse(input){
+async function hpImpParse(input){
+  if(!await _gcNeed(_gcEnsureXlsx(),'Excel 元件')) return;
   var file=input.files&&input.files[0]; if(!file) return;
   var status=document.getElementById('hp-imp-status'); if(status) status.textContent='解析中…';
   var reader=new FileReader();
@@ -14872,6 +14974,7 @@ function hpBatchSku(origin,category){
   hpSkuCount[prefix]++; return prefix+String(hpSkuCount[prefix]).padStart(3,'0');
 }
 async function hpImpRun(){
+  if(!await _gcNeed(_gcEnsureExcelJs(),'Excel 元件')) return;
   var ok=hpImpRows.filter(function(r){return !r.errors.length;});
   if(!ok.length) return;
   hpSkuCount={};
@@ -14943,7 +15046,7 @@ var HP_EXP_COLS=[
   {k:'sale_region', w:12, def:1, zh:'銷售國家',         en:'Sales Region',                 ja:'販売国',           ko:'판매 국가'},
   {k:'currency',   w:10, def:1, zh:'幣別',             en:'Currency',                     ja:'通貨',             ko:'통화'},
   {k:'gc_price',   w:18, def:1, zh:'GC 報價(含稅)',    en:'Quoted Price (incl. tax)',     ja:'見積価格(税込)',   ko:'견적가(세금 포함)'},
-  {k:'min_price',  w:16, def:1, zh:'最低販售價',       en:'Min. Selling Price',           ja:'最低販売価格',     ko:'최저 판매가'},
+  {k:'min_price',  w:20, def:1, zh:'最低販售價(含稅)', en:'Min. Selling Price (incl. tax)', ja:'最低販売価格(税込)', ko:'최저 판매가(세금 포함)'},
   {k:'suggested',  w:16, def:1, zh:'建議售價(含稅)',   en:'Suggested Retail (incl. tax)', ja:'希望小売価格(税込)', ko:'권장가(세금 포함)'},
   {k:'moq',        w:18, def:1, zh:'最低訂購量(MOQ)',  en:'MOQ (Min. order qty)',         ja:'最低発注数量(MOQ)', ko:'최소 주문 수량(MOQ)'},
   {k:'order_qty',  w:13, def:1, zh:'訂購數量',         en:'Order Qty',                    ja:'発注数量',         ko:'주문 수량'},
@@ -14995,7 +15098,10 @@ function hpExpNumFmt(cur){
   return c?('"'+c+' "'+d):d;
 }
 // 舊匯出檔用過、後來改掉的表頭；補欄位時要認得出來（key → 四語舊表頭）
-var HP_EXP_OLD_HEADS={ gc_price:['GC 報價','Quoted Price','見積価格','견적가'] };
+var HP_EXP_OLD_HEADS={
+  gc_price:['GC 報價','Quoted Price','見積価格','견적가'],
+  min_price:['最低販售價','Min. Selling Price','最低販売価格','최저 판매가']
+};
 function hpExpColDef(k){ for(var i=0;i<HP_EXP_COLS.length;i++){ if(HP_EXP_COLS[i].k===k) return HP_EXP_COLS[i]; } return null; }
 function hpExpLabel(k,lang){ var d=hpExpColDef(k); return d?(d[lang]||d.zh):k; }
 /* 匯出欄位＝HP_EXP_COLS 中 def 為真者（依原始順序），使用者不能自由勾選。
@@ -15052,7 +15158,6 @@ function hpExpPubSync(){
   hpExpRenderScopeParts();
 }
 function openExportDialog(scope){
-  if(typeof ExcelJS==='undefined'){ alert('Excel 函式庫尚未載入，請重新整理頁面再試。'); return; }
   HP_EXP_SKIP_WARN=false;   // 「這次匯出不再提醒」只在這一次有效
   hpExpScope=(scope==='selected' && hpSelIds.size>0)?'selected':'filtered';
   var selN=hpSelIds.size, filN=hpFilteredProducts().length;
@@ -15186,7 +15291,8 @@ function hpExpNeededCurs(){
   _expExportedEntries().forEach(function(e){
     var sup=e.supply_currency, loc=e.local_currency;
     var hasCost=(e.supply_incl!=null||e.supply_excl!=null);
-    var hasMin =(e.min_price_incl!=null||e.min_price_excl!=null);
+    // 對外匯出一律只用「含稅」最低販售價；只有未稅值時維持空白，不猜稅率。
+    var hasMin =(e.min_price_incl!=null);
     var hasSugg=(e.suggested_incl!=null);
     if(wantGc   && hasCost && sup && sup!==target){ need[sup]=1; need[target]=1; }
     if(wantMin  && hasMin  && loc && loc!==target){ need[loc]=1; need[target]=1; }
@@ -15304,7 +15410,9 @@ async function hpExpFillSheet(wb, ws, rows, country, lang, margin, mode, targetC
     // GC 報價 ＝ 成本×(1+利潤率)（成本幣）；最低／建議售價為當地幣。成本本身永不輸出。
     var base=(e.supply_incl!=null?e.supply_incl:e.supply_excl);
     var gcRaw=(base!=null)?base*(1+margin/100):null;
-    var mnRaw=(e.min_price_incl!=null?e.min_price_incl:e.min_price_excl);
+    // 最低販售價是品牌方的市場保價資訊，並非每項商品必填。
+    // 對外檔只允許含稅值；未稅值不再當作替代資料輸出，避免把未稅價誤標成含稅價。
+    var mnRaw=(e.min_price_incl!=null?e.min_price_incl:null);
     var suggRaw=(e.suggested_incl!=null?e.suggested_incl:null);
     var gcCell,mnCell,suggCell,curCell,gcFmt='',mnFmt='',suggFmt='';
     if(unified){
@@ -15514,6 +15622,7 @@ function hpExpWarnSupply(rows, regions, fileHint){
 }
 
 async function hpExportRun(){
+  if(!await _gcNeed(_gcEnsureExcelJs(),'Excel 元件')) return;
   var lang=document.getElementById('exp-lang').value;
   var sel=(typeof msSel==='function')?msSel('exp-country').slice():[];
   var margin=Number(document.getElementById('exp-margin').value)||0;
@@ -16059,9 +16168,9 @@ async function webSaveOps(idx,which){
   return true;
 }
 // ─── 下載單張詢價單 Excel ───
-function webExportInquiryXlsx(idx){
+async function webExportInquiryXlsx(idx){
   var row=(WEB_DB.web_inquiries||[])[idx]; if(!row){ return; }
-  if(typeof XLSX==='undefined'){ if(typeof _toast==='function') _toast('Excel 元件尚未載入','err'); return; }
+  if(!await _gcNeed(_gcEnsureXlsx(),'Excel 元件')) return;
   var ps=_webJson(row.products)||[];
   var aoa=[];
   aoa.push(['詢價單']);
@@ -16270,7 +16379,8 @@ function hpExpAddOrderColsTo(ws){
 }
 // 整本活頁簿。沒東西要補就回 null（呼叫端就用原檔）
 async function hpExpUpgradeBuf(buf){
-  if(typeof ExcelJS==='undefined' || !buf) return null;
+  if(!buf) return null;
+  if(!await _gcNeed(_gcEnsureExcelJs(),'Excel 元件')) return null;
   try{
     var wb=new ExcelJS.Workbook();
     await wb.xlsx.load(buf);
@@ -16291,6 +16401,7 @@ function _expSaveBlob(blob,name){
 // 預覽/下載：按下時才產生簽署網址，避免把長效網址存進資料庫。
 // 讀出來之後先過一次 hpExpUpgradeBuf()，舊檔就會多出訂購數量與小計金額兩欄。
 async function hpExpOpen(pathOrUrl,name,mode){
+  if(!await _gcNeed(Promise.all([_gcEnsureXlsx(),_gcEnsureExcelJs()]),'Excel 元件')) return;
   var u=await _expSignedUrl(pathOrUrl);
   if(!u){ alert('無法取得檔案連結。可能檔案已被刪除，或此帳號沒有讀取權限。'); return; }
   var buf=null, up=null;
@@ -16327,7 +16438,8 @@ async function hpExpClearAll(){
   await loadExportLogs();
 }
 async function hpExpPreview(buf, name, url, upgraded, upBuf){
-  if(typeof XLSX==='undefined' || !buf){ window.open(url,'_blank'); return; }
+  if(!buf){ window.open(url,'_blank'); return; }
+  if(!await _gcNeed(_gcEnsureXlsx(),'Excel 元件')){ window.open(url,'_blank'); return; }
   window._expPrevBlob=new Blob([upBuf||buf],{type:HP_XLSX_MIME});
   window._expPrevName=name||'貨盤表.xlsx';
   var ov=document.createElement('div'); ov.id='exp-prev';
@@ -16526,7 +16638,7 @@ async function hpImgEntries(files){
   var out=[];
   for(var i=0;i<files.length;i++){ var f=files[i];
     if(/\.zip$/i.test(f.name)){
-      if(typeof JSZip==='undefined'){ continue; }
+      if(!await _gcNeed(_gcEnsureJsZip(),'ZIP 元件')) continue;
       var zip=await JSZip.loadAsync(f); var ns=Object.keys(zip.files);
       for(var j=0;j<ns.length;j++){ var zf=zip.files[ns[j]]; if(zf.dir) continue; var bn=ns[j].split('/').pop(); if(/^__MACOSX/.test(ns[j])||/^\./.test(bn)) continue; if(!/\.(png|jpe?g|gif|webp)$/i.test(bn)) continue; var blob=await zf.async('blob'); out.push({name:bn,blob:blob}); }
     } else if(/\.(png|jpe?g|gif|webp)$/i.test(f.name)){ out.push({name:f.name,blob:f}); }
@@ -16638,8 +16750,8 @@ function hpSupMapRow(row){
   var match=(DB.suppliers||[]).filter(function(s){return s.supplier_name===name;})[0];
   return {payload:payload, errors:errs, mode:(match?'update':'new'), id:(match?match.id:null), name:name||''};
 }
-function hpSupDownloadTemplate(){
-  if(typeof XLSX==='undefined'){ alert('Excel 函式庫尚未載入，請重新整理頁面再試。'); return; }
+async function hpSupDownloadTemplate(){
+  if(!await _gcNeed(_gcEnsureXlsx(),'Excel 元件')) return;
   var note=['品牌方批量匯入範本：第 2 列為欄位標題（請勿刪除或更名），第 3 列起填資料'];
   var headers=['品牌方名稱','負責地區/國家','聯絡窗口','職稱','電話','Email','通訊軟體(LINE/WeChat/WhatsApp)','品牌連結','收款幣別','結算稅別','付款方式/帳期','最低起訂量MOQ','最低起訂金額','備註'];
   /* ⚠️ 這一列要跟 headers 一格一格對齊。2026-09-11 加「結算稅別」時只加了表頭、
@@ -16651,8 +16763,8 @@ function hpSupDownloadTemplate(){
   var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '品牌方資料');
   XLSX.writeFile(wb, '品牌方_批量匯入範本.xlsx');
 }
-function openSupplierImportDialog(){
-  if(typeof XLSX==='undefined'){ alert('Excel 函式庫尚未載入，請重新整理頁面再試。'); return; }
+async function openSupplierImportDialog(){
+  if(!await _gcNeed(_gcEnsureXlsx(),'Excel 元件')) return;
   hpSupImpRows=[];
   var _old=document.getElementById('supimp-modal'); if(_old) _old.remove();
   var ov=document.createElement('div'); ov.id='supimp-modal';
@@ -16673,7 +16785,8 @@ function openSupplierImportDialog(){
       '<button class="btn btn-primary" id="hp-supimp-run" disabled onclick="hpSupImpRun()">匯入</button></div></div>';
   document.body.appendChild(ov);
 }
-function hpSupImpParse(input){
+async function hpSupImpParse(input){
+  if(!await _gcNeed(_gcEnsureXlsx(),'Excel 元件')) return;
   var file=input.files&&input.files[0]; if(!file) return;
   var status=document.getElementById('hp-supimp-status'); if(status) status.textContent='解析中…';
   var reader=new FileReader();
@@ -16732,6 +16845,8 @@ async function hpSupImpRun(){
   await loadSuppliers();
 }
 
+</script>
+<script type="text/plain" id="gc-orders-module-source">
 /* ORD-MODULE-BEGIN（1.6.1 內部文件/ordtest 會抓這兩個標記之間的程式碼來測，不要刪）*/
 /* ═══════════════════════════════════════════════════════════════════════════
    貨盤管理 › 訂購管理　（P2：回填貨盤表解析 ＋ 核對頁）
@@ -16767,37 +16882,44 @@ function ordNewState(){
 }
 
 /* ── 頁面進入點 ──────────────────────────────────────────────────────── */
+async function _ordLoadProductsAll(){
+  if(DB.products && DB.products.length) return DB.products;
+  var all=[], from=0, SIZE=1000;
+  for(;;){
+    var r=await sb.from('products').select('*').order('sku',{ascending:true}).range(from, from+SIZE-1);
+    if(r.error) throw r.error;
+    var chunk=r.data||[]; all=all.concat(chunk);
+    if(chunk.length<SIZE) break;
+    from+=SIZE;
+  }
+  DB.products=all;
+  return all;
+}
+var _ordEditorDataPromise=null;
+function ordEnsureEditorData(){
+  if(_ordEditorDataPromise) return _ordEditorDataPromise;
+  var jobs=[_ordLoadProductsAll()];
+  jobs.push((DB.suppliers&&DB.suppliers.length)?Promise.resolve(DB.suppliers):
+    sb.from('suppliers').select('*').then(function(r){ if(r.error) throw r.error; DB.suppliers=r.data||[]; return DB.suppliers; }));
+  jobs.push((DB.customers&&DB.customers.length)?Promise.resolve(DB.customers):
+    sb.from('customers').select('*').then(function(r){ if(r.error) throw r.error; DB.customers=r.data||[]; return DB.customers; }));
+  if(typeof _fxBaseLoad==='function') jobs.push(Promise.resolve(_fxBaseLoad(false)).catch(function(){ return null; }));
+  _ordEditorDataPromise=Promise.all(jobs).catch(function(err){ _ordEditorDataPromise=null; throw err; });
+  return _ordEditorDataPromise;
+}
 async function loadOrders(){
   var main=document.getElementById('main-content');
   if(main) main.innerHTML='<div style="padding:60px;text-align:center;color:var(--text-dim);font-size:13px;">載入中…</div>';
-  // 解析要靠商品與品牌方：SKU 比對商品、商品的 source_supplier 回查窗口
-  // ⚠️ Supabase 單次上限 1000 筆，商品有 1500+，一定要用 range 逐批抓完，
-  //    少抓的那幾百筆會變成核對頁上的「找不到商品」。
-  if(!DB.products || !DB.products.length){
-    var all=[], from=0, SIZE=1000, err=null;
-    while(true){
-      var r=await sb.from('products').select('*').order('sku',{ascending:true}).range(from, from+SIZE-1);
-      if(r.error){ err=r.error; break; }
-      var chunk=r.data||[]; all=all.concat(chunk);
-      if(chunk.length<SIZE) break;
-      from+=SIZE;
-    }
-    if(err){ if(main) main.innerHTML='<div style="padding:60px;text-align:center;color:#dc2626;font-size:13px;">商品讀取失敗：'+_esc(err.message)+'</div>'; return; }
-    DB.products=all;
-  }
-  if(!DB.suppliers || !DB.suppliers.length){
-    var sr=await sb.from('suppliers').select('*');
-    if(sr.error){ if(main) main.innerHTML='<div style="padding:60px;text-align:center;color:#dc2626;font-size:13px;">品牌方讀取失敗：'+_esc(sr.error.message)+'</div>'; return; }
-    DB.suppliers=sr.data||[];
-  }
-  if(!DB.customers || !DB.customers.length){
-    var cr=await sb.from('customers').select('*');
-    if(cr.error){ if(main) main.innerHTML='<div style="padding:60px;text-align:center;color:#dc2626;font-size:13px;">客戶讀取失敗：'+_esc(cr.error.message)+'</div>'; return; }
-    DB.customers=cr.data||[];
-  }
-  // 換匯要用的匯率基準（fx_baseline），沒有的話 _fxBaseOf 會退回台銀內建快照
-  if(typeof _fxBaseLoad==='function'){ try{ await _fxBaseLoad(false); }catch(e){} }
-  var oe=await ordFetchAll(false);
+  // 台帳只需要客戶、匯率與訂購資料；商品／品牌方延到真的進入新增或編輯時才讀。
+  // 三組彼此獨立，同時向 Supabase 取回，避免登入後一個接一個等待。
+  var custJob=(DB.customers&&DB.customers.length)?Promise.resolve({data:DB.customers,error:null}):sb.from('customers').select('*');
+  var fxJob=(typeof _fxBaseLoad==='function')?Promise.resolve(_fxBaseLoad(false)).catch(function(){ return null; }):Promise.resolve(null);
+  var got;
+  try{ got=await Promise.all([custJob,fxJob,ordFetchAll(false)]); }
+  catch(e){ if(main) main.innerHTML='<div style="padding:60px;text-align:center;color:#dc2626;font-size:13px;">訂購資料讀取失敗：'+_esc((e&&e.message)||e)+'</div>'; return; }
+  var cr=got[0], oe=got[2];
+  if(cr.error){ if(main) main.innerHTML='<div style="padding:60px;text-align:center;color:#dc2626;font-size:13px;">客戶讀取失敗：'+_esc(cr.error.message)+'</div>'; return; }
+  DB.customers=cr.data||[];
   if(oe){ if(main) main.innerHTML='<div style="padding:60px;text-align:center;color:#dc2626;font-size:13px;">訂購資料讀取失敗：'+_esc(oe.message)+'</div>'; return; }
   if(!ORD) ORD=ordNewState();
   /* 從側欄點進來就是要看台帳。ordView 是模組層的變數，換頁再回來會停在上次的
@@ -17082,6 +17204,7 @@ function ordDragOut(ev){ ev.preventDefault(); ev.stopPropagation(); ev.currentTa
 
 async function _ordParseFile(file, statusId, gotoStep){
   if(_ordRO('檢視者模式，不能匯入貨盤表')) return;
+  if(!await _gcNeed(Promise.all([_gcEnsureXlsx(),ordEnsureEditorData()]),'訂購匯入資料')) return;
   /* 解析是「整份換掉」（ordNewState + ordKeepWizard 只留客戶／備註那幾樣）——
      手上已經有列的時候按下去，手動加的那幾筆會直接不見。
      「換一份檔案」自己有問過，但步驟 2 的「改用貨盤表」以前沒有，
@@ -17246,7 +17369,10 @@ function ordRecheck(ln){
   if(_ordIsCustExtra(ln)){
     ln.contact_name=null; ln.supplier_name=null;
     ln.cost_price=null; ln.cost_currency=null; ln.cost_amount=null;
-    ln.sell_amount=(ln.sell_price!=null&&ln.qty!=null)?(ln.sell_price*ln.qty):null;
+    var custExtraCalc=(ln.sell_price!=null&&ln.qty!=null)?(ln.sell_price*ln.qty):null;
+    // 自訂應收也要跟商品列一樣尊重營運手動填的小計；
+    // 否則在編輯視窗直接改「報價小計」，重算後又會被單價×數量蓋掉。
+    ln.sell_amount=(ln._fileSubtotal!=null)?ln._fileSubtotal:custExtraCalc;
     if(!(ln.sell_amount>0)) ln._issues.push('no_sell');
     return;
   }
@@ -17807,7 +17933,7 @@ function ordGroups(lines){
 }
 
 /* 收款幣別設定要涵蓋**所有要跟經紀公司收的錢**，所以是「窗口單 ＋ 跟客戶收的其他項目」。
-   後者沒有窗口，但它一樣要決定收原幣還是換台幣。 */
+   後者沒有窗口，但它一樣要決定維持原幣或改用其他結算幣別。 */
 function ordSettleGroups(lines){
   var gs=ordGroups(lines);
   var ex=(lines||[]).filter(_ordIsCustExtra);
@@ -17871,34 +17997,45 @@ var ordSaving = false;
 var ORD_BUCKET = 'export-files';
 
 /* ── 讀取 ─────────────────────────────────────────────────────────── */
-async function ordFetchAll(force){
-  if(!force && DB.purchase_batches && DB.purchase_batches.length!==undefined && DB._ordLoaded) return null;
-  var b = await sb.from('purchase_batches').select('*').order('created_time',{ascending:false});
-  if(b.error) return b.error;
-  var o = await sb.from('purchase_orders').select('*').order('po_no',{ascending:true});
-  if(o.error) return o.error;
-  // 明細可能上千列 —— Supabase 單次上限 1000 筆，一定要分批抓完
+async function _ordFetchAllLines(){
   var lines=[], from=0, SIZE=1000;
   for(;;){
     // 一定要排序：沒有 ORDER BY 的 .range() 分頁在 PostgREST 是不保證的。
-    // 排法照「回填檔上的順序」——同一次匯入的列 created_time 都一樣，
-    // 真正分得出先後的是 source_sheet ＋ source_row；手動新增與自訂項目沒有列號，排最後。
-    var l = await sb.from('purchase_order_lines').select('*')
-              .order('created_time',{ascending:true})
-              .order('source_sheet',{ascending:true,nullsFirst:false})
-              .order('source_row',{ascending:true,nullsFirst:false})
-              .order('id',{ascending:true})
-              .range(from, from+SIZE-1);
-    if(l.error) return l.error;
+    var l=await sb.from('purchase_order_lines').select('*')
+      .order('created_time',{ascending:true})
+      .order('source_sheet',{ascending:true,nullsFirst:false})
+      .order('source_row',{ascending:true,nullsFirst:false})
+      .order('id',{ascending:true})
+      .range(from,from+SIZE-1);
+    if(l.error) throw l.error;
     var chunk=l.data||[]; lines=lines.concat(chunk);
     if(chunk.length<SIZE) break;
     from+=SIZE;
   }
+  return lines;
+}
+async function ordFetchAll(force){
+  if(!force && DB.purchase_batches && DB.purchase_batches.length!==undefined && DB._ordLoaded) return null;
+  var got;
+  try{
+    got=await Promise.all([
+      sb.from('purchase_batches').select('*').order('created_time',{ascending:false}),
+      sb.from('purchase_orders').select('*').order('po_no',{ascending:true}),
+      _ordFetchAllLines(),
+      sb.from('financial_records').select('*').not('batch_id','is',null),
+      sb.from('purchase_change_logs').select('*').order('created_time',{ascending:false}).limit(2000)
+    ]);
+  }catch(e){ return e; }
+  var b=got[0];
+  if(b.error) return b.error;
+  var o=got[1];
+  if(o.error) return o.error;
+  var lines=got[2];
   /* 詳情頁的「帳務入帳」要顯示這一批寫了哪幾筆進 financial_records。
      帳務紀錄頁沒開過的話 DB.financial_records 是空的，所以這裡自己抓 ——
      但只抓訂購來的那些（batch_id 不是 null），不要把整張帳務表拉進來。
      已經有資料（從帳務頁進來的）就用既有的，不要蓋掉整張表。 */
-  var f = await sb.from('financial_records').select('*').not('batch_id','is',null);
+  var f=got[3];
   if(!f.error){
     if((DB.financial_records||[]).length){
       var seen={};
@@ -17911,7 +18048,7 @@ async function ordFetchAll(force){
   }
   // 寄送紀錄與「窗口回覆確認」都存在 purchase_change_logs（沒有另外開欄位），
   // 所以這裡要一起抓回來，畫面才知道這張窗口單寄過沒、對方回了沒
-  var cl = await sb.from('purchase_change_logs').select('*').order('created_time',{ascending:false}).limit(2000);
+  var cl=got[4];
   if(!cl.error) DB.purchase_change_logs=cl.data||[];
 
   DB.purchase_batches=b.data||[];
@@ -17944,6 +18081,8 @@ async function ordSaveAll(){
   var setMsg=function(t,err){ if(msg){ msg.textContent=t; msg.style.color=err?'#dc2626':'var(--text-dim)'; } };
   if(!cid){ setMsg('請先選擇經紀公司',true); return; }
   if(!ORD.confirmed){ setMsg('請先勾選確認',true); return; }
+  var missingFx=ordFxMissingCount();
+  if(missingFx){ setMsg('還有 '+missingFx+' 筆換匯沒有有效匯率，請回上一步填寫',true); return; }
 
   var cust=_ordCust(cid);
   if(!cust){ setMsg('找不到這家客戶，重新整理後再試',true); return; }
@@ -18275,8 +18414,8 @@ async function ordGoLedger(){
    那一頁沒有步驟條，專案名稱、內部備註、客戶都在第 1 步，從那裡走不回去，是個死路。
 
    草稿本來就還在編輯中，它不需要一張唯讀的詳情頁：**精靈就是它的頁面**。
-   所以草稿一律直接進精靈（有品項停第 2 步、還沒有品項停第 1 步，_ordDraftLoad 決定），
-   兩邊用步驟條自由來回。
+   所以草稿一律直接進精靈第 2 步，回到當前應該處理的新增／核對品項流程；
+   需要修改客戶、專案名稱或備註時，仍可用步驟條點回第 1 步。
    檢視者沒有精靈可以進，維持看唯讀的詳情頁。 */
 function ordOpenDetail(id){
   var b=_ordBatch(id);
@@ -18302,8 +18441,8 @@ function ordOrderPrimary(o){
   return '';
 }
 
-/* 自訂項目（運費、打樣費）不屬於任何品牌方 —— 畫面上要獨立一節，
-   不能顯示成「（未知品牌方）」，那會被當成資料出錯。 */
+/* 跟客戶收的自訂項目不屬於品牌方；品牌方叫貨附加費原則上會直接帶 supplier_name。
+   ORD_CUSTOM_SEC 只保留給客戶自訂項目，以及尚未整理的舊 po_extra。 */
 function _ordSecOf(l){
   if(_ordIsCustExtra(l)) return ORD_CUSTOM_SEC;          // 理論上進不到訂購單，保險用
   if(_ordIsPoExtra(l))   return l.supplier_name || ORD_CUSTOM_SEC;
@@ -18509,27 +18648,29 @@ function _prompt2(opts){
      凍結 —— 出單時把用到的匯率連同換算後金額一起寫進 settlement。
               單據寄出去之後金額就不能再浮動，重算出來跟寄出去的對不上就是事故。
      可逆 —— 明細的 sell_price / sell_currency **永遠是原幣原值，一個字都不改**。
-              取消換匯就是把該幣別改回 KEEP，原值一直都在，不必從台幣回推。
+              取消換匯就是把該幣別改回 KEEP，原值一直都在，不必從結算幣回推。
      透明 —— 畫面與單據上原幣與換算後兩個都印，並標明匯率。
      人工 —— 換不換、換成什麼幣別一律人工選。系統不自動換、不預設換。
 
-   這一版**只支援換成 TWD**。規劃書寫得很清楚：目標幣是 TWD 時直接用
-   「1 外幣 = ? 台幣」換，不繞第三種幣；目標幣不是台幣才需要經台幣中轉，
-   那會多一層誤差也多一個要標示的地方。真的需要收 USD 再說。
+   目標幣別不限 TWD。匯率的定義統一是「1 原幣 = ? 目標幣」；
+   只要原幣或目標幣是 TWD，就可直接用台銀基準或其倒數。
+   外幣轉外幣時以兩者對 TWD 的基準交叉計算建議值，但最後仍由營運人工確認與修改。
 
    進位：一律走 _ceilFx()（先收斂到小數 6 位再進位）。直接用裸的 Math.ceil
    會出現 500,001 這種多 1 的金額，patch37 已經踩過。
    ═══════════════════════════════════════════════════════════════════════════ */
 
-var ORD_FX_TARGET = 'TWD';
+var ORD_FX_TARGET = 'TWD'; // 舊資料相容，也是台銀牌告匯率的基準幣
 
 /* settlement 的形狀（就是 purchase_batches.settlement 存進去的東西）：
 
-     { "黃恩荻\u0001JPY": {contact:"黃恩荻", cur:"JPY", mode:"TWD",  rate:0.1992, orig:35000,  out:6972},
+     { "黃恩荻\u0001JPY": {contact:"黃恩荻", cur:"JPY", mode:"TWD", target:"TWD", rate:0.1992, orig:35000, out:6972},
        "黃恩荻\u0001TWD": {contact:"黃恩荻", cur:"TWD", mode:"KEEP",             orig:6500,   out:6500},
        "木村政昌\u0001JPY":{contact:"木村政昌",cur:"JPY", mode:"KEEP",             orig:273000, out:273000} }
 
    mode=KEEP 代表這一格維持原幣收，out 就等於原幣金額。
+   有換匯時 mode 就是目標幣別（TWD／JPY／USD…），target 也同步存一份以方便閱讀。
+   舊單只有 mode='TWD' 也能直接讀，不需要資料庫 migration。
 
    ⚠️ 2026-09-10 之前的 key 只有幣別（"JPY"）。sylvia：「同樣都是收 JPY，
    但是其實是不同的窗口，我要個別窗口的幣別可以決定是不是要換算」——
@@ -18540,6 +18681,21 @@ var ORD_FX_TARGET = 'TWD';
    `_ordStEntries()` 兩種形狀都吃得下（舊的沒有 \u0001，contact 會是 null）。 */
 var ORD_ST_SEP = '\u0001';
 function _ordStKey(contact, cur){ return String(contact==null?'':contact)+ORD_ST_SEP+String(cur||''); }
+function _ordStTarget(s, cur){
+  cur=cur||(s&&s.cur)||'';
+  if(!s || !s.mode || s.mode==='KEEP') return cur;
+  return s.target||s.mode||cur;
+}
+function _ordStIsConv(s, cur){ return !!s && _ordStTarget(s,cur)!==(cur||(s&&s.cur)||''); }
+
+/* 可選的結算幣別：沿用品牌方／商品幣別清單，並納入已有匯率基準與當前原幣。 */
+function ordFxCurrencies(cur){
+  var a=(typeof HP_CUR!=='undefined'&&HP_CUR.length?HP_CUR:['TWD','JPY','USD','CNY','EUR','HKD','SGD']).slice();
+  Object.keys(typeof FX_BASE==='object'&&FX_BASE?FX_BASE:{}).forEach(function(c){ if(a.indexOf(c)<0) a.push(c); });
+  Object.keys(typeof BOT_RATES==='object'&&BOT_RATES?BOT_RATES:{}).forEach(function(c){ if(a.indexOf(c)<0) a.push(c); });
+  if(cur&&a.indexOf(cur)<0) a.unshift(cur);
+  return a;
+}
 
 /* settlement → 正規化的陣列。舊形狀（key 就是幣別）也照樣讀得出來。 */
 function _ordStEntries(st){
@@ -18547,30 +18703,37 @@ function _ordStEntries(st){
   return Object.keys(st).map(function(k){
     var s=st[k]||{};
     var p=k.split(ORD_ST_SEP), old=(p.length<2);
+    var cur=(s.cur||(old?k:p[1]));
+    var target=_ordStTarget(s,cur);
+    var mode=(target===cur)?'KEEP':target;
     return {
       key:k,
       contact:(s.contact!=null?s.contact:(old?null:p[0])),
-      cur:(s.cur||(old?k:p[1])),
-      mode:(s.mode||'KEEP'),
+      cur:cur,
+      mode:mode,
+      target:target,
       rate:(s.rate==null?null:s.rate),
       orig:(s.orig==null?null:s.orig),
-      out:(s.out!=null?s.out:(s.orig!=null?s.orig:null))
+      out:(s.out!=null?s.out:(s.orig!=null?s.orig:null)),
+      twd_rate:(s.twd_rate==null?null:s.twd_rate),
+      twd_out:(s.twd_out==null?null:s.twd_out)
     };
   }).sort(function(a,b){
     return (String(a.contact||'')+a.cur).localeCompare(String(b.contact||'')+b.cur);
   });
 }
-/* 實際會收到的錢：依「最後結算的幣別」彙總（換過的算 TWD、沒換的算原幣） */
+/* 實際會收到的錢：依「最後結算的幣別」彙總 */
 function _ordStRecv(st){
   var out={};
   _ordStEntries(st).forEach(function(e){
     if(e.out==null) return;
-    out[(e.mode==='TWD')?ORD_FX_TARGET:e.cur] = (out[(e.mode==='TWD')?ORD_FX_TARGET:e.cur]||0) + Number(e.out);
+    var target=_ordStTarget(e,e.cur);
+    out[target]=(out[target]||0)+Number(e.out);
   });
   return out;
 }
 function _ordStAnyConv(st){
-  return _ordStEntries(st).some(function(e){ return e.mode==='TWD'; });
+  return _ordStEntries(st).some(function(e){ return _ordStIsConv(e,e.cur); });
 }
 /* 這一輪畫面上該有哪幾格：一個窗口一個幣別一格 */
 function _ordStWanted(){
@@ -18600,22 +18763,36 @@ function ordFxEnsure(){
   return ORD.settlement;
 }
 
-/* 這個幣別的預設匯率：先看 fx_baseline（營運人員採用過的基準），
-   沒有才退回程式內建的台銀快照。回傳 1 外幣 = ? TWD。 */
-function ordFxDefaultRate(cur){
+/* 先把幣別換成「1 單位 = ? TWD」，再組成任意原幣→目標幣的建議匯率。
+   基準優先讀 fx_baseline（營運採用過的值），沒有才退回程式內建台銀快照。 */
+function _ordFxTwdPer(cur){
   if(cur===ORD_FX_TARGET) return 1;
   var b=(typeof _fxBaseOf==='function')?_fxBaseOf(cur):null;
-  if(b && b.buy>0 && b.sell>0) return Math.round((b.buy+b.sell)/2*10000)/10000;
-  return null;
+  return (b&&b.buy>0&&b.sell>0)?((Number(b.buy)+Number(b.sell))/2):null;
 }
-function ordFxRateDate(cur){
-  var b=(typeof _fxBaseOf==='function')?_fxBaseOf(cur):null;
-  return b?b.date:null;
+function ordFxDefaultRate(cur,target){
+  target=target||ORD_FX_TARGET;
+  if(cur===target) return 1;
+  var from=_ordFxTwdPer(cur), to=_ordFxTwdPer(target);
+  if(!(from>0)||!(to>0)) return null;
+  return Math.round((from/to)*1000000)/1000000;
+}
+function ordFxRateDate(cur,target){
+  target=target||ORD_FX_TARGET;
+  var ds=[];
+  [cur,target].forEach(function(c){
+    if(!c||c===ORD_FX_TARGET) return;
+    var b=(typeof _fxBaseOf==='function')?_fxBaseOf(c):null;
+    if(b&&b.date) ds.push(String(b.date));
+  });
+  // 交叉匯率同時依賴兩個基準，用較舊日期提醒過期才不會低估風險
+  return ds.length?ds.sort()[0]:null;
 }
 /* 換算：原幣 × 匯率 → 目標幣，取整走 _ceilFx，小數位走 _curDec */
-function ordFxConv(amount, rate){
+function ordFxConv(amount, rate, target){
   if(amount==null||rate==null||!(rate>0)) return null;
-  var v=amount*rate, dec=_curDec(ORD_FX_TARGET);
+  target=target||ORD_FX_TARGET;
+  var v=amount*rate, dec=_curDec(target);
   if(dec===0) return _ceilFx(v);
   var p=Math.pow(10,dec);
   return _ceilFx(v*p)/p;
@@ -18624,9 +18801,10 @@ function ordFxConv(amount, rate){
 function ordFxOut(key, origAmount){
   var s=(ORD.settlement||{})[key]||{mode:'KEEP'};
   var cur=s.cur||String(key).split(ORD_ST_SEP).pop();
-  if(s.mode!=='TWD') return { cur:cur, amount:origAmount, converted:false, rate:null };
-  var rate=(s.rate!=null?s.rate:ordFxDefaultRate(cur));
-  return { cur:ORD_FX_TARGET, amount:ordFxConv(origAmount, rate), converted:true, rate:rate };
+  var target=_ordStTarget(s,cur);
+  if(target===cur) return { cur:cur, amount:origAmount, converted:false, rate:null };
+  var rate=(s.rate!=null?s.rate:ordFxDefaultRate(cur,target));
+  return { cur:target, amount:ordFxConv(origAmount,rate,target), converted:true, rate:rate };
 }
 /* 全部套用完之後，實際要收的錢（依收款幣別彙總） */
 function ordFxSettledTotals(){
@@ -18646,21 +18824,39 @@ function ordFxSnapshot(){
   _ordStWanted().forEach(function(w){
     var s=(ORD.settlement||{})[w.key]||{mode:'KEEP'};
     var r=ordFxOut(w.key, w.orig);
-    snap[w.key]= (s.mode==='TWD')
-      ? { contact:w.contact, cur:w.cur, mode:'TWD', rate:r.rate, orig:w.orig, out:r.amount }
-      : { contact:w.contact, cur:w.cur, mode:'KEEP', orig:w.orig, out:w.orig };
+    var twdRate=ordFxDefaultRate(w.cur,'TWD');
+    var twdOut=(twdRate>0)?ordFxConv(w.orig,twdRate,'TWD'):null;
+    snap[w.key]= r.converted
+      ? { contact:w.contact, cur:w.cur, mode:r.cur, target:r.cur, rate:r.rate,
+          orig:w.orig, out:r.amount, twd_rate:twdRate, twd_out:twdOut }
+      : { contact:w.contact, cur:w.cur, mode:'KEEP', orig:w.orig, out:w.orig,
+          twd_rate:twdRate, twd_out:twdOut };
   });
   return snap;
 }
 function ordFxAnyConverted(){ return _ordStAnyConv(ORD.settlement||{}); }
+function ordFxMissingCount(){
+  ordFxEnsure();
+  return _ordStWanted().filter(function(w){
+    var s=ORD.settlement[w.key]||{mode:'KEEP'};
+    if(!_ordStIsConv(s,w.cur)) return false;
+    var rate=(s.rate!=null?s.rate:ordFxDefaultRate(w.cur,_ordStTarget(s,w.cur)));
+    return !(rate>0);
+  }).length;
+}
 
 /* ── 畫面：收款設定 ───────────────────────────────────────────────── */
 
 function ordFxSetMode(key,mode){
   ordFxEnsure();
   var s=ORD.settlement[key]; if(!s) return;
-  s.mode=mode;
-  if(mode==='TWD' && s.rate==null) s.rate=ordFxDefaultRate(s.cur);
+  var oldTarget=_ordStTarget(s,s.cur);
+  if(mode==='KEEP'||mode===s.cur){ s.mode='KEEP'; delete s.target; s.rate=null; }
+  else{
+    s.mode=mode; s.target=mode;
+    // 匯率的單位跟目標幣別綁在一起；換目標時不能沿用上一組數字
+    if(oldTarget!==mode||s.rate==null) s.rate=ordFxDefaultRate(s.cur,mode);
+  }
   ordRender();
 }
 function ordFxSetRate(key,val){
@@ -18670,20 +18866,19 @@ function ordFxSetRate(key,val){
   if(n==null||!(n>0)){ _toast('匯率要是大於 0 的數字','err'); ordRender(); return; }
   s.rate=n; ordRender();
 }
-/* 這個幣別的每一個窗口一起套用 —— 五個窗口都收 JPY 又都要換的時候，
-   一格一格點五次很煩，但預設仍然是一格一個決定（不預設連動）。 */
-function ordFxApplyCur(cur, mode){
+/* 全表批次套用。選 KEEP 就讓每一列各自維持原幣；
+   選目標幣別就讓所有列都以它結算。原幣恰好等於目標幣的列不做多餘換算。 */
+function ordFxApplyAll(mode){
   ordFxEnsure();
-  var d=ordFxDefaultRate(cur), n=0;
+  var n=0;
   _ordStEntries(ORD.settlement).forEach(function(e){
-    if(e.cur!==cur) return;
     var s=ORD.settlement[e.key]; if(!s) return;
-    s.mode=mode;
-    if(mode==='TWD' && s.rate==null) s.rate=d;
+    if(mode==='KEEP'||mode===e.cur){ s.mode='KEEP'; delete s.target; s.rate=null; }
+    else{ s.mode=mode; s.target=mode; s.rate=ordFxDefaultRate(e.cur,mode); }
     n++;
   });
   ordRender();
-  _toast(cur+' 的 '+n+' 個窗口都設成'+(mode==='TWD'?('換算 '+ORD_FX_TARGET):'維持原幣'));
+  _toast(n+' 筆收款設定已全部'+(mode==='KEEP'?'改為維持原幣':('改為結算 '+mode)));
 }
 
 /* ── 詳情頁：唯讀顯示凍結後的設定 ─────────────────────────────────── */
@@ -18699,12 +18894,13 @@ function ordDetailSettleHtml(b){
       (b.fx_locked_at?'<span style="font-size:11.5px;color:var(--text-dim);">凍結於 '+_dt(b.fx_locked_at)+'</span>':'')+
     '</div>'+
     '<div style="padding:6px 0;">'+es.map(function(e){
+      var target=_ordStTarget(e,e.cur), converted=_ordStIsConv(e,e.cur);
       return '<div style="padding:10px 20px;border-bottom:1px solid #f1f3f6;font-size:13px;">'+
         (e.contact?('<span style="color:var(--text-dim);font-size:12px;margin-right:10px;">'+
           _esc(e.contact)+'</span>'):'')+
         '<b>'+_esc(e.cur)+'</b>　'+
-        (e.mode==='TWD'
-          ? ('<b>'+ORD_FX_TARGET+' '+_ordFmt(e.out,ORD_FX_TARGET)+'</b>'+
+        (converted
+          ? ('<b>'+_esc(target)+' '+_ordFmt(e.out,target)+'</b>'+ 
              '<span style="color:var(--text-dim);"> ← 原幣 '+_esc(e.cur)+' '+_ordFmt(e.orig,e.cur)+'　×　'+_esc(String(e.rate))+'</span>')
           : ('維持原幣　<b>'+_esc(e.cur)+' '+_ordFmt(e.out,e.cur)+'</b>'))+
       '</div>';
@@ -18805,7 +19001,7 @@ async function _ordXlsSave(wb, fname){
 
 /* ── 文件一：訂購確認單（一批次一份，給 MCN）──────────────────────── */
 async function ordDocConfirm(batchId){
-  if(typeof ExcelJS==='undefined'){ _toast('Excel 函式庫尚未載入，請重新整理再試','err'); return; }
+  if(!await _gcNeed(_gcEnsureExcelJs(),'Excel 元件')) return;
   var bad=ordDocWhitelistCheck();
   if(bad.length){ _toast('欄位白名單有問題，先修好再產文件：'+bad[0],'err'); return; }
   var b=_ordBatch(batchId); if(!b) return;
@@ -18819,7 +19015,7 @@ async function ordDocConfirm(batchId){
 /* ── 文件二：訂購單（一窗口一份，給窗口）───────────────────────────── */
 
 async function ordDocPo(batchId, orderId){
-  if(typeof ExcelJS==='undefined'){ _toast('Excel 函式庫尚未載入，請重新整理再試','err'); return; }
+  if(!await _gcNeed(_gcEnsureExcelJs(),'Excel 元件')) return;
   var bad=ordDocWhitelistCheck();
   if(bad.length){ _toast('欄位白名單有問題，先修好再產文件：'+bad[0],'err'); return; }
 
@@ -18835,7 +19031,7 @@ async function ordDocPo(batchId, orderId){
     await _ordXlsSave(wb, '訂購單_'+o.po_no+'_'+(o.contact_name||'')+'.xlsx');
   }else{
     // 多個窗口 → 一次打包，不要讓人按 N 次下載
-    if(typeof JSZip==='undefined'){ _toast('打包元件尚未載入，請改成一張一張產','err'); return; }
+    if(!await _gcNeed(_gcEnsureJsZip(),'ZIP 元件')) return;
     var zip=new JSZip();
     for(var i=0;i<orders.length;i++){
       var oi=orders[i];
@@ -19182,6 +19378,7 @@ function _ordSaveBlob(blob, fname){
 
 /* ── 產生 Word ─────────────────────────────────────────────────────── */
 async function ordDocConfirmDocx(batchId){
+  if(!await _gcNeed(_gcEnsureOrderDocs(),'Word 訂購文件元件')) return;
   var Dt=_ordDocx(); if(!Dt) return;
   var bad=ordDocWhitelistCheck();
   if(bad.length){ _toast('欄位白名單有問題，先修好再產文件：'+bad[0],'err'); return; }
@@ -19195,6 +19392,7 @@ async function ordDocConfirmDocx(batchId){
 }
 
 async function ordDocPoDocx(batchId, orderId){
+  if(!await _gcNeed(_gcEnsureOrderDocs(),'Word 訂購文件元件')) return;
   var Dt=_ordDocx(); if(!Dt) return;
   var bad=ordDocWhitelistCheck();
   if(bad.length){ _toast('欄位白名單有問題，先修好再產文件：'+bad[0],'err'); return; }
@@ -19212,7 +19410,7 @@ async function ordDocPoDocx(batchId, orderId){
                            '訂購單_'+o.po_no+'_'+(o.contact_name||'')+'.docx');
       _ordSaveBlob(r.blob, r.fname);
     }else{
-      if(typeof JSZip==='undefined'){ _toast('打包元件尚未載入，請改成一張一張產','err'); return; }
+      if(!await _gcNeed(_gcEnsureJsZip(),'ZIP 元件')) return;
       var zip=new JSZip();
       for(var i=0;i<orders.length;i++){
         var oi=orders[i];
@@ -19233,6 +19431,139 @@ async function ordDocPoDocx(batchId, orderId){
   }
   await ordFetchAll(true); ordRender();
   _toast('已產生 '+orders.length+' 份訂購單（Word）');
+}
+
+/* ── 建立前預覽：直接套正式 Word 範本，但只讀精靈裡的草稿 ──────────
+   這裡刻意不呼叫 ordDocConfirmDocx / ordDocPoDocx：那兩支是正式單成立後的下載流程，
+   品牌方版本還會回寫 doc_generated_at。預覽只能組記憶體快照、渲染畫面，不能寫資料庫、
+   不能下載，也不能讓「看一下」變成「已產生文件」。 */
+var _ordPreviewCur=null;
+
+function _ordPreviewBatch(){
+  var draft=ORD.draftId?_ordBatch(ORD.draftId):null;
+  var cust=_ordCust(ORD.customer_id)||{};
+  var now=new Date().toISOString();
+  return {
+    id:null,
+    batch_no:(draft&&draft.batch_no)||'草稿預覽',
+    customer_id:ORD.customer_id||null,
+    customer_snapshot:ordCustSnapshot(cust),
+    created_time:now,
+    doc_version:(draft&&draft.doc_version)||1,
+    settlement:ordFxSnapshot(),
+    fx_locked_at:ordFxAnyConverted()?now:null,
+    ship_to:ORD.shipTo||null,
+    sell_totals:ordTotals(ORD.lines,'sell_amount','sell_currency'),
+    cost_totals:ordTotals(ORD.lines,'cost_amount','cost_currency')
+  };
+}
+
+function _ordPreviewOrder(g, i, b){
+  var terms={}, supNames=[];
+  (g.lines||[]).forEach(function(l){
+    var sn=_ordSecOf(l);
+    if(sn===ORD_CUSTOM_SEC || terms[sn]) return;
+    terms[sn]=ordSupplierTerms(sn); supNames.push(sn);
+  });
+  var c=(DB.suppliers||[]).filter(function(s){ return s.contact_name===g.contact; })[0]||{};
+  return {
+    id:null,
+    batch_id:null,
+    po_no:b.batch_no+'-'+String(i+1).padStart(2,'0'),
+    contact_name:g.contact,
+    contact_snapshot:{ email:c.email||null, phone:c.phone||null,
+      messenger:c.messenger||null, title:c.contact_title||null },
+    supplier_names:supNames,
+    supplier_terms:terms,
+    cost_totals:ordTotals(g.lines,'cost_amount','cost_currency'),
+    doc_note:((ORD.docNotes||{})[g.contact]||null),
+    doc_currency:null, fx_rates:null, fx_locked_at:null
+  };
+}
+
+function _ordPreviewClose(){
+  _ordPreviewCur=null;
+  var ov=document.getElementById('ordprev-modal'); if(ov) ov.remove();
+}
+
+function _ordPreviewShell(title, subtitle){
+  _ordPreviewClose();
+  var ov=document.createElement('div'); ov.id='ordprev-modal';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.58);z-index:420;'+
+    'display:flex;flex-direction:column;align-items:flex-start;padding:20px;overflow:auto;';
+  ov.innerHTML='<div id="ordprev-bar" style="width:960px;max-width:calc(100vw - 40px);margin:0 auto 14px;'+
+      'display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0;">'+
+      '<div style="color:#fff;min-width:260px;flex:1;">'+
+        '<div style="font-weight:700;font-size:14px;">'+_esc(title)+'</div>'+
+        '<div style="font-size:11.5px;opacity:.78;margin-top:2px;">'+_esc(subtitle)+'</div>'+
+      '</div>'+
+      '<span style="color:#fde68a;font-size:11.5px;">草稿預覽 · 不會建立、下載或寫入資料庫</span>'+
+      '<button class="btn btn-secondary" onclick="_ordPreviewClose()">關閉</button>'+
+    '</div>'+
+    '<div id="ordprev-paper" style="width:960px;max-width:calc(100vw - 40px);margin:0 auto 20px;'+
+      'background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.3);min-height:420px;overflow:hidden;flex-shrink:0;">'+
+      '<div style="padding:56px;text-align:center;color:#64748b;font-size:13px;">正在產生正式文件預覽…</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  return ov;
+}
+
+function _ordPreviewBlocking(lines){
+  return (lines||[]).filter(function(l){
+    return (l._issues||[]).some(function(k){
+      return k==='no_product'||k==='no_cost'||k==='pick_region'||k==='no_sell'||k==='dup_key';
+    });
+  });
+}
+
+async function ordDraftDocPreview(kind, groupIndex){
+  var lines=ORD.lines||[];
+  if(!lines.length){ _toast('這張草稿還沒有品項，無法預覽','err'); return; }
+  var bad=_ordPreviewBlocking(lines);
+  if(bad.length){ _toast('還有 '+bad.length+' 列沒處理完，完成後才能預覽正式文件','err'); return; }
+  if(kind==='confirm' && ordFxMissingCount()){
+    _toast('收款換匯還有缺少匯率的項目，填完才能預覽客戶文件','err'); return;
+  }
+
+  var b=_ordPreviewBatch(), data, tpl, title, subtitle, fname;
+  if(kind==='confirm'){
+    if(!_ordBillable(lines).length){ _toast('沒有可向客戶收款的品項，無法預覽','err'); return; }
+    data=ordDocConfirmData(b,lines); tpl=function(){ return ORD_TPL_CONFIRM; };
+    title='客戶報價／訂購確認單預覽';
+    subtitle=(b.customer_snapshot.company_name||'未命名客戶')+' · '+b.batch_no;
+    fname='訂購確認單_'+b.batch_no+'.docx';
+  }else{
+    var gs=ordGroups(lines), g=gs[Number(groupIndex)];
+    if(!g){ _toast('找不到這張窗口訂購單，請重新整理後再試','err'); return; }
+    var incomplete=g.lines.filter(function(l){
+      return (_ordIsPoExtra(l) && (!l.supplier_name || !String(l.item_name||'').trim() || l.cost_amount==null));
+    });
+    if(incomplete.length){ _toast('這張訂購單有 '+incomplete.length+' 筆叫貨附加費用尚未填完整','err'); return; }
+    var o=_ordPreviewOrder(g,Number(groupIndex),b);
+    data=ordDocPoData(b,o,g.lines);
+    tpl=function(){ return data._hasConv?ORD_TPL_PO_FX:ORD_TPL_PO; };
+    title='品牌方訂購單預覽'; subtitle=g.contact+' · '+o.po_no;
+    fname='訂購單_'+o.po_no+'_'+g.contact+'.docx';
+  }
+
+  var wl=ordDocWhitelistCheck();
+  if(wl.length){ _toast('文件欄位白名單有問題：'+wl[0],'err'); return; }
+  _ordPreviewShell(title,subtitle);
+  var ok=await _gcNeed(Promise.all([_gcEnsureOrderDocs(),_gcEnsureDocxPreview()]),'Word 訂購文件元件');
+  var paper=document.getElementById('ordprev-paper');
+  if(!ok){ if(paper) paper.innerHTML='<div style="padding:56px;color:#b91c1c;">預覽元件載入失敗，請關閉後重試。</div>'; return; }
+  var Dt=_ordDocx(); if(!Dt) return;
+  try{
+    var r=_ordDocxRender(Dt,tpl(),data,fname); _ordPreviewCur=r;
+    if(!paper) return;
+    paper.innerHTML='<div id="ordprev-inner"></div>';
+    var inner=document.getElementById('ordprev-inner');
+    await window.docx.renderAsync(r.blob,inner,null,{inWrapper:false,ignoreLastRenderedPageBreak:true});
+    requestAnimationFrame(function(){ _docFitPaper('ordprev'); });
+  }catch(e){
+    if(paper) paper.innerHTML='<div style="padding:56px;color:#b91c1c;font-size:13px;">預覽失敗：'+
+      _esc((e&&e.message)||String(e))+'</div>';
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -19267,9 +19598,16 @@ async function ordDocPoDocx(batchId, orderId){
 
 /* 把某個幣別的金額換算成 TWD，並回傳帳務要存的那一組欄位。
    取不到匯率時回 null —— 寧可不入帳也不要記一個猜的數字。 */
-function ordFinAmount(cur, amount){
+function ordFinAmount(cur, amount, lockedTwd){
   if(amount==null) return null;
   if(cur==='TWD') return { currency:'TWD', amount:amount, orig_currency:null, fx_rate:null, amount_orig:null };
+  if(lockedTwd!=null && Number(amount)>0){
+    return {
+      currency:'TWD', amount:Number(lockedTwd), orig_currency:cur,
+      fx_rate:Math.round((Number(lockedTwd)/Number(amount))*1000000)/1000000,
+      amount_orig:amount
+    };
+  }
   var rate=ordFxDefaultRate(cur);
   if(rate==null||!(rate>0)) return null;
   return {
@@ -19287,10 +19625,19 @@ function ordFinanceRows(b, orders, who){
   // ── 應收經紀公司：依「實際收款幣別」記，跟收款設定一致 ──────────
   // 一個窗口的一個幣別是一格，但帳務只關心「最後收到什麼幣別、多少」——
   // 依結算幣別彙總之後寫一筆，跟收款設定一致（2026-09-10 起 key 是窗口＋幣別）
-  var recv=_ordStRecv(b.settlement);
-  if(!Object.keys(recv).length) recv=b.sell_totals||{};
+  var recv={}, recvTwd={}, recvEntries=_ordStEntries(b.settlement);
+  if(recvEntries.length){
+    recvEntries.forEach(function(e){
+      if(e.out==null) return;
+      var target=_ordStTarget(e,e.cur);
+      recv[target]=(recv[target]||0)+Number(e.out);
+      var twd=(e.twd_out!=null)?Number(e.twd_out)
+              :(target==='TWD'?Number(e.out):(e.cur==='TWD'?Number(e.orig):null));
+      if(twd!=null) recvTwd[target]=(recvTwd[target]||0)+twd;
+    });
+  }else recv=b.sell_totals||{};
   Object.keys(recv).sort().forEach(function(cur){
-    var m=ordFinAmount(cur, recv[cur]);
+    var m=ordFinAmount(cur,recv[cur],recvTwd[cur]);
     if(!m){ skipped.push('應收 '+cur+'（後台沒有這個幣別的匯率基準，無法換算台幣對照）'); return; }
     rows.push({
       record_type:'receivable_purchase', counterparty_type:'customer', counterparty_id:b.customer_id,
@@ -19407,21 +19754,25 @@ async function ordFinanceSyncAndReport(batchId, label){
 var ORD_STEPS=[[1,'建立訂購單'],[2,'核對與收款設定'],[3,'確認訂購']];
 function ordStepBar(){
   var cur=ORD.step||1;
+  var unlocked=Math.max(ORD.maxStep||1, cur);
   return '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
     ORD_STEPS.map(function(s){
-      var n=s[0], on=(n===cur), done=(n<cur);
-      // 只能往回點，不能往前跳 —— 前面沒做完，後面的數字是錯的
-      var clickable=done;
+      var n=s[0], on=(n===cur), reached=(n<=unlocked);
+      // 已經到過的步驟可來回切換；還沒解鎖的步驟仍不能提前跳入
+      var clickable=!on&&reached;
       return '<div'+(clickable?(' onclick="ordGoStep('+n+')" style="cursor:pointer;'):' style="')+
         'padding:8px 14px;border-radius:9px;font-size:12.5px;font-weight:'+(on?'600':'500')+';'+
-        'background:'+(on?'var(--accent)':(done?'#eef3fc':'#f4f6f9'))+';'+
-        'color:'+(on?'#fff':(done?'var(--accent)':'var(--text-dim)'))+';'+
-        'border:1px solid '+(on?'var(--accent)':(done?'#c8d8f5':'var(--border)'))+';">'+
+        'background:'+(on?'var(--accent)':(clickable?'#eef3fc':'#f4f6f9'))+';'+
+        'color:'+(on?'#fff':(clickable?'var(--accent)':'var(--text-dim)'))+';'+
+        'border:1px solid '+(on?'var(--accent)':(clickable?'#c8d8f5':'var(--border)'))+';">'+
         '<span style="opacity:.65;margin-right:5px;">'+n+'</span>'+s[1]+'</div>';
     }).join('')+'</div>';
 }
 function ordGoStep(n){
-  if(n>(ORD.step||1)) return;      // 往前只能靠底部按鈕，那裡才有把關
+  var cur=ORD.step||1;
+  var unlocked=Math.max(ORD.maxStep||1, cur);
+  if(n>unlocked) return;
+  ORD.maxStep=unlocked;             // 往回切換後，仍記得曾經到過的最遠步驟
   ORD.step=n; ordRender();
 }
 
@@ -19792,18 +20143,19 @@ function _ordFmtInt(n){ return Number(n||0).toLocaleString('en-US'); }
 function ordStep3SettleHtml(){
   var st=ordFxSnapshot(), es=_ordStEntries(st);
   if(!es.length) return '';
-  var conv=es.filter(function(e){ return e.mode==='TWD'; });
+  var conv=es.filter(function(e){ return _ordStIsConv(e,e.cur); });
   return '<div class="table-card" style="margin-top:14px;padding:15px 20px;">'+
     '<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;flex-wrap:wrap;">'+
       '<span style="font-family:var(--font);font-weight:700;font-size:14px;">給經紀公司的收款設定</span>'+
       (conv.length? _badge('建立時一併凍結匯率','amber') : _badge('全部維持原幣','gray'))+
     '</div>'+
     es.map(function(e){
+      var target=_ordStTarget(e,e.cur), converted=_ordStIsConv(e,e.cur);
       return '<div style="font-size:13px;margin-top:3px;">'+
         (e.contact?('<span style="color:var(--text-dim);margin-right:8px;">'+_esc(e.contact)+'</span>'):'')+
         '<b>'+_esc(e.cur)+' '+_ordFmt(e.orig,e.cur)+'</b>　→　'+
-        (e.mode==='TWD'
-          ? ('TWD '+_ordFmt(e.out,'TWD')+' <span style="color:var(--text-dim);">（@'+e.rate+'）</span>')
+        (converted
+          ? (_esc(target)+' '+_ordFmt(e.out,target)+' <span style="color:var(--text-dim);">（@'+e.rate+'）</span>')
           : ('<span style="color:var(--text-dim);">維持 '+_esc(e.cur)+' '+_ordFmt(e.out,e.cur)+'</span>'))+
       '</div>';
     }).join('')+
@@ -19815,6 +20167,19 @@ function ordStep3OrderHtml(g, i){
   var cost=ordTotals(g.lines,'cost_amount','cost_currency');
   // 這一行是「這張窗口單有哪些品牌方」——「其他項目」不是品牌方，不列進去
   var sups={}; g.lines.forEach(function(l){ var k=_ordSecOf(l); if(k!==ORD_CUSTOM_SEC) sups[k]=1; });
+  var supNames=Object.keys(sups);
+  /* 以前叫貨附加費用是加在窗口單底下，還要再選一次「歸到哪一節」。
+     現在入口直接放進各品牌方區塊：新增時品牌方已由所在位置決定，不重複問。
+     舊草稿若這張窗口單只有一個品牌方，也可以安全地直接補上歸屬。 */
+  if(supNames.length===1){
+    g.lines.forEach(function(l){
+      if(_ordIsPoExtra(l) && !l.supplier_name) l.supplier_name=supNames[0];
+    });
+  }
+  var extraHtml=supNames.map(function(s){ return ordPoExHtml(g,s); }).join('');
+  // 多品牌的舊草稿可能留有「未歸品牌方」的費用；不能安靜地丟掉，保留一次性整理區。
+  var oldLoose=g.lines.some(function(l){ return _ordIsPoExtra(l) && !l.supplier_name; });
+  if(oldLoose) extraHtml+=ordPoExHtml(g,null,supNames);
   var key=g.contact;
   return '<div style="padding:15px 20px;'+(i?'border-top:1px solid var(--border);':'')+'">'+
     '<div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;">'+
@@ -19823,9 +20188,13 @@ function ordStep3OrderHtml(g, i){
         '<span style="font-size:12px;color:var(--text-dim);margin-left:9px;">'+
           Object.keys(sups).join('、')+'　·　'+g.lines.length+' 個品項</span>'+
       '</div>'+
-      '<div style="text-align:right;">'+
+      '<div style="text-align:right;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end;">'+
+        '<button class="btn btn-secondary" style="padding:4px 11px;font-size:12px;" '+
+          'onclick="ordDraftDocPreview(\'po\','+i+')">預覽這張品牌方訂購單</button>'+
+        '<span>'+
         '<div style="font-size:13.5px;font-weight:600;">'+ordMoneyList(cost)+'</div>'+
         '<div style="font-size:11px;color:var(--text-dim);">成本試算 · 貨款下訂後確認</div>'+
+        '</span>'+
       '</div>'+
     '</div>'+
     '<div style="margin-top:9px;">'+
@@ -19835,10 +20204,10 @@ function ordStep3OrderHtml(g, i){
         'oninput="ordSetDocNote(\''+_esc(key).replace(/'/g,"\\'")+'\',this.value)" '+
         'placeholder="例：請於 9/20 前出貨，分兩批亦可（選填）" style="max-width:560px;">'+
     '</div>'+
-    ordPoExHtml(g)+
+    extraHtml+
   '</div>';
 }
-/* ── 步驟 3：這一張窗口單要加給品牌方的其他款項 ─────────────────────
+/* ── 步驟 3：各品牌方叫貨單的附加費用 ───────────────────────────────
    2026-09-14 sylvia：「等到要出訂購單給廠商的時候那邊應該也要可以調整
    是不是有其他款項，好比說稅金、運費等等。」
 
@@ -19848,24 +20217,27 @@ function ordStep3OrderHtml(g, i){
    會進應付試算（她定案：「對品牌方的那筆要進應付試算」），
    不會進帳務 —— 應付一律等「登錄實際貨款」才入帳，這一條沒有變。
 
-   歸到哪一節：預設「其他項目」，也可以指定這張單上的某一個品牌方 ——
-   稅金通常是某一家的稅，掛過去才會算進那一節的小計；
-   國際運費是整批的，放「其他項目」比較對。 */
-function ordPoExAdd(contact){
+   2026-09-21：入口已經在品牌方區塊裡，品牌歸屬由所在位置決定，
+   不再讓營運重複選「歸到哪一節」。 */
+function ordPoExAdd(contact, supplierName){
   if(_ordRO('檢視者模式，不能編輯訂購')) return;
   var g=null;
   ordGroups(ORD.lines).forEach(function(x){ if(x.contact===contact) g=x; });
-  // 幣別預設跟著這張單上已經有的成本幣走，沒有就用品牌方的收款幣別
+  // 幣別預設跟著這個品牌方既有的成本幣走，沒有就用品牌方資料的收款幣別
   var cur=null;
-  (g?g.lines:[]).forEach(function(l){ if(!cur && l.cost_currency) cur=l.cost_currency; });
+  (g?g.lines:[]).forEach(function(l){
+    if(!cur && l.supplier_name===supplierName && l.cost_currency) cur=l.cost_currency;
+  });
   if(!cur){
-    var s=(DB.suppliers||[]).filter(function(x){ return x.contact_name===contact; })[0];
+    var s=(DB.suppliers||[]).filter(function(x){
+      return x.supplier_name===supplierName && x.contact_name===contact;
+    })[0] || (DB.suppliers||[]).filter(function(x){ return x.supplier_name===supplierName; })[0];
     cur=(s&&s.payment_currency)||'JPY';
   }
   ORD.lines.push({
     product_id:null, sku:null, region:null, brand:null,
     product_name:null, local_code:null, units_per_carton:null, moq_text:null,
-    supplier_name:null, contact_name:contact, qty:1,
+    supplier_name:supplierName, contact_name:contact, qty:1,
     cost_price:null, cost_currency:cur, cost_amount:null,
     sell_price:null, sell_currency:null, sell_amount:null,
     origin:'po_extra', item_name:'', line_note:null,
@@ -19892,29 +20264,30 @@ function ordPoExDel(key){
   ORD.lines=(ORD.lines||[]).filter(function(l){ return l._key!==key; });
   ordRender();
 }
-function ordPoExHtml(g){
+function ordPoExHtml(g, supplierName, legacySupNames){
   var contact=g.contact;
   var ck=_esc(contact).replace(/'/g,"\\'");
-  var rows=(ORD.lines||[]).filter(function(l){ return _ordIsPoExtra(l) && l.contact_name===contact; });
-  // 可以掛的節＝這張單上真的有的品牌方
-  var supOrder=[], seen={};
-  g.lines.forEach(function(l){
-    if(_ordIsPoExtra(l)) return;
-    var k=l.supplier_name; if(k && !seen[k]){ seen[k]=1; supOrder.push(k); }
+  var sk=_esc(supplierName||'').replace(/'/g,"\\'");
+  var legacy=!supplierName;
+  var rows=(ORD.lines||[]).filter(function(l){
+    if(!_ordIsPoExtra(l) || l.contact_name!==contact) return false;
+    return legacy ? !l.supplier_name : l.supplier_name===supplierName;
   });
+  var supOrder=legacySupNames||[];
+  if(legacy && !rows.length) return '';
   var body=rows.map(function(l){
     var k=l._key;
     var bad=(l._issues||[]).length;
     return '<tr'+(bad?' style="background:#fffaf2;"':'')+'>'+
       '<td><input class="cm-input" style="width:100%;min-width:150px;" value="'+_esc(l.item_name||'')+'" '+
         'placeholder="例：稅金、國際運費、打樣費" onchange="ordPoExSet(\'' + k + '\',\'item_name\',this.value)"></td>'+
-      '<td><select class="cm-input" style="height:30px;padding:0 6px;font-size:12px;" '+
-        'onchange="ordPoExSet(\'' + k + '\',\'supplier_name\',this.value)">'+
-        '<option value=""'+(!l.supplier_name?' selected':'')+'>其他項目（不歸品牌方）</option>'+
-        supOrder.map(function(s){
-          return '<option value="'+_esc(s)+'"'+(l.supplier_name===s?' selected':'')+'>'+_esc(s)+'</option>';
-        }).join('')+
-      '</select></td>'+
+      (legacy
+        ? ('<td><select class="cm-input" style="height:30px;padding:0 6px;font-size:12px;" '+
+            'onchange="ordPoExSet(\'' + k + '\',\'supplier_name\',this.value)">'+
+            '<option value="" selected>請選擇品牌方</option>'+
+            supOrder.map(function(s){ return '<option value="'+_esc(s)+'">'+_esc(s)+'</option>'; }).join('')+
+          '</select></td>')
+        : '')+
       '<td><input class="cm-input" type="number" min="1" step="1" style="width:56px;" '+
         'value="'+(l.qty!=null?l.qty:'')+'" onchange="ordPoExSet(\'' + k + '\',\'qty\',this.value)"></td>'+
       '<td><div style="display:flex;gap:4px;">'+
@@ -19939,17 +20312,20 @@ function ordPoExHtml(g){
       'border-radius:9px;overflow:hidden;">'+
     '<div style="padding:8px 13px;background:var(--surface-2,#fbfcfe);border-bottom:1px solid var(--border);'+
       'display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'+
-      '<b style="font-size:12.5px;">其他款項</b>'+
+      '<b style="font-size:12.5px;">'+(legacy?'待指定品牌方的舊費用':'叫貨附加費用')+'</b>'+
+      (legacy ? _badge('需要整理','amber') : _badge(supplierName+' · 應付','green'))+
       '<span style="font-size:11.5px;color:var(--text-dim);">'+
-        '要付給品牌方的稅金、國際運費、打樣費 —— 會印在這張訂購單上，也會算進應付試算。'+
-        '跟客戶收的錢請在第 2 步的「自訂項目」加。</span>'+
+        (legacy
+          ? '這是舊草稿留下、尚未指定品牌方的費用；選定一次後就會移到該品牌方區塊。'
+          : '此區已屬於「'+_esc(supplierName)+'」，新增的稅金、運費、打樣費會直接計入這個品牌方的應付金額，'+
+            '並印在窗口訂購單。跟客戶收的錢請在第 2 步的「自訂項目」加。')+'</span>'+
       '<span style="flex:1;"></span>'+
-      '<button class="btn btn-secondary" style="padding:3px 10px;font-size:11.5px;" '+
-        'onclick="ordPoExAdd(\'' + ck + '\')">＋ 加一列</button>'+
+      (legacy ? '' : '<button class="btn btn-secondary" style="padding:3px 10px;font-size:11.5px;" '+
+        'onclick="ordPoExAdd(\'' + ck + '\',\''+sk+'\')">＋ 加一列</button>')+
     '</div>'+
     (rows.length
       ? ('<div class="table-wrap"><table><thead><tr>'+
-          '<th>項目名稱</th><th style="width:200px;">歸到哪一節</th><th style="width:64px;">數量</th>'+
+          '<th>項目名稱</th>'+(legacy?'<th style="width:200px;">品牌方</th>':'')+'<th style="width:64px;">數量</th>'+
           '<th style="width:172px;">成本單價</th><th style="width:120px;text-align:right;">金額</th>'+
           '<th style="width:76px;"></th>'+
         '</tr></thead><tbody>'+body+'</tbody></table></div>')
@@ -20028,6 +20404,8 @@ function ordStep2Next(){
   });
   if(!(ORD.lines||[]).length){ _toast('這張單還沒有任何品項，先用「＋ 新增品項」加幾列','err'); return; }
   if(bad.length){ _toast('還有 '+bad.length+' 列沒處理完（小計對不上不算），處理完才能往下','err'); return; }
+  var missingFx=ordFxMissingCount();
+  if(missingFx){ _toast('還有 '+missingFx+' 筆換匯沒有有效匯率，請先填寫再確認訂購','err'); return; }
   ORD.step=3; ORD.confirmed=false; ordRender();
 }
 
@@ -20045,8 +20423,17 @@ function ordStep2Next(){
    所以這一顆只是「我現在就要確定它存進去了」，跟自動存檔走**同一支**
    —— 兩條路各寫一次存檔邏輯，遲早會有一條忘了帶某個欄位。
 
-   也不再跳走。以前存完會把 ORD 清掉、跳到草稿頁，明細就這樣消失在眼前；
-   現在明細本來就存得住，人留在原地繼續做才是對的。 */
+   也不再離開精靈。以前存完會把 ORD 清掉、跳到草稿頁，明細就這樣消失在眼前；
+   現在是確定存成功後，留在同一個精靈並進到第 2 步繼續加品項。 */
+function _ordDbWaitIdle(){
+  return new Promise(function(resolve){
+    function check(){
+      if(!_ordDbBusy){ resolve(); return; }
+      setTimeout(check,20);
+    }
+    check();
+  });
+}
 async function ordSaveDraft(){
   if(_ordRO('檢視者模式，不能儲存草稿')) return;
   if(ordSaving) return;
@@ -20057,7 +20444,23 @@ async function ordSaveDraft(){
   if(_ordDbTimer){ clearTimeout(_ordDbTimer); _ordDbTimer=null; }
   try{
     var isNew=!ORD.draftId;
-    await _ordDraftSaveNow(_ordDraftSig());
+    /* 選客戶後的自動存檔可能還在跑。以前這時 _ordDraftSaveNow() 會直接 return，
+       主按鈕卻照樣提示成功，也因為還沒有 draftId 而留在第 1 步。
+       這裡先等前一次真正結束，再以最新畫面內容確定存一次。 */
+    await _ordDbWaitIdle();
+    if(_ordDbTimer){ clearTimeout(_ordDbTimer); _ordDbTimer=null; }
+    var sig=_ordDraftSig();
+    if(!(ORD.draftId && sig===_ordDbSig && _ordDbState==='')){
+      await _ordDraftSaveNow(sig);
+    }
+    if(!ORD.draftId){
+      if(_ordDbState!=='err'){
+        _ordDbState='err';
+        _toast('草稿沒有建立成功，請再試一次','err');
+      }
+      ordRender();
+      return;
+    }
     _ordLsSetDraftId(ORD.draftId);
     /* 存完就往第二步走。2026-09-14 sylvia：「點擊建立訂購單之後，應該要引導我到
        第二個步驟，但是現在會卡在第一個步驟」。
@@ -20461,8 +20864,9 @@ function _ordDraftLoad(b){
   // 草稿的明細掛在批次底下、order_id 是空的
   ORD.lines=_ordLinesOf(b.id).map(_ordRowToLine);
   ORD.manual=!b.source_file_name;
+  // 草稿代表第 1 步已建立完成；重新進入時回到第 2 步，第 1 步仍可從步驟條點回編輯
+  ORD.step=2;
   if(ORD.lines.length){
-    ORD.step=2;
     ordRecheckAll();      // 這段時間商品可能改過價改過名，接回來先重新比對
   }
   _ordDbState=''; _ordDbSig=_ordDraftSig();
@@ -20470,30 +20874,42 @@ function _ordDraftLoad(b){
 }
 
 /* 草稿頁選檔／拖檔 —— 解析完直接進第二步核對，不繞回第一步 */
-function ordDraftPick(input, id){
+async function ordDraftPick(input, id){
   var f=input.files&&input.files[0]; if(!f) return;
   var b=_ordBatch(id); if(!b) return;
+  if(!await _gcNeed(ordEnsureEditorData(),'商品資料')) return;
   _ordDraftLoad(b);
   _ordParseFile(f, 'ord-draft-status', 2);
 }
-function ordDraftDrop(ev, id){
-  var b=_ordBatch(id); if(!b){ ev.preventDefault(); return; }
+async function ordDraftDrop(ev, id){
+  ev.preventDefault(); ev.stopPropagation();
+  var el=ev.currentTarget; if(el) el.style.background='';
+  var f=ev.dataTransfer&&ev.dataTransfer.files&&ev.dataTransfer.files[0];
+  var b=_ordBatch(id); if(!b||!f) return;
+  if(!/\.xlsx$/i.test(f.name)){
+    var s=document.getElementById('ord-draft-status');
+    if(s) s.textContent='只吃 .xlsx —— 這是從「匯出貨盤表」出去的那一種檔案。';
+    return;
+  }
+  if(!await _gcNeed(ordEnsureEditorData(),'商品資料')) return;
   _ordDraftLoad(b);
-  ordDropFile(ev, 'ord-draft-status', 2);
+  _ordParseFile(f, 'ord-draft-status', 2);
 }
 /* 草稿頁「手動一筆一筆加品項」 */
-function ordDraftManual(id){
+async function ordDraftManual(id){
   if(_ordRO('檢視者模式，不能新增品項')) return;
   var b=_ordBatch(id); if(!b) return;
+  if(!await _gcNeed(ordEnsureEditorData(),'商品資料')) return;
   _ordDraftLoad(b);
   ORD.manual=true; ORD.step=2;
   ordView='wizard'; ordDetailId=null;
   ordRender();
   setTimeout(function(){ if(typeof ordAddOpen==='function') ordAddOpen(); }, 60);
 }
-/* 舊入口留著（別的地方可能還有連結）：帶著草稿回第一步改客戶／備註／專案名稱 */
-function ordDraftImport(id){
+/* 台帳「繼續編輯」入口：草稿回第 2 步；需要改基本資訊可點步驟 1 */
+async function ordDraftImport(id){
   var b=_ordBatch(id); if(!b) return;
+  if(!await _gcNeed(ordEnsureEditorData(),'商品資料')) return;
   _ordDraftLoad(b);
   ordView='wizard'; ordDetailId=null;
   ordRender();
@@ -21166,9 +21582,13 @@ function ordEditSettlement(b, rows){
   t.order.forEach(function(k){
     var w=t.map[k];
     var s=byKey[k]||byCur[w.cur]||{mode:'KEEP', rate:null};
-    var mode=s.mode||'KEEP', rate=(s.rate==null?null:s.rate);
-    out[k]={ contact:w.contact, cur:w.cur, mode:mode, rate:rate, orig:w.amt,
-             out:(mode==='TWD'&&rate>0)?ordFxConvTo(w.amt, rate, 'TWD'):w.amt };
+    var target=_ordStTarget(s,w.cur), mode=(target===w.cur?'KEEP':target);
+    var rate=(s.rate==null?null:s.rate);
+    var twdRate=(s.twd_rate>0)?Number(s.twd_rate):ordFxDefaultRate(w.cur,'TWD');
+    out[k]={ contact:w.contact, cur:w.cur, mode:mode,
+             target:(mode==='KEEP'?undefined:target), rate:rate, orig:w.amt,
+             out:(mode!=='KEEP'&&rate>0)?ordFxConvTo(w.amt,rate,target):w.amt,
+             twd_rate:twdRate, twd_out:(twdRate>0?ordFxConvTo(w.amt,twdRate,'TWD'):null) };
   });
   return out;
 }
@@ -21627,7 +22047,7 @@ function ordSummaryHtml(lines){
         _ordCellLabel('毛利', _badge('一律用原幣算','green'))+
         grossRows+
         _ordCellNote('應收與應付<b>同幣別</b>（都跟著品牌方的成本幣），'+
-          '所以毛利在原幣層級直接相減就有。<b>不看換算後的台幣，換匯不影響毛利</b>。')+
+          '所以毛利在原幣層級直接相減就有。<b>不看換算後的結算幣，換匯不影響毛利</b>。')+
       '</div>'+
 
     '</div></div>';
@@ -21639,6 +22059,17 @@ function ordSummaryHtml(lines){
 function ordSettleSeeLines(key){
   var s=(ORD.settlement||{})[key]||{};
   var target=s.contact;
+  // 「跟客戶收的額外費用」故意不進窗口訂購單，因此 ordGroups()
+  // 一定找不到它。改為展開專屬明細區，不要生出假窗口。
+  if(target===ORD_CUST_EXTRA_LABEL){
+    ORD._custExtraOpen=true;
+    ordRender();
+    setTimeout(function(){
+      var extra=document.getElementById('ord-cust-extra');
+      if(extra) extra.scrollIntoView({behavior:'smooth',block:'start'});
+    },80);
+    return;
+  }
   var gs=ordGroups(ORD.lines);
   if(!ORD._open) ORD._open={};
   var first=-1;
@@ -21660,40 +22091,41 @@ function ordSettleHtml(){
 
   /* 一列＝一個窗口的一個幣別。同一個幣別在不同窗口可以有不同決定 ——
      sylvia 2026-09-10：「同樣都是收 JPY，但是其實是不同的窗口」。 */
-  var rows='', anyRow=false, curCount={}, prevContact=null;
+  var rows='', anyRow=false, prevContact=null;
   gs.forEach(function(g){
     var sell=ordTotals(g.lines,'sell_amount','sell_currency');
     Object.keys(sell).sort().forEach(function(cur){
       anyRow=true;
-      curCount[cur]=(curCount[cur]||0)+1;
       var key=_ordStKey(g.contact,cur);
       var s=ORD.settlement[key]||{mode:'KEEP',rate:null};
-      var isT=(cur===ORD_FX_TARGET);
-      var rate=(s.rate!=null?s.rate:ordFxDefaultRate(cur));
+      var target=_ordStTarget(s,cur), converted=(target!==cur);
+      var rate=(s.rate!=null?s.rate:ordFxDefaultRate(cur,target));
       var r=ordFxOut(key, sell[cur]);
-      var d=ordFxRateDate(cur);
-      var stale=(typeof _fxIsStale==='function') && !isT && _fxIsStale(d);
+      var d=ordFxRateDate(cur,target);
+      var stale=converted && (typeof _fxIsStale==='function') && _fxIsStale(d);
       var by=_ordBySupplier(g.lines,'sell_amount','sell_currency',cur);
       var newGroup=(g.contact!==prevContact); prevContact=g.contact;
 
-      var modeCell = isT
-        ? '<span style="font-size:12px;color:var(--text-dim);">本來就是 '+ORD_FX_TARGET+'</span>'
-        : '<select class="cm-input" style="width:150px;height:30px;padding:0 8px;font-size:12px;" '+
-            'onchange="ordFxSetMode(\''+_esc(key)+'\',this.value)">'+
-            '<option value="KEEP"'+(s.mode!=='TWD'?' selected':'')+'>'+_esc(cur)+' 維持原幣</option>'+
-            '<option value="TWD"'+(s.mode==='TWD'?' selected':'')+'>'+ORD_FX_TARGET+' 換算</option>'+
-          '</select>';
+      var modeCell = '<select class="cm-input" style="width:150px;height:30px;padding:0 8px;font-size:12px;" '+
+          'onchange="ordFxSetMode(\''+_esc(key)+'\',this.value)">'+
+          '<option value="KEEP"'+(!converted?' selected':'')+'>'+_esc(cur)+' 維持原幣</option>'+
+          ordFxCurrencies(cur).filter(function(c){ return c!==cur; }).map(function(c){
+            return '<option value="'+_esc(c)+'"'+(target===c?' selected':'')+'>'+_esc(c)+' 換算</option>';
+          }).join('')+
+        '</select>';
 
-      var rateCell = (s.mode==='TWD' && !isT)
+      var rateCell = converted
         ? ('<input class="cm-input" type="number" step="any" style="width:92px;height:30px;font-size:12px;" '+
-            'value="'+(rate!=null?rate:'')+'" onchange="ordFxSetRate(\''+_esc(key)+'\',this.value)">')
+            'value="'+(rate!=null?rate:'')+'" onchange="ordFxSetRate(\''+_esc(key)+'\',this.value)">'+
+            '<div style="font-size:10px;color:var(--text-dim);margin-top:3px;white-space:nowrap;">1 '+
+              _esc(cur)+' = ? '+_esc(target)+'</div>')
         : '<span style="color:var(--text-dim);font-size:12.5px;">—</span>';
 
-      var refCell = isT ? '<span style="color:var(--text-dim);">—</span>'
-        : (d ? ('<span style="'+(stale?'color:#b91c1c;':'color:var(--text-dim);')+'">台銀 '+
-                (ordFxDefaultRate(cur)!=null?ordFxDefaultRate(cur):'—')+'<br>'+_esc(String(d))+
+      var refCell = !converted ? '<span style="color:var(--text-dim);">—</span>'
+        : (d ? ('<span style="'+(stale?'color:#b91c1c;':'color:var(--text-dim);')+'">台銀換算 '+
+                (ordFxDefaultRate(cur,target)!=null?ordFxDefaultRate(cur,target):'—')+'<br>'+_esc(String(d))+
                 (stale?('（超過 '+FX_STALE_DAYS+' 天）'):'')+'</span>')
-             : '<span style="color:#b45309;">後台沒有基準</span>');
+             : '<span style="color:#b45309;">後台沒有完整基準<br>請人工填匯率</span>');
 
       rows+='<tr'+(newGroup?' style="border-top:2px solid var(--border);"':'')+'>'+
         '<td style="font-size:12.5px;'+(newGroup?'font-weight:600;':'color:var(--text-dim);')+'">'+
@@ -21708,31 +22140,31 @@ function ordSettleHtml(){
             'white-space:nowrap;" onclick="ordSettleSeeLines(\''+_esc(key)+'\')">看明細</span>':'')+
         '</td>'+
         '<td>'+modeCell+'</td>'+
-        '<td>'+rateCell+'</td>'+
-        '<td style="font-size:11px;line-height:1.5;">'+refCell+'</td>'+
+        '<td>'+rateCell+'</td>'+ 
+        '<td style="font-size:11px;line-height:1.5;">'+refCell+'</td>'+ 
         '<td style="text-align:right;background:#f5f9ff;font-weight:700;white-space:nowrap;">'+
-          _esc(r.cur)+' '+_ordFmt(r.amount,r.cur)+'</td>'+
+          (r.amount==null
+            ? '<span style="color:#dc2626;">缺匯率</span>'
+            : (_esc(r.cur)+' '+_ordFmt(r.amount,r.cur)))+'</td>'+ 
       '</tr>';
     });
   });
   if(!anyRow) return '';
 
-  /* 同一個幣別橫跨好幾個窗口時給一個整批套用 —— 五個窗口都收 JPY 又都要換，
-     一格一格點五次很煩。但預設仍然是一格一個決定，不連動。 */
-  var bulk=Object.keys(curCount).filter(function(c){ return curCount[c]>1 && c!==ORD_FX_TARGET; }).sort();
-  var bulkHtml = bulk.length
-    ? ('<div style="padding:10px 20px;border-top:1px solid var(--border);display:flex;'+
-       'align-items:center;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--text-mid);">'+
-       '<span>整批套用（一格一格設也可以）：</span>'+
-       bulk.map(function(c){
-         return '<span style="display:inline-flex;align-items:center;gap:6px;">'+
-           '<b>'+_esc(c)+'</b><span style="color:var(--text-dim);">'+curCount[c]+' 個窗口</span>'+
-           '<button class="btn btn-secondary" style="padding:2px 8px;font-size:11px;" '+
-             'onclick="ordFxApplyCur(\''+_esc(c)+'\',\'TWD\')">都換 '+ORD_FX_TARGET+'</button>'+
-           '<button class="btn btn-secondary" style="padding:2px 8px;font-size:11px;" '+
-             'onclick="ordFxApplyCur(\''+_esc(c)+'\',\'KEEP\')">都維持原幣</button></span>';
-       }).join('　')+'</div>')
-    : '';
+  /* 整張訂購單的批次動作，不再只限定某一種原幣。
+     個別列仍可在套用後再單獨調整。 */
+  var bulkHtml = '<div style="padding:10px 20px;border-top:1px solid var(--border);display:flex;'+
+    'align-items:center;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--text-mid);">'+
+    '<span><b>全部列套用</b>（個別列仍可另外調整）：</span>'+ 
+    '<select class="cm-input" style="width:170px;height:30px;padding:0 8px;font-size:11.5px;" '+
+      'onchange="if(this.value)ordFxApplyAll(this.value)">'+
+      '<option value="">選擇批次設定…</option>'+ 
+      '<option value="KEEP">全部維持原幣</option>'+ 
+      ordFxCurrencies().map(function(c){
+        return '<option value="'+_esc(c)+'">全部結算為 '+_esc(c)+'</option>';
+      }).join('')+'</select>'+ 
+    '<span style="color:var(--text-dim);">原幣與目標幣相同的列會維持原值，不重複換算。</span>'+ 
+  '</div>';
 
   return '<div class="table-card" style="margin-bottom:14px;">'+
     '<div style="padding:13px 20px;border-bottom:1px solid var(--border);background:#f6fbf8;'+
@@ -21760,7 +22192,7 @@ function ordSettleHtml(){
     '<div style="padding:10px 20px;background:#f6fbf8;border-top:1px solid var(--border);'+
       'font-size:11.5px;color:var(--text-mid);line-height:1.85;">'+
       '<b>一列＝一個窗口的一個幣別。</b>同一個幣別在不同窗口可以有不同決定 —— '+
-      '一邊維持原幣、一邊換台幣都可以，兩張窗口單本來就是分開談的。<br>'+
+      '一邊維持原幣、一邊換其他幣別都可以，TWD 也可轉成外幣。<br>'+
       '<b>「應收原幣」＝下面那張窗口卡的「報價小計」</b>，兩邊一定對得起來；'+
       '對不起來就是有列被略過或報價金額沒填，<b>系統會擋在「確認訂購」那一刻</b>。'+
     '</div>'+
@@ -21779,6 +22211,61 @@ function ordSettleHtml(){
 }
 
 /* ── ③ 窗口卡片（預設收合）───────────────────────────────────────── */
+function ordCustExtraToggle(){
+  ORD._custExtraOpen=(ORD._custExtraOpen===false);
+  ordRender();
+}
+
+/* 跟客戶收的額外費用不屬於任何窗口訂購單，在第二步獨立給營運編輯。 */
+function ordCustExtraHtml(lines){
+  var extras=(lines||[]).filter(_ordIsCustExtra);
+  var open=(ORD._custExtraOpen!==false); // 新增後預設展開，立刻看到剛加的列
+  var sell=ordTotals(extras,'sell_amount','sell_currency');
+  var head='<div onclick="ordCustExtraToggle()" style="cursor:pointer;display:flex;align-items:center;'+
+      'gap:9px;flex-wrap:wrap;padding:13px 20px;background:#f6fbf8;'+
+      (open?'border-bottom:1px solid var(--border);':'')+'">'+
+    '<span style="color:var(--text-dim);font-size:11px;">'+(open?'▾':'▸')+'</span>'+
+    '<span style="font-weight:700;font-size:13.5px;">額外費用（跟客戶收）</span>'+
+    _badge(extras.length+' 個項目','purple')+
+    '<span style="font-size:11.5px;color:var(--text-dim);">'+
+      '只會進訂購確認單與應收，不會印在品牌方訂購單</span>'+
+    '<span style="margin-left:auto;display:flex;align-items:center;gap:10px;">'+
+      '<b style="font-family:var(--font);font-size:13px;color:#16a34a;">'+(ordMoneyList(sell)||'—')+'</b>'+
+      '<button class="btn btn-secondary ord-write" style="padding:3px 10px;font-size:11.5px;" '+
+        'onclick="event.stopPropagation();ordAddOpen({tab:\'custom\'})">＋ 新增額外費用</button>'+
+    '</span></div>';
+  if(!open) return '<div id="ord-cust-extra" class="table-card" style="margin-bottom:14px;overflow:hidden;">'+head+'</div>';
+
+  var rows=extras.length ? extras.map(function(l){
+    return '<tr'+(l._issues.length?' style="background:#fffbeb;"':'')+'>'+
+      '<td><b style="font-size:12.5px;">'+_esc(l.item_name||'自訂項目')+'</b>'+
+        (l.line_note?'<div class="cell-clip-in" style="font-size:10px;color:var(--text-dim);">'+_esc(l.line_note)+'</div>':'')+'</td>'+
+      '<td style="text-align:right;font-weight:500;">'+_ordFmt(l.qty)+'</td>'+
+      '<td style="text-align:right;background:#f6fbf8;white-space:nowrap;">'+
+        (l.sell_price==null?'<span style="color:#dc2626;">缺</span>':_ordFmt(l.sell_price,l.sell_currency))+'</td>'+
+      '<td><b style="font-family:var(--font);">'+_esc(l.sell_currency||'—')+'</b></td>'+
+      '<td style="text-align:right;background:#f6fbf8;white-space:nowrap;font-weight:600;">'+
+        (l.sell_amount==null?'<span style="color:#dc2626;">缺</span>':
+          (_esc(l.sell_currency||'')+' '+_ordFmt(l.sell_amount,l.sell_currency)))+'</td>'+
+      '<td style="text-align:center;white-space:nowrap;">'+
+        '<button class="btn btn-secondary ord-write" style="padding:3px 9px;font-size:12px;" '+
+          'onclick="ordLineEditOpen(\''+l._key+'\')">編輯</button></td>'+
+    '</tr>';
+  }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:18px;">'+
+    '還沒有額外費用；如果要向客戶加收運費、人工費或手續費，請按右上角新增。</td></tr>';
+
+  return '<div id="ord-cust-extra" class="table-card" style="margin-bottom:14px;overflow:hidden;">'+head+
+    '<div class="table-wrap"><table><thead><tr>'+
+      '<th>項目名稱／內部備註</th><th style="width:80px;text-align:right;">數量</th>'+
+      '<th style="width:130px;text-align:right;">報價單價</th><th style="width:80px;">幣別</th>'+
+      '<th style="width:150px;text-align:right;">報價金額</th><th style="width:76px;"></th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div style="padding:9px 20px;background:var(--surface-2,#f6f8fb);border-top:1px solid var(--border);'+
+      'font-size:11.5px;color:var(--text-dim);line-height:1.7;">'+
+      '修改數量、報價或幣別後，上方收款幣別設定與實收合計會立即重新計算。</div>'+
+  '</div>';
+}
+
 function ordGroupsHtml(lines){
   var gs=ordGroups(lines);
   if(!ORD._open) ORD._open={};
@@ -21966,6 +22453,7 @@ function ordCheckHtml(){
       return k==='no_product'||k==='no_cost'||k==='pick_region'||k==='no_sell'||k==='dup_key';
     });
   });
+  var previewFxMissing=(!blocking.length&&lines.length)?ordFxMissingCount():0;
   var sheetBar=ORD.sheets.map(function(s){
     return '<span style="display:inline-flex;align-items:center;gap:6px;margin-right:14px;">'+
       '<b style="font-size:12px;">'+_esc(s.name)+'</b>'+
@@ -22025,6 +22513,7 @@ function ordCheckHtml(){
     ordSummaryHtml(lines)+
     ordPendingHtml(bad)+
     (blocking.length ? '' : ordSettleHtml())+
+    ordCustExtraHtml(lines)+
     ordGroupsHtml(lines)+
     '<div style="display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:16px;">'+
       (!lines.length
@@ -22034,6 +22523,9 @@ function ordCheckHtml(){
             ' 列待處理，處理完才會出現收款幣別設定</span>'
           : ''))+
       '<button class="btn btn-secondary" onclick="ordGoStep(1)">上一步</button>'+
+      '<button class="btn btn-secondary" '+
+        ((blocking.length||!lines.length||previewFxMissing)?'disabled ':'')+
+        'onclick="ordDraftDocPreview(\'confirm\')">預覽客戶報價／確認單</button>'+
       '<button class="btn btn-primary" '+((blocking.length||!lines.length)?'disabled ':'')+
         'onclick="ordStep2Next()">下一步 · 確認訂購</button>'+
     '</div>';
@@ -22070,10 +22562,9 @@ var ORD_CUSTOM_SEC = '其他項目（運費、打樣費）';
    拆成兩種，各自只做一件事：
      origin='custom'    對客戶加收：只有報價，沒有窗口。人工費、手續費、裝箱費…
                         出現在訂購確認單、應收、帳務；**不進任何一張訂購單**。
-     origin='po_extra'  對品牌方加付：只有成本，屬於某一張窗口單。稅金、國際運費、打樣費…
+     origin='po_extra'  對品牌方加付：只有成本，屬於某一張窗口單與其中一個品牌方。稅金、運費、打樣費…
                         出現在訂購單與應付試算；**不進確認單、不進應收**。
-                        可以指定歸到哪一個品牌方（印在那一節、算進那一節小計），
-                        不指定就放「其他項目」那一節。 */
+                        新增入口就在品牌方區塊裡，因此直接帶入該品牌方；只有舊草稿的空值需要整理。 */
 function _ordIsCustExtra(l){ return !!(l && l.origin==='custom');   }
 function _ordIsPoExtra(l){   return !!(l && l.origin==='po_extra'); }
 /* 收款幣別設定裡代表「跟客戶收的其他項目」那一格。窗口都是人名，不會撞。 */
@@ -22097,9 +22588,11 @@ function ordAddNewCustomRow(){
 
 /* opt.supplier / opt.contact：從某個品牌方分節的「＋ 新增品項」進來時帶著，
    新加的列預設就歸給那個窗口，不用再選一次。 */
-function ordAddOpen(opt){
+async function ordAddOpen(opt){
+  if(!await _gcNeed(ordEnsureEditorData(),'商品資料')) return;
   opt=opt||{};
-  ORD._add={ tab:'product', rows:[ordAddNewProdRow()], paste:false, pasteText:'',
+  var tab=(opt.tab==='custom')?'custom':'product';
+  ORD._add={ tab:tab, rows:[tab==='custom'?ordAddNewCustomRow():ordAddNewProdRow()], paste:false, pasteText:'',
              defContact:opt.contact||'' };
   ordAddRender();
 }
@@ -22309,7 +22802,8 @@ function ordAddProdPane(){
   var rows=A.rows.filter(function(r){ return r.kind==='product'; });
   return '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:11px 15px;'+
       'font-size:12.5px;color:#1e40af;margin-bottom:10px;line-height:1.7;">'+
-      '<b>SKU 欄打字就會即時搜尋後台商品</b>，選到之後右邊自動帶出商品與供貨價。'+
+      '<b>SKU 欄打字就會即時搜尋後台商品</b>，中文品名可輸入中間關鍵字或不連續的字，不必從第一個字開始。'+
+      '選到之後右邊自動帶出商品與供貨價。'+
       '<b>貼上一整排 SKU 也可以</b>（空白／逗號／換行分隔），系統會自動展開成多列，'+
       '你只要補數量與報價單價。</div>'+
     (A.paste
@@ -22343,17 +22837,56 @@ function ordAddProdPane(){
       '</div></div>';
 }
 
+function _ordAddSearchNorm(v){
+  var s=String(v==null?'':v);
+  try{ if(s.normalize) s=s.normalize('NFKC'); }catch(e){}
+  return s.toUpperCase().replace(/[\s_\-\/\\,.;:，。；：、()（）\[\]【】]+/g,'');
+}
+function _ordAddSearchSubseq(needle,hay){
+  if(!needle||!hay) return false;
+  var j=0;
+  for(var i=0;i<hay.length&&j<needle.length;i++) if(hay.charAt(i)===needle.charAt(j)) j++;
+  return j===needle.length;
+}
+function _ordAddSearchScore(p,q){
+  var raw=String(q||'').trim().toUpperCase(), n=_ordAddSearchNorm(raw);
+  if(!n) return -1;
+  var sku=_ordAddSearchNorm(p.sku||'');
+  var names=[p.name_zh,p.name_en,p.name_ja,p.name_ko,p.brand,p.source_supplier,p.local_code];
+  if(Array.isArray(p.local_codes)) p.local_codes.forEach(function(c){ names.push(c&&c.code); });
+  var fields=names.map(_ordAddSearchNorm).filter(Boolean), joined=fields.join('|');
+  if(sku===n) return 1200;
+  var si=sku.indexOf(n); if(si>=0) return 1080-si;
+  var best=-1;
+  fields.forEach(function(f,idx){
+    var at=f.indexOf(n);
+    if(at>=0) best=Math.max(best,980-at-(idx*3));
+  });
+  if(best>=0) return best;
+  var terms=raw.split(/\s+/).map(_ordAddSearchNorm).filter(Boolean);
+  if(terms.length>1 && terms.every(function(t){ return sku.indexOf(t)>=0||joined.indexOf(t)>=0; })) return 760;
+  // 中文關鍵字可不連續，例如「保膜」也能找到「亮白保濕面膜」。保留輸入順序，避免結果過度寬鬆。
+  for(var i=0;i<fields.length;i++) if(_ordAddSearchSubseq(n,fields[i])) return 620-i;
+  return -1;
+}
+function ordAddProductHits(q,limit){
+  return (DB.products||[]).map(function(p){ return {p:p,score:_ordAddSearchScore(p,q)}; })
+    .filter(function(x){ return x.score>=0; })
+    .sort(function(a,b){
+      if(a.score!==b.score) return b.score-a.score;
+      return String(a.p.sku||'').localeCompare(String(b.p.sku||''));
+    }).slice(0,limit||8).map(function(x){ return x.p; });
+}
+
 function ordAddProdRowHtml(r){
   var d=ordAddDerive(r);
   var q=String(r.skuInput||'').trim().toUpperCase();
 
-  // 候選清單：SKU 或品名對得上就列出來，最多 8 個。已經選好商品就不再顯示。
+  // 候選清單：SKU、四語品名、品牌、品牌方與當地品號都可搜尋；中文支援任意位置與不連續字。
   var sug='';
-  if(!r.product_id && q.length>=2){
-    var hits=(DB.products||[]).filter(function(p){
-      return String(p.sku||'').toUpperCase().indexOf(q)>=0 ||
-             String(p.name_zh||'').toUpperCase().indexOf(q)>=0;
-    }).slice(0,8);
+  var canSearch=q.length>=2 || /[\u3400-\u9fff]/.test(q);
+  if(!r.product_id && canSearch){
+    var hits=ordAddProductHits(q,8);
     sug=hits.length
       ? ('<div style="margin-top:5px;border:1px solid var(--border);border-radius:8px;overflow:hidden;">'+
           hits.map(function(p){
@@ -22776,10 +23309,11 @@ function ordAddPasteGo(){
 function ordAddCommit(){
   var st=ordAddStats();
   if(!st.live.length || st.bad.length) return;
-  var added=0;
+  var added=0, addedCustom=false;
   st.live.forEach(function(r){
     var d=ordAddDerive(r);
     if(r.kind==='custom'){
+      addedCustom=true;
       ORD.lines.push({
         product_id:null, sku:null, region:null, brand:null,
         product_name:null, local_code:null, units_per_carton:null, moq_text:null,
@@ -22814,6 +23348,7 @@ function ordAddCommit(){
     }
     added++;
   });
+  if(addedCustom) ORD._custExtraOpen=true;
   ordAddClose();
   ordRecheckAll();
   ordRender();
@@ -22840,6 +23375,7 @@ var ORD_LE=null;
 function ordLineEditOpen(key){
   var l=ordLine(key); if(!l) return;
   ORD_LE={ key:key, qty:l.qty, sell_price:l.sell_price, sell_amount:l.sell_amount,
+           sell_currency:l.sell_currency||l.cost_currency||'TWD',
            item_name:l.item_name||'', note:l.line_note||'' };
   ordLineEditRender();
 }
@@ -22883,10 +23419,16 @@ function ordLineEditHtml(){
           '<input class="cm-input" type="number" min="1" step="1" style="width:100px;" '+
             'value="'+(E.qty!=null?E.qty:'')+'" oninput="ordLineEditNum(\'qty\',this.value)"></div>'+
         '<div><label style="display:block;font-size:11.5px;color:var(--text-mid);margin-bottom:4px;">'+
-          '報價單價<span style="color:var(--text-dim);margin-left:5px;">'+_esc(cur)+'</span></label>'+
-          '<input class="cm-input" type="number" step="any" style="width:130px;" '+
-            'value="'+(E.sell_price!=null?E.sell_price:'')+'" '+
-            'oninput="ordLineEditNum(\'sell_price\',this.value)"></div>'+
+          '報價單價'+(custom?'':'<span style="color:var(--text-dim);margin-left:5px;">'+_esc(cur)+'</span>')+'</label>'+
+          '<div style="display:flex;gap:5px;">'+
+            '<input class="cm-input" type="number" step="any" style="width:130px;" '+
+              'value="'+(E.sell_price!=null?E.sell_price:'')+'" '+
+              'oninput="ordLineEditNum(\'sell_price\',this.value)">'+
+            (custom?('<select class="cm-input" style="width:74px;height:36px;padding:0 6px;font-size:12px;" '+
+                'onchange="ORD_LE.sell_currency=this.value">'+
+                HP_CUR.map(function(c){ return '<option value="'+c+'"'+(c===E.sell_currency?' selected':'')+'>'+c+'</option>'; }).join('')+
+              '</select>'):'')+
+          '</div></div>'+
         '<div><label style="display:block;font-size:11.5px;color:var(--text-mid);margin-bottom:4px;">'+
           '報價小計<span style="color:var(--text-dim);margin-left:5px;">可直接改</span></label>'+
           '<input class="cm-input" type="number" step="any" style="width:150px;" id="ordle-amt" '+
@@ -22938,6 +23480,9 @@ function ordLineEditSave(){
   var l=ordLine(ORD_LE.key); if(!l){ ordLineEditClose(); return; }
   var E=ORD_LE;
   if(!(E.qty>0)){ _toast('數量要大於 0','err'); return; }
+  if(l.origin==='custom' && !String(E.item_name||'').trim()){
+    _toast('請填額外費用的項目名稱','err'); return;
+  }
   l.qty=E.qty;
   l.sell_price=E.sell_price;
   // 之後 ordRecheck 會以 _fileSubtotal 為準 —— 人在這裡填的小計就是新的「以此為準」
@@ -22945,6 +23490,7 @@ function ordLineEditSave(){
   l.line_note=String(E.note||'').trim()||null;
   if(l.origin==='custom'){
     l.item_name=String(E.item_name||'').trim()||l.item_name;
+    l.sell_currency=E.sell_currency||l.sell_currency||'TWD';
     l.sell_amount=E.sell_amount;
     l.cost_amount=(l.cost_price!=null)?(l.cost_price*l.qty):null;
   }
@@ -22988,8 +23534,8 @@ function ordSettledOut(b){
   var out={}, conv=false;
   es.forEach(function(e){
     if(e.out==null) return;
-    if(e.mode==='TWD') conv=true;
-    var cur=(e.mode==='TWD')?ORD_FX_TARGET:e.cur;
+    var cur=_ordStTarget(e,e.cur);
+    if(_ordStIsConv(e,e.cur)) conv=true;
     out[cur]=(out[cur]||0)+Number(e.out);
   });
   return { amt:out, conv:conv, nCur:es.length };
@@ -23237,7 +23783,7 @@ function ordLedgerRow(b){
     '<td style="text-align:right;'+dim+'">'+(os.length||'<span style="color:var(--text-dim);">—</span>')+'</td>'+
     '<td>'+recvBadge+'</td>'+
     '<td>'+payBadge+'</td>'+
-    /* 跟商品清單／品牌方那幾頁的「操作」欄同一顆按鈕 —— 藍字底線是連結，
+    /* 跟商品清單／品牌方那幾頁的「操作」欄同一組按鈕 —— 藍字底線是連結，
        這裡是列動作，樣式要跟其他頁一致（2026-09-10 sylvia）
 
        2026-09-14 sylvia：「點擊編輯之後就可以直接顯示編輯頁面，不用再點一次編輯」。
@@ -23248,7 +23794,9 @@ function ordLedgerRow(b){
     '<td style="text-align:center;white-space:nowrap;">'+
       ((draft && !_ordViewer())
         ? ('<button class="btn btn-secondary" style="padding:3px 9px;font-size:12px;" '+
-            'onclick="event.stopPropagation();ordDraftImport(\''+_esc(b.id)+'\')">繼續編輯</button>')
+            'onclick="event.stopPropagation();ordDraftImport(\''+_esc(b.id)+'\')">繼續編輯</button> '+
+            '<button class="btn btn-secondary" style="padding:3px 9px;font-size:12px;color:#dc2626;" '+
+            'onclick="event.stopPropagation();ordDraftDelete(\''+_esc(b.id)+'\')">刪除草稿</button>')
         : ('<button class="btn btn-secondary" style="padding:3px 9px;font-size:12px;" '+
             'onclick="event.stopPropagation();ordOpenDetail(\''+_esc(b.id)+'\')">檢視</button>'))+
     '</td>'+
@@ -23384,7 +23932,7 @@ function ordDetailRecvHtml(b, lines, custName){
   // 三格總覽 —— 跟核對頁同一套語言，但這裡的匯率已經凍結了
   var recvRows = so.conv
     ? stEs.map(function(e){
-        var outCur=(e.mode==='TWD')?ORD_FX_TARGET:e.cur;
+        var outCur=_ordStTarget(e,e.cur), converted=_ordStIsConv(e,e.cur);
         return '<div style="display:flex;align-items:baseline;gap:8px;margin-top:5px;flex-wrap:wrap;">'+
           (e.contact?('<span style="font-size:11.5px;color:var(--text-dim);min-width:64px;">'+
             _esc(e.contact)+'</span>'):'')+
@@ -23394,7 +23942,7 @@ function ordDetailRecvHtml(b, lines, custName){
           '<span style="font-size:12.5px;color:var(--text-mid);font-variant-numeric:tabular-nums;">'+
             '原幣 '+_esc(e.cur)+' '+_ordFmt(e.orig,e.cur)+'</span>'+
           '<span style="font-size:11px;color:var(--text-dim);">'+
-            (e.mode==='TWD'?('@ '+e.rate):'維持原幣')+'</span></div>';
+            (converted?('@ '+e.rate):'維持原幣')+'</span></div>';
       }).join('')+
       '<div style="margin-top:7px;padding-top:6px;border-top:1px solid var(--border);'+
         'display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">'+
@@ -23803,13 +24351,13 @@ function _ordBillable(lines){
    對方一看就知道「這 4 項跟一家調、那 1 項跟另一家調」。
    切開的理由純粹是我們內部的窗口分單，跟經紀公司要付多少錢完全無關。
 
-   但**不能只照幣別分**：要不要換成台幣收款是「一個窗口的一個幣別」各自決定的，
+   但**不能只照幣別分**：要不要換幣、換成哪種幣別是「一個窗口的一個幣別」各自決定的，
    同一個 JPY 可能一個窗口換、另一個窗口不換，硬併成一節節尾那行就會說謊。
 
    所以分節鍵改成 **幣別 × 結算方式（含匯率）**：
      · 同幣別又同結算方式 → 併成一節（絕大多數情況，例如三格都「維持原幣」）
      · 同幣別但結算方式不同 → 還是兩節，但標題寫「JPY 計價」與
-       「JPY 計價（換算新台幣收款）」—— 分節理由是收款方式，不是貨源，
+       「JPY 計價（換算 USD 收款）」—— 分節理由是收款方式，不是貨源，
        講得出口、也看不出我們跟誰調貨。
 
    窗口與品牌方的名字完全不進標題。品牌（brand）留在明細欄位裡，
@@ -23819,20 +24367,25 @@ function ordConfirmSections(b, lines){
   var st=b.settlement||{};
   var d=b.fx_locked_at?_tpeDate(b.fx_locked_at):(b.created_time?_tpeDate(b.created_time):'');
   // 舊單（key 只有幣別）用幣別回退，不然節尾會全部變成「維持原幣」
-  var byCur={};
-  _ordStEntries(st).forEach(function(e){ if(byCur[e.cur]===undefined) byCur[e.cur]=e; });
+  var byCur={}, byKey={};
+  _ordStEntries(st).forEach(function(e){
+    byKey[e.key]=e;
+    if(byCur[e.cur]===undefined) byCur[e.cur]=e;
+  });
 
   var by={}, order=[];
   lines.forEach(function(l){
     var cur=l.sell_currency||'（未指定幣別）';
-    var s=st[_ordStKey(_ordStContactOf(l),cur)]||byCur[cur]||null;
-    var mode=(s && s.mode==='TWD')?'TWD':'KEEP';
-    var rate=(mode==='TWD'&&s)?String(s.rate):'';
+    var sk=_ordStKey(_ordStContactOf(l),cur);
+    var s=byKey[sk]||byCur[cur]||null;
+    var target=s?_ordStTarget(s,cur):cur;
+    var mode=(target===cur)?'KEEP':target;
+    var rate=(mode!=='KEEP'&&s)?String(s.rate):'';
     // 匯率也進鍵：同幣別同樣要換算、但兩個窗口鎖到不同匯率的話，併起來節尾也說不清
     var k=cur+'\u0001'+mode+'\u0001'+rate;
-    if(!by[k]){ by[k]={cur:cur, mode:mode, rate:rate, out:0, lines:[]}; order.push(k); }
+    if(!by[k]){ by[k]={cur:cur, mode:mode, target:target, rate:rate, out:0, lines:[]}; order.push(k); }
     by[k].lines.push(l);
-    if(s && st[_ordStKey(l.contact_name||'',cur)]) by[k]._hasFrozen=true;
+    if(s && st[sk]) by[k]._hasFrozen=true;
   });
   order.sort(function(a,b2){ return a.localeCompare(b2); });
 
@@ -23850,9 +24403,9 @@ function ordConfirmSections(b, lines){
     });
     var sum=ls.reduce(function(a,l){ return a+(l.sell_amount||0); },0);
     var conv;
-    if(g.mode==='TWD'){
-      conv='依 '+d+' 匯率換算　'+cur+' 1 = '+ORD_FX_TARGET+' '+g.rate+
-           '　＝　'+ORD_FX_TARGET+' '+_ordFmt(ordFxConvTo(sum,Number(g.rate),ORD_FX_TARGET),ORD_FX_TARGET);
+    if(g.mode!=='KEEP'){
+      conv='依 '+d+' 匯率換算　'+cur+' 1 = '+g.target+' '+g.rate+
+           '　＝　'+g.target+' '+_ordFmt(ordFxConvTo(sum,Number(g.rate),g.target),g.target);
     }else{
       conv='本節維持原幣收款　Settled in '+cur;
     }
@@ -23861,7 +24414,7 @@ function ordConfirmSections(b, lines){
       subLabel:cur+' 小計 Subtotal（'+ls.length+' 列）',
       subAmount:cur+' '+_ordFmt(sum,cur),
       convLine:conv,
-      title:_ordCnNo(i)+'、'+cur+' 計價'+(g.mode==='TWD'?'（換算新台幣收款）':'')
+      title:_ordCnNo(i)+'、'+cur+' 計價'+(g.mode!=='KEEP'?('（換算 '+g.target+' 收款）'):'')
     };
   });
 }
@@ -23877,11 +24430,11 @@ function ordConfirmGrandText(b, lines){
 function ordConfirmFxNote(b){
   var es=_ordStEntries(b.settlement);
   if(!es.length) return '';
-  var conv=es.filter(function(e){ return e.mode==='TWD'; }).length;
+  var conv=es.filter(function(e){ return _ordStIsConv(e,e.cur); }).length;
   var keep=es.length-conv;
   var t='※ ';
-  if(conv && keep) t+='標示「依…匯率換算」的節，依該節註記的匯率換算為新台幣收款；其餘各節維持原幣收款。';
-  else if(conv)    t+='各節依該節註記的匯率換算為新台幣收款。';
+  if(conv && keep) t+='標示「依…匯率換算」的節，依該節註記的匯率與結算幣別收款；其餘各節維持原幣收款。';
+  else if(conv)    t+='各節依該節註記的匯率與結算幣別收款。';
   else             t+='各節均維持原幣收款。';
   if(conv) t+='匯率以本單開立日為準，不隨市場波動調整。';
   return t;
@@ -24516,7 +25069,9 @@ function ordExpTwd(b){
   var src = es.length ? es
           : Object.keys(sell).map(function(c){ return {cur:c, mode:'KEEP', orig:sell[c], out:sell[c]}; });
   src.forEach(function(e){
-    if(e.mode==='TWD' && e.out!=null){ total+=Number(e.out); any=true; return; }
+    if(e.twd_out!=null){ total+=Number(e.twd_out); any=true; return; }
+    var target=_ordStTarget(e,e.cur);
+    if(_ordStIsConv(e,e.cur) && target==='TWD' && e.out!=null){ total+=Number(e.out); any=true; return; }
     var amt=(e.orig!=null)?Number(e.orig):Number(sell[e.cur]||0);
     if(!amt) return;
     if(e.cur==='TWD'){ total+=amt; any=true; return; }
@@ -24528,7 +25083,7 @@ function ordExpTwd(b){
 }
 
 async function ordExpGo(){
-  if(typeof ExcelJS==='undefined'){ _toast('Excel 函式庫尚未載入，請重新整理再試','err'); return; }
+  if(!await _gcNeed(_gcEnsureExcelJs(),'Excel 元件')) return;
   var E=ORD_EXP, rows=ordExpRows();
   if(!rows.length){ _toast('這個範圍沒有案件','err'); return; }
   var fname=ordExpFileName();
@@ -24642,7 +25197,7 @@ function ordExpSheetCurrency(wb, rows){
        會變成一個看起來很確定的錯數字。混合時整列標「混合（見詳情）」。 */
     var stByCur={};
     _ordStEntries(st).forEach(function(e){
-      var x=stByCur[e.cur]||(stByCur[e.cur]={mode:e.mode, rate:e.rate, out:0, orig:0, mixed:false});
+      var x=stByCur[e.cur]||(stByCur[e.cur]={cur:e.cur, mode:e.mode, target:e.target, rate:e.rate, out:0, orig:0, mixed:false});
       if(x.mode!==e.mode) x.mixed=true;
       if(e.rate!=null && x.rate!=null && Number(x.rate)!==Number(e.rate)) x.mixed=true;
       x.out+=Number(e.out||0); x.orig+=Number(e.orig||0);
@@ -24656,9 +25211,10 @@ function ordExpSheetCurrency(wb, rows){
       row.getCell(i++).value=(b.customer_snapshot||{}).company_name||_custName(b.customer_id);
       row.getCell(i++).value=cur;
       _ordExpNum(row.getCell(i), sell[cur]!=null?sell[cur]:null, cur); i++;
-      row.getCell(i++).value = s ? (s.mixed ? '混合（見詳情）' : ((s.mode==='TWD')?ORD_FX_TARGET:cur)) : cur;
+      var target=s?_ordStTarget(s,cur):cur;
+      row.getCell(i++).value = s ? (s.mixed ? '混合（見詳情）' : target) : cur;
       var rc=row.getCell(i++);
-      rc.value=(s&&!s.mixed&&s.mode==='TWD'&&s.rate!=null)?Number(s.rate):null;
+      rc.value=(s&&!s.mixed&&target!==cur&&s.rate!=null)?Number(s.rate):null;
       hpExpStyle(rc,{numFmt:'0.0000', alignment:{horizontal:'right'}});
       if(s && s.mixed){
         // 混合的時候「實收」欄位沒有單一幣別可以標，寫成看得懂的字
@@ -24667,7 +25223,7 @@ function ordExpSheetCurrency(wb, rows){
         hpExpStyle(mc,{font:{size:9,color:{argb:'FFB45309'}}, alignment:{horizontal:'right'}});
       }else{
         _ordExpNum(row.getCell(i), s?(s.out!=null?s.out:null):(sell[cur]!=null?sell[cur]:null),
-                   s?((s.mode==='TWD')?ORD_FX_TARGET:cur):cur);
+                   s?target:cur);
       }
       i++;
       _ordExpNum(row.getCell(i), est[cur]!=null?est[cur]:null, cur); i++;
@@ -25062,6 +25618,7 @@ function ordSendManual(){
 async function ordSendAttachments(){
   var S=ORD_SEND, out=[];
   if(S.attXlsx){
+    await _gcEnsureExcelJs();
     var wb=await ordDocPoBuild(S.b, S.o, S.lines);
     var buf=await wb.xlsx.writeBuffer();
     out.push({ filename:'訂購單_'+S.o.po_no+'.xlsx',
@@ -25069,6 +25626,7 @@ async function ordSendAttachments(){
       base64:_ordBufToB64(buf) });
   }
   if(S.attDocx){
+    await _gcEnsureOrderDocs();
     var Dt=_ordDocx(); if(!Dt) throw new Error('Word 產生元件尚未載入');
     var d=ordDocPoData(S.b, S.o, S.lines);
     var r=_ordDocxRender(Dt, d._hasConv?ORD_TPL_PO_FX:ORD_TPL_PO, d, 'x.docx');
@@ -25158,7 +25716,5 @@ async function ordMarkReplied(orderId){
 
 </script>
 
-<!-- 部落格模組：必須放在上面所有 inline script 之後，才讀得到 sb / currentUser / _esc / _toast -->
-<script src="blog-admin.js"></script>
 </body>
 </html>
