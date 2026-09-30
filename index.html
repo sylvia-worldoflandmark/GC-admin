@@ -1918,7 +1918,7 @@ async function _gcEnsureQuoteDocs(){
 }
 async function _gcEnsureOrderDocs(){
   await _gcEnsureDocxCore();
-  await _gcLoadScript('po_templates.js?v=20260922-10',function(){ return typeof ORD_TPL_CONFIRM!=='undefined'&&typeof ORD_TPL_PO!=='undefined'; });
+  await _gcLoadScript('po_templates.js?v=20260929-1',function(){ return typeof ORD_TPL_CONFIRM!=='undefined'&&typeof ORD_TPL_PO!=='undefined'; });
 }
 function _gcEnsureBlog(){
   return _gcLoadScript('blog-admin.js?v=20260921',function(){ return typeof loadBlogPosts==='function'; });
@@ -4681,12 +4681,14 @@ function _confirm(opts){
   var okTxt  = opts.okLabel || '確定';
   var cxlTxt = opts.cancelLabel || '取消';
   var danger = !!opts.danger;
+  var requireChoice = !!opts.requireChoice;
   var body   = _esc(opts.message || '').replace(/\n/g, '<br>');
 
   return new Promise(function(resolve){
     var old = document.getElementById('gc-confirm'); if (old) old.remove();
     var ov = document.createElement('div');
     ov.id = 'gc-confirm';
+    if (requireChoice) ov.tabIndex = -1;
     // z-index 要比其他 modal 高 —— 確認框常常是從別的 modal 裡叫出來的
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.42);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;';
     ov.innerHTML =
@@ -4716,7 +4718,7 @@ function _confirm(opts){
     }
     function onKey(e){
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); }
-      else if (e.key === 'Enter' && !danger) { e.preventDefault(); e.stopPropagation(); done(true); }
+      else if (e.key === 'Enter' && !danger && !requireChoice) { e.preventDefault(); e.stopPropagation(); done(true); }
     }
     ov.addEventListener('click', function(e){ if (e.target === ov) done(false); });
     ov.querySelector('[data-act="ok"]').addEventListener('click', function(){ done(true); });
@@ -4724,7 +4726,7 @@ function _confirm(opts){
     document.addEventListener('keydown', onKey, true);
     document.body.appendChild(ov);
     // 預設焦點放在「取消」—— 這些確認框大多是不可逆動作，不該讓空白鍵直接按下去
-    var f = ov.querySelector('[data-act="' + (danger ? 'cancel' : 'ok') + '"]');
+    var f = requireChoice ? ov : ov.querySelector('[data-act="' + (danger ? 'cancel' : 'ok') + '"]');
     if (f) f.focus();
   });
 }
@@ -18897,11 +18899,12 @@ function _ordSecOf(l){
 function ordDetailOrderHtml(o, allLines){
   var ls=allLines.filter(function(l){ return String(l.order_id)===String(o.id); });
   var actualMeta=_ordActualMeta(o);
+  var hasActual=!!(o.actual_totals&&Object.keys(o.actual_totals).length);
   var bySup={}, order=[];
   ls.forEach(function(l){ var k=_ordSecOf(l); if(!bySup[k]){ bySup[k]=[]; order.push(k); } bySup[k].push(l); });
   var nSup=order.filter(function(k){ return k!==ORD_CUSTOM_SEC; }).length;
   return '<div style="border-bottom:1px solid var(--border);padding-bottom:14px;">'+
-    '<div style="padding:14px 20px 4px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">'+
+    '<div style="padding:14px 20px 4px;">'+
       '<div><span style="font-size:14px;font-weight:700;">'+_esc(o.contact_name)+'</span>'+
         '<span style="font-size:11px;color:var(--text-dim);margin-left:10px;">'+_esc(o.po_no)+
           ' · '+order.filter(function(k){ return k!==ORD_CUSTOM_SEC; }).join('、')+
@@ -18914,7 +18917,7 @@ function ordDetailOrderHtml(o, allLines){
         // 歷史資料可能只有實際貨款、尚未完成付款；新流程確認付款資訊時會一次完成。
         ' '+ordSendBadge(o)+
         (o.pay_status==='paid'?'':(o.actual_confirmed_at?' '+_badge('付款資訊待完成','amber'):' '+_badge('付款未登錄','amber')))+
-        (o.actual_totals&&Object.keys(o.actual_totals).length
+        (hasActual
           ? ' '+_badge('已入帳','blue') : ' '+_badge('尚未入帳','gray'))+
         (_ordHasBrandPayFx(o)?' '+_badge('品牌逐列換匯','blue'):(o.doc_currency?' '+_badge('以 '+o.doc_currency+' 結算','blue'):''))+
         (o.doc_generated_at?'<span style="font-size:11px;color:var(--text-dim);margin-left:8px;">訂購單已產生 '+_dt(o.doc_generated_at)+'</span>':'')+
@@ -18937,15 +18940,16 @@ function ordDetailOrderHtml(o, allLines){
             ? '<button class="btn btn-secondary" onclick="ordActualSlipOpen(\''+_esc(o.id)+'\')">查看水單</button>' : '')+
         '</div>')+
       '</div>'+
-      '<div style="text-align:right;font-size:12px;line-height:1.9;">'+
-        ((o.actual_totals&&Object.keys(o.actual_totals).length)
-          ? '<div><span style="color:var(--text-dim);">實際貨款</span> <b>'+ordMoneyList(o.actual_totals)+'</b>'+
-            (o.actual_confirmed_at?'<span style="font-size:11px;color:var(--text-dim);margin-left:6px;">確認於 '+_tpeDate(o.actual_confirmed_at)+'</span>':'')+
-            '</div>'+
-            (actualMeta.remitted_at?'<div style="font-size:11px;color:var(--text-dim);">匯款時間 '+_dt(actualMeta.remitted_at)+'</div>':'') : '')+
-        '<div><span style="color:var(--text-dim);">應付試算</span> '+ordMoneyList(o.cost_totals||{})+
-          (o.cost_totals_conv?'<div style="font-size:11px;color:var(--text-dim);">換算後 '+ordMoneyList(o.cost_totals_conv)+
-            (o.fx_locked_at?'　凍結於 '+_tpeDate(o.fx_locked_at):'')+'</div>':'')+
+      '<div class="ord-order-payment-summary" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:baseline;gap:4px 24px;flex-wrap:wrap;font-size:12px;line-height:1.5;">'+
+        (hasActual
+          ? '<div style="display:flex;align-items:baseline;gap:3px 12px;flex-wrap:wrap;"><span style="color:var(--text-dim);white-space:nowrap;">實際貨款</span><b>'+ordMoneyList(o.actual_totals)+'</b>'+
+            (o.actual_confirmed_at?'<span style="font-size:11px;color:var(--text-dim);white-space:nowrap;">確認於 '+_tpeDate(o.actual_confirmed_at)+'</span>':'')+
+            (actualMeta.remitted_at?'<span style="font-size:11px;color:var(--text-dim);white-space:nowrap;">匯款時間 '+_dt(actualMeta.remitted_at)+'</span>':'')+
+            '</div>' : '')+
+        '<div style="display:flex;align-items:baseline;gap:3px 10px;flex-wrap:wrap;"><span style="color:var(--text-dim);white-space:nowrap;">'+
+          (hasActual?'<span aria-hidden="true" style="color:#9ca3af;margin-right:8px;">｜</span>':'')+'應付試算</span><span>'+ordMoneyList(o.cost_totals||{})+'</span>'+
+          (o.cost_totals_conv?'<span style="color:#d97706;font-weight:700;white-space:nowrap;">換算後 '+ordMoneyList(o.cost_totals_conv)+'</span>'+
+            (o.fx_locked_at?'<span style="font-size:11px;color:var(--text-dim);white-space:nowrap;">凍結於 '+_tpeDate(o.fx_locked_at)+'</span>':''):'')+
         '</div></div>'+
     '</div>'+
     order.map(function(sn){
@@ -19404,6 +19408,7 @@ async function ordFxSetRateCommit(key,val){
       title:'其他同幣別收款也一起更新？',
       subtitle:'更新成 1 '+s.cur+' = '+n+' '+target,
       message:'另有 '+peers.length+' 筆收款也是 '+s.cur+' → '+target+'：\n'+names+'\n\n是否一併使用目前輸入的匯率？',
+      requireChoice:true,
       okLabel:'一併更新',
       cancelLabel:'不用，只更新這筆'
     });
@@ -19650,7 +19655,7 @@ function ordFxPayRateNotes(rows){
     var date=ordFxRateDate(g.source,g.target);
     var stale=(typeof _fxIsStale==='function')&&_fxIsStale(date);
     var txt=touched
-      ? '本次已輸入，確認後會更新為今天'
+      ? '本次已設定，確認後會更新為今天'
       : (locked
           ? ('本單已確認 '+_esc(_tpeDate(locked)))
           : (date?('台銀基準 '+_esc(String(date))+(stale?'（已過期，請重新確認）':'')):'後台沒有基準，請自行確認'));
@@ -19686,7 +19691,7 @@ function ordFxPayHtml(){
           '<div><span class="ord-fxpay-mini-label">匯率</span><div class="ord-fxpay-ratebox"><span>1 '+_esc(r.source)+' =</span>'+
             '<input class="cm-input ord-fxpay-control" type="number" step="any" value="'+(r.rate!=null?_esc(String(r.rate)):'')+'" '+
               (r.target===r.source?'disabled ':'')+'oninput="ordFxPayRowRate('+i+',this.value)" '+
-              'onblur="ordFxPayRateOfferSync('+i+',this.value)" onkeydown="if(event.key===\'Enter\'){this.blur();}">'+
+              'onblur="ordFxPayRateOfferSync('+i+',this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();event.stopPropagation();this.blur();}">'+
             '<b>'+_esc(r.target)+'</b></div></div>'+
           '<div><span class="ord-fxpay-mini-label">換算後金額</span><b id="ord-fxpay-conv-'+i+'" style="font-size:14px;color:#d97706;"></b></div>'+
         '</div>';
@@ -19699,13 +19704,88 @@ function ordFxPayHtml(){
       '<button class="btn btn-primary" '+(ORD_FXPAY.saving?'disabled':'')+' onclick="ordFxPayApply(\''+_esc(o.id)+'\')">'+(ORD_FXPAY.saving?'儲存中…':'確認並凍結')+'</button>'+
     '</div></div>';
 }
-function ordFxPayRowTarget(i,target){
+async function ordFxPayRowTarget(i,target){
   if(!ORD_FXPAY||!ORD_FXPAY.rows[i]) return;
   if(ORD_FXPAY_SYNC_TIMER){ clearTimeout(ORD_FXPAY_SYNC_TIMER); ORD_FXPAY_SYNC_TIMER=null; }
-  var r=ORD_FXPAY.rows[i]; r.target=String(target||r.source).toUpperCase();
-  r.rateSyncPending=false;
+  var r=ORD_FXPAY.rows[i], nextTarget=String(target||r.source).toUpperCase();
+  if(nextTarget===r.target) return;
+  r.target=nextTarget;
   r.rate=(r.target===r.source)?1:(ordFxDefaultRate(r.source,r.target)||null);
+  r.rateTouched=r.target!==r.source;
+  r.rateSyncPending=false;
+  r.lockedAt=null;
   ordFxPayRender();
+  if(r.target===r.source){
+    var rows=ORD_FXPAY.rows, peers=_ordFxPayKeepPeers(rows,i);
+    if(!peers.length) return;
+    var names=peers.map(function(x){ return x.row.brand; }).filter(Boolean).join('、');
+    var ok=await _confirm({
+      title:'其他同幣別品牌也維持原幣？',
+      subtitle:'付款幣別改為 '+r.source+'（維持原幣）',
+      message:'同一張窗口單還有 '+peers.length+' 筆原始應付為 '+r.source+' 的品牌方仍設定換匯：\n'+names+'\n\n是否一併改為維持原幣付款？',
+      requireChoice:true,
+      okLabel:'一併更新',
+      cancelLabel:'不用，只更新這筆'
+    });
+    if(!ok||!ORD_FXPAY||ORD_FXPAY.rows!==rows||rows[i]!==r) return;
+    _ordFxPayApplyPeerKeep(peers);
+    ordFxPayRender();
+    _toast('已將 '+peers.length+' 筆同幣別品牌方改為維持原幣');
+    return;
+  }
+  var rows=ORD_FXPAY.rows, peers=_ordFxPayTargetPeers(rows,i);
+  if(!peers.length) return;
+  var names=peers.map(function(x){ return x.row.brand; }).filter(Boolean).join('、');
+  var ok=await _confirm({
+    title:'其他同幣別品牌也改為 '+r.target+'？',
+    subtitle:'付款幣別改為 '+r.source+' → '+r.target,
+    message:'同一張窗口單還有 '+peers.length+' 筆原始應付為 '+r.source+' 的品牌方：\n'+names+'\n\n是否一併改為 '+r.target+' 付款？'+
+      (r.rate>0?'也會使用目前顯示的匯率。':'尚無有效匯率，請變更後逐列設定匯率。'),
+    requireChoice:true,
+    okLabel:'一併更新',
+    cancelLabel:'不用，只更新這筆'
+  });
+  if(!ok||!ORD_FXPAY||ORD_FXPAY.rows!==rows||rows[i]!==r||r.target!==nextTarget) return;
+  _ordFxPayApplyPeerTarget(peers,r);
+  ordFxPayRender();
+  _toast('已將 '+peers.length+' 筆同原幣品牌方改為 '+r.target+' 付款');
+}
+function _ordFxPayTargetPeers(rows,i){
+  rows=Array.isArray(rows)?rows:[];
+  var current=rows[i];
+  if(!current||current.target===current.source) return [];
+  return rows.map(function(r,j){ return { row:r, index:j }; }).filter(function(x){
+    return x.index!==i && x.row && x.row.source===current.source;
+  });
+}
+function _ordFxPayApplyPeerTarget(peers,current){
+  (peers||[]).forEach(function(x){
+    if(!x||!x.row) return;
+    var sameTarget=x.row.target===current.target;
+    x.row.target=current.target;
+    x.row.rate=(current.rate>0)?current.rate:(sameTarget?x.row.rate:null);
+    x.row.rateTouched=current.rate>0;
+    x.row.rateSyncPending=false;
+    x.row.lockedAt=null;
+  });
+}
+function _ordFxPayKeepPeers(rows,i){
+  rows=Array.isArray(rows)?rows:[];
+  var current=rows[i];
+  if(!current||current.target!==current.source) return [];
+  return rows.map(function(r,j){ return { row:r, index:j }; }).filter(function(x){
+    return x.index!==i && x.row && x.row.source===current.source && x.row.target!==x.row.source;
+  });
+}
+function _ordFxPayApplyPeerKeep(peers){
+  (peers||[]).forEach(function(x){
+    if(!x||!x.row) return;
+    x.row.target=x.row.source;
+    x.row.rate=1;
+    x.row.rateTouched=false;
+    x.row.rateSyncPending=false;
+    x.row.lockedAt=null;
+  });
 }
 function ordFxPayRowRate(i,val){
   if(!ORD_FXPAY||!ORD_FXPAY.rows[i]) return;
@@ -19754,7 +19834,8 @@ async function ordFxPayRateOfferSync(i,val){
   var ok=await _confirm({
     title:'同步相同幣別的匯率？',
     subtitle:'更新成 1 '+current.source+' = '+rate+' '+current.target,
-    message:'同一張窗口單還有 '+peers.length+' 筆品牌方付款也是 '+current.source+' → '+current.target+'：\n'+names+'\n\n是否讓這些品牌一起使用目前輸入的匯率？',
+    message:'同一張窗口單還有 '+peers.length+' 筆品牌方付款也是 '+current.source+' → '+current.target+'：\n'+names+'\n\n是否讓這些品牌一起使用目前設定的匯率？',
+    requireChoice:true,
     okLabel:'一併更新',
     cancelLabel:'不用，只更新這筆'
   });
@@ -19853,6 +19934,18 @@ function _ordBrandPayPlan(rows){
     totals[r.target]=(totals[r.target]||0)+v;
   });
   return {ok:ok&&!!(rows||[]).length,totals:totals,bad:bad};
+}
+function _ordBrandPayBrandTotals(rows){
+  var by={}, order=[];
+  (rows||[]).forEach(function(r){
+    var target=r.target||r.source, key=r.brand+'\u0001'+target;
+    if(!by[key]){ by[key]={brand:r.brand,currency:target,amount:0,missing:false}; order.push(key); }
+    var rate=(target===r.source)?1:Number(r.rate);
+    var amount=(rate>0)?ordFxConvTo(r.original,rate,target):null;
+    if(amount==null) by[key].missing=true;
+    else by[key].amount+=amount;
+  });
+  return order.map(function(key){ return by[key]; });
 }
 function _ordHasBrandPayFx(o){
   return Object.keys((o&&o.supplier_terms)||{}).some(function(brand){
@@ -23333,7 +23426,7 @@ function ordSettleHtml(){
       var rateCell = converted
         ? ('<input class="cm-input" type="number" step="any" style="width:92px;height:30px;font-size:12px;" '+
             'value="'+(rate!=null?rate:'')+'" oninput="ordFxSetRateInput(\''+_esc(key)+'\',this.value)" '+
-            'onblur="ordFxSetRateCommit(\''+_esc(key)+'\',this.value)" onkeydown="if(event.key===\'Enter\'){this.blur();}">'+
+            'onblur="ordFxSetRateCommit(\''+_esc(key)+'\',this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();event.stopPropagation();this.blur();}">'+
             '<div style="font-size:10px;color:var(--text-dim);margin-top:3px;white-space:nowrap;">1 '+
               _esc(cur)+' = ? '+_esc(target)+'</div>')
         : '<span style="color:var(--text-dim);font-size:12.5px;">—</span>';
@@ -25053,12 +25146,15 @@ function ordDetailTabBtn(k,label){
 /* 內部備註：建立之後還是會想改（設計稿有一顆「編輯」）。
    它不影響任何金額，所以不走「修改明細」那條需要變更原因的路。 */
 function ordDetailNoteHtml(b){
-  return '<div style="background:#fffdf7;border:1px solid #eccb92;border-radius:10px;padding:10px 15px;'+
-    'margin-bottom:14px;display:flex;gap:10px;align-items:flex-start;">'+
-    '<span style="font-size:11px;font-weight:700;letter-spacing:.04em;color:#d97706;white-space:nowrap;padding-top:2px;">內部備註</span>'+
-    '<span style="font-size:12.5px;line-height:1.8;flex:1;'+(b.note?'':'color:var(--text-dim);')+'">'+
-      (b.note?_esc(b.note):'（沒有備註）')+'</span>'+
-    (b.is_void?'':'<button class="btn btn-secondary" style="padding:3px 10px;font-size:12px;" '+
+  return '<div class="ord-detail-note" style="display:flex;width:fit-content;max-width:100%;align-items:flex-start;gap:10px;'+
+    'background:#fffdf7;border:1px solid #eccb92;border-left:3px solid #d97706;border-radius:8px;'+
+    'padding:8px 10px;margin-bottom:14px;">'+
+    '<span style="font-size:11px;font-weight:700;color:#b45309;background:#fff3df;border-radius:5px;'+
+      'padding:3px 7px;white-space:nowrap;flex:0 0 auto;">內部備註</span>'+
+    '<span style="font-size:12.5px;line-height:1.6;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere;'+
+      (b.note?'':'color:var(--text-dim);')+'">'+
+      (b.note?_esc(b.note):'尚未填寫')+'</span>'+
+    (b.is_void?'':'<button class="btn btn-secondary" style="padding:3px 10px;font-size:12px;flex:0 0 auto;" '+
       'onclick="ordEditNote(\''+_esc(b.id)+'\')">編輯</button>')+
   '</div>';
 }
@@ -26094,6 +26190,8 @@ async function ordDocPoBuild(b, o, lines){
   }
   var fxr=o.fx_rates||null, target=o.doc_currency||null;
   var brandFxRows=_ordBrandPayRows(o,lines);
+  var payPlan=_ordBrandPayPlan(brandFxRows);
+  var brandPayTotals=_ordBrandPayBrandTotals(brandFxRows);
   var hasConv=brandFxRows.some(function(x){ return x.target!==x.source; });
   if(hasConv) cols.push(ORD_DOC_SUP_CONV_COL);
   var N=cols.length;
@@ -26151,7 +26249,7 @@ async function ordDocPoBuild(b, o, lines){
     ws.getRow(r).height=20; r++;
     if(terms.settlement_note){
       ws.mergeCells(r,1,r,N);
-      var nc=ws.getCell(r,1); nc.value='結算備註：'+terms.settlement_note; nc.font={size:9,italic:true}; r++;
+      var nc=ws.getCell(r,1); nc.value='結算備註：'+terms.settlement_note; nc.font={size:10,italic:true}; r++;
     }
 
     if(headRow===null) headRow=r;
@@ -26197,17 +26295,60 @@ async function ordDocPoBuild(b, o, lines){
   });
   if(headRow!==null) ws.pageSetup.printTitlesRow=headRow+':'+headRow;
 
-  // 刻意沒有跨品牌方的總計 —— 各節幣別不同，印一個總計跟下面那句話自相矛盾
   if(hasConv){
     var shown=brandFxRows.filter(function(x){ return x.target!==x.source; });
     var note='本單依品牌方分別換匯（'+(o.fx_locked_at?_tpeDate(o.fx_locked_at):_tpeDate(new Date()))+'）：'+
       shown.map(function(x){ return x.brand+'　'+x.source+' 1 = '+x.target+' '+x.rate; }).join('、')+
-      '。原幣金額為準，換算後金額供對帳參考。';
+      '。原幣小計供核對；付款總額依最終付款幣別列示。';
     ws.mergeCells(r,1,r,N);
     var fc=ws.getCell(r,1); fc.value=note; fc.font={size:10,bold:true}; fc.alignment={wrapText:true};
     ws.getRow(r).height=30; r++;
   }
-  _ordXlsKV(ws, r++, [['','※ 本單依品牌方分節計價，各節幣別不同、不做合計。']], N);
+  ws.mergeCells(r,1,r,N);
+  var payHead=ws.getCell(r,1); payHead.value='本單付款總額　Total Payable by Currency';
+  payHead.font={bold:true,size:11,color:{argb:'FF17324D'}};
+  payHead.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEEF4FB'}};
+  ws.getRow(r).height=22; r++;
+  var leftAmountCol=Math.floor(N/2), rightTotalCol=leftAmountCol+1;
+  ws.mergeCells(r,1,r,leftAmountCol);
+  ws.mergeCells(r,rightTotalCol,r,N);
+  var brandHead=ws.getCell(r,1), totalHead=ws.getCell(r,rightTotalCol);
+  brandHead.value='各品牌方應付　Payable by Brand';
+  totalHead.value='依幣別加總　Total by Currency';
+  [brandHead,totalHead].forEach(function(c){
+    c.font={bold:true,size:10,color:{argb:'FF17324D'}};
+    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF6F8FB'}};
+  });
+  totalHead.border={left:{style:'medium',color:{argb:'FFCBD5E1'}}};
+  totalHead.alignment={horizontal:'left',indent:1};
+  ws.getRow(r).height=20; r++;
+  var currencyTotals=payPlan.ok
+    ?Object.keys(payPlan.totals).sort().map(function(cur){ return {currency:cur,amount:payPlan.totals[cur]}; })
+    :[{currency:'—',amount:'待補匯率 Rate required'}];
+  for(var pi=0; pi<Math.max(brandPayTotals.length,currencyTotals.length); pi++){
+    var brandPay=brandPayTotals[pi], currencyPay=currencyTotals[pi];
+    ws.mergeCells(r,1,r,leftAmountCol-1);
+    ws.mergeCells(r,rightTotalCol,r,N);
+    var payAmt=ws.getCell(r,rightTotalCol);
+    payAmt.border={left:{style:'medium',color:{argb:'FFCBD5E1'}}};
+    if(brandPay){
+      var brandName=ws.getCell(r,1); brandName.value=brandPay.brand;
+      brandName.font={size:10};
+      var brandAmount=ws.getCell(r,leftAmountCol);
+      brandAmount.value=brandPay.missing?'待補匯率':brandPay.amount;
+      if(!brandPay.missing) brandAmount.numFmt=_ordXlsNumFmt(brandPay.currency);
+      brandAmount.font={bold:true,size:10}; brandAmount.alignment={horizontal:'right'};
+    }
+    if(currencyPay){
+      payAmt.value=currencyPay.amount;
+      if(typeof currencyPay.amount==='number') payAmt.numFmt=_ordXlsNumFmt(currencyPay.currency);
+      payAmt.font={bold:true,size:10,color:{argb:'FF17324D'}};
+      payAmt.alignment={horizontal:'right'};
+    }
+    ws.getRow(r).height=20; r++;
+  }
+  r++;
+  _ordXlsKV(ws, r++, [['','※ 本單依品牌方分節計價，付款總額依最終付款幣別分別加總，不跨幣別合併。']], N);
   _ordXlsKV(ws, r++, [['','※ 表列單價為後台記載之供貨價，含稅／未稅依各節標示，實際貨款金額與付款幣別以雙方另行確認為準。']], N);
   _ordXlsKV(ws, r++, [['','※ MOQ 與箱入數為商品原始記載，僅供排貨參考。']], N);
   if(o.doc_note)     _ordXlsKV(ws, r++, [['','※ 備註：'+o.doc_note]], N);
@@ -26262,6 +26403,8 @@ function ordDocConfirmData(b, lines){
 function ordDocPoData(b, o, lines){
   var fxr=o.fx_rates||null, target=o.doc_currency||null;
   var brandFxRows=_ordBrandPayRows(o,lines);
+  var payPlan=_ordBrandPayPlan(brandFxRows);
+  var brandPayTotals=_ordBrandPayBrandTotals(brandFxRows);
   var hasConv=brandFxRows.some(function(x){ return x.target!==x.source; });
   var CUSTOM_SEC=ORD_CUSTOM_SEC;
   var bySup={}, order=[];
@@ -26335,7 +26478,23 @@ function ordDocPoData(b, o, lines){
     fxNote=(payTargets.length===1?('付款幣別為 '+payTargets[0]+'。'):'本單依品牌方分別設定付款幣別。')+
       '本單依 '+(o.fx_locked_at?_tpeDate(o.fx_locked_at):_tpeDate(new Date()))+' 匯率換算：'+
       shown.map(function(x){ return x.brand+'：'+x.source+' 1 = '+x.target+' '+x.rate; }).join('、')+
-      '。換算後應付金額為本單付款金額，原幣小計供核對。';
+      '。本單付款總額依最終付款幣別合計，原幣小計供核對。';
+  }
+  var paymentTotals=payPlan.ok
+    ?Object.keys(payPlan.totals).sort().map(function(c){ return {currency:c,amount:_ordFmt(payPlan.totals[c],c)}; })
+    :[{currency:'—',amount:'待補匯率 Rate required'}];
+  var brandPaymentTotals=brandPayTotals.map(function(x){
+    return {brand:x.brand,currency:x.currency,
+      amount:x.missing?'待補匯率 Rate required':_ordFmt(x.amount,x.currency)};
+  });
+  var paymentSummaryRows=[];
+  for(var pi=0; pi<Math.max(brandPaymentTotals.length,paymentTotals.length); pi++){
+    var brandPay=brandPaymentTotals[pi]||{}, currencyPay=paymentTotals[pi]||{};
+    paymentSummaryRows.push({
+      brandName:brandPay.brand||'',
+      brandAmount:brandPay.currency?(brandPay.currency+' '+brandPay.amount):'',
+      currency:currencyPay.currency||'', amount:currencyPay.amount||''
+    });
   }
   var delivery=_ordDeliveryInfo(b);
   return {
@@ -26348,6 +26507,9 @@ function ordDocPoData(b, o, lines){
     deliveryRecipient:delivery.recipient, deliveryPhone:delivery.phone,
     deliveryAddress:delivery.address,
     sections:sections,
+    brandPaymentTotals:brandPaymentTotals,
+    paymentTotals:paymentTotals,
+    paymentSummaryRows:paymentSummaryRows,
     fxNote:fxNote,
     _hasConv:hasConv
   };
